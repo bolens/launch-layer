@@ -4,13 +4,18 @@
 [[ -n "${LAUNCHLAYER_BACKUP_IMPORT_LOADED:-}" ]] && return 0
 LAUNCHLAYER_BACKUP_IMPORT_LOADED=1
 
-# _tar_archive_members_are_safe — Reject absolute paths and parent-dir traversal in tar members.
+# _tar_archive_members_are_safe — Reject unsafe paths/types and oversized archives.
 _tar_archive_members_are_safe() {
 	local archive=$1
-	local member
+	local member listing type size rest
+	local count=0 total=0
+	local max_members=${LAUNCHLAYER_IMPORT_MAX_MEMBERS:-4096}
+	local max_bytes=${LAUNCHLAYER_IMPORT_MAX_BYTES:-67108864}
 
 	while IFS= read -r member; do
 		[[ -z "$member" ]] && continue
+		count=$((count + 1))
+		(( count <= max_members )) || return 1
 		case "$member" in
 			/*)
 				return 1
@@ -21,7 +26,40 @@ _tar_archive_members_are_safe() {
 			return 1
 		fi
 	done < <(tar -tzf "$archive" 2>/dev/null)
+	(( count > 0 )) || return 1
+
+	while IFS= read -r listing; do
+		[[ -n "$listing" ]] || continue
+		type="${listing:0:1}"
+		[[ "$type" == "-" || "$type" == "d" ]] || return 1
+		read -r _ _ size rest <<< "$listing"
+		[[ "$size" =~ ^[0-9]+$ ]] || return 1
+		total=$((total + size))
+		(( total <= max_bytes )) || return 1
+	done < <(LC_ALL=C tar -tvzf "$archive" 2>/dev/null)
 	return 0
+}
+
+_validate_staged_import_files() {
+	local bundle_root=$1 rel src issues=0
+	shift
+	for rel in "$@"; do
+		[[ "$rel" == *.env ]] || continue
+		src="$bundle_root/$rel"
+		[[ -f "$src" && ! -L "$src" ]] || return 1
+		validate_single_config_file "$src" >/dev/null || issues=$((issues + 1))
+	done
+	(( issues == 0 ))
+}
+
+_install_import_file_atomic() {
+	local src=$1 dest=$2 tmp
+	mkdir -p "$(dirname "$dest")"
+	tmp="$(mktemp "$(dirname "$dest")/.launchlayer-import.XXXXXX")" || return 1
+	if ! cp "$src" "$tmp" || ! chmod 600 "$tmp" || ! mv -f "$tmp" "$dest"; then
+		rm -f "$tmp"
+		return 1
+	fi
 }
 
 # _filter_import_files_by_appid — Keep only games/<AppID>.env when restoring one game.
@@ -46,6 +84,7 @@ import_config() {
 	local include_profiles=${6:-1} include_tui=${7:-0} json=${8:-0} filter_appid=${9:-}
 	local tmpdir bundle_root rel src dest action
 	local -a files=() actions=()
+	local -a rollback_dest=() rollback_copy=() rollback_existed=()
 	local added=0 replaced=0 skipped=0 applied=0 first=1 entry
 
 	[[ -n "$archive" && -f "$archive" ]] || {
@@ -90,6 +129,10 @@ import_config() {
 	if [[ -n "$filter_appid" ]]; then
 		_filter_import_files_by_appid "$filter_appid" files || return 1
 	fi
+	if ! _validate_staged_import_files "$bundle_root" "${files[@]}"; then
+		echo "Archive contains invalid or unsafe config files: $archive" >&2
+		return 1
+	fi
 
 	local apply=0
 	if [[ "$dry_run" != "1" && "$yes" == "1" ]]; then
@@ -109,10 +152,7 @@ import_config() {
 			src="$bundle_root/$rel"
 		fi
 		dest="$(_config_import_destination "$rel")"
-		[[ -f "$src" ]] || continue
-		if [[ "$rel" == games/* ]]; then
-			mkdir -p "$GAMES_DIR"
-		fi
+		[[ -f "$src" && ! -L "$src" ]] || continue
 
 		if [[ -f "$dest" ]]; then
 			if [[ "$mode" == merge ]]; then
@@ -129,8 +169,28 @@ import_config() {
 
 		actions+=("$rel|$action|$dest")
 		if [[ "$apply" == "1" && "$action" != skip ]]; then
-			mkdir -p "$(dirname "$dest")"
-			cp "$src" "$dest"
+			local backup=""
+			if [[ -f "$dest" ]]; then
+				backup="$(mktemp "$tmpdir/rollback.XXXXXX")" || return 1
+				cp "$dest" "$backup" || return 1
+				rollback_existed+=(1)
+			else
+				rollback_existed+=(0)
+			fi
+			rollback_dest+=("$dest")
+			rollback_copy+=("$backup")
+			_install_import_file_atomic "$src" "$dest" || {
+				echo "Failed to install imported config: $rel" >&2
+				local i
+				for ((i = ${#rollback_dest[@]} - 1; i >= 0; i--)); do
+					if [[ "${rollback_existed[$i]}" == "1" ]]; then
+						cp "${rollback_copy[$i]}" "${rollback_dest[$i]}" || true
+					else
+						rm -f "${rollback_dest[$i]}"
+					fi
+				done
+				return 1
+			}
 			((applied++)) || true
 		fi
 	done
@@ -149,6 +209,9 @@ import_config() {
 				"$(json_string "$rel")" \
 				"$(json_string "$action")" \
 				"$(json_string "$dest")"
+		done
+		for entry in "${rollback_copy[@]}"; do
+			[[ -n "$entry" ]] && rm -f "$entry"
 		done
 		printf ']}\n'
 		return 0
@@ -175,7 +238,7 @@ import_config() {
 	echo "Summary: add=$added replace=$replaced skip=$skipped"
 	if [[ "$apply" == "1" ]]; then
 		echo "Applied $applied file(s)"
-		validate_config all 0 || true
+		validate_config all 0
 	elif (( added + replaced > 0 )); then
 		echo "Re-run with --yes to apply (use --replace to overwrite existing files)."
 	fi
