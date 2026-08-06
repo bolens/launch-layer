@@ -13,7 +13,10 @@ while IFS=: read -r file line content; do
 			"$file" "$line" "$content" >&2
 		status=1
 	fi
-done < <(rg -n '^[[:space:]]*-[[:space:]]+uses:' .github/workflows/*.yml)
+done < <(
+	rg -n --glob '*.yml' --glob '*.yaml' \
+		'^[[:space:]]*(-[[:space:]]*)?uses:' .github/workflows
+)
 
 python3 - <<'PY' || status=1
 import json
