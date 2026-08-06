@@ -1,5 +1,5 @@
 import { convexTest } from "convex-test";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { internal } from "./_generated/api";
 import {
   DOWNLOAD_DEDUP_RETENTION_MS,
@@ -150,5 +150,41 @@ describe("cleanupExpiredRecords", () => {
       {},
     );
     expect(result).toEqual({ rateLimitBuckets: 1, downloadDedup: 1 });
+  });
+
+  it("reschedules cleanup when an expired batch is full", async () => {
+    vi.useFakeTimers();
+    try {
+      const t = convexTest(schema, modules);
+      const expired = Date.now() - RATE_LIMIT_RETENTION_MS - 1;
+      await t.run(async (ctx) => {
+        for (let i = 0; i < 201; i += 1) {
+          await ctx.db.insert("rateLimitBuckets", {
+            bucketKey: `expired-${i}`,
+            windowStart: expired,
+            count: 1,
+          });
+        }
+      });
+
+      const first = await t.mutation(
+        internal.rate_limits.cleanupExpiredRecords,
+        {},
+      );
+      expect(first.rateLimitBuckets).toBe(200);
+      await t.finishAllScheduledFunctions(vi.runAllTimers);
+
+      const remaining = await t.run(async (ctx) =>
+        ctx.db
+          .query("rateLimitBuckets")
+          .withIndex("by_window_start", (q) =>
+            q.lt("windowStart", Date.now() - RATE_LIMIT_RETENTION_MS),
+          )
+          .collect(),
+      );
+      expect(remaining).toHaveLength(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
