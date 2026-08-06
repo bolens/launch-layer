@@ -110,13 +110,18 @@ export default defineSchema({
     bucketKey: v.string(),
     windowStart: v.number(),
     count: v.number(),
-  }).index("by_bucket_key", ["bucketKey"]),
+  })
+    .index("by_bucket_key", ["bucketKey"])
+    .index("by_window_start", ["windowStart"]),
 
   configDownloadDedup: defineTable({
     configId: v.id("sharedConfigs"),
     identifier: v.string(),
     recordedAt: v.number(),
-  }).index("by_config_and_identifier", ["configId", "identifier"]),
+  })
+    .index("by_config_and_identifier", ["configId", "identifier"])
+    .index("by_config_id", ["configId"])
+    .index("by_recorded_at", ["recordedAt"]),
 });
 
 export {

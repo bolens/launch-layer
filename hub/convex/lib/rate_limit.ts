@@ -1,4 +1,6 @@
 export const RATE_LIMIT_WINDOW_MS = 60_000;
+export const RATE_LIMIT_RETENTION_MS = 24 * 60 * 60 * 1_000;
+export const DOWNLOAD_DEDUP_RETENTION_MS = 30 * 24 * 60 * 60 * 1_000;
 
 export const RATE_LIMITS = {
   recommend: 30,
@@ -36,36 +38,25 @@ export function rateLimitExceededError(): never {
  * Do not key rate limits on client-supplied fingerprint hashes alone —
  * those are trivial to rotate and bypass per-client caps.
  */
-export function clientIpFromRequest(request: Request): string {
-  const cfConnecting = request.headers.get("CF-Connecting-IP")?.trim();
-  if (cfConnecting) {
-    return `ip:${cfConnecting}`;
-  }
-
-  const trueClient = request.headers.get("True-Client-IP")?.trim();
-  if (trueClient) {
-    return `ip:${trueClient}`;
-  }
-
-  const forwarded = request.headers.get("X-Forwarded-For");
-  if (forwarded) {
-    const ip = forwarded.split(",")[0]?.trim();
-    if (ip) {
-      return `ip:${ip}`;
-    }
-  }
-
-  const realIp = request.headers.get("X-Real-IP")?.trim();
-  if (realIp) {
-    return `ip:${realIp}`;
-  }
-
-  return "ip:unknown";
+export function trustedClientIdentity(request: Request): string {
+  const header =
+    process.env.HUB_TRUSTED_CLIENT_IP_HEADER?.trim().toLowerCase() ??
+    "cf-connecting-ip";
+  const value = request.headers.get(header)?.trim();
+  return value ? `ip:${value}` : "ip:unknown";
 }
 
-export function requestIdentifier(
+async function sha256(value: string): Promise<string> {
+  const bytes = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest), (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
+}
+
+export async function requestIdentifier(
   request: Request,
   _body?: Record<string, unknown>,
-): string {
-  return clientIpFromRequest(request);
+): Promise<string> {
+  return `sha256:${await sha256(trustedClientIdentity(request))}`;
 }

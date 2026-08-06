@@ -1,5 +1,5 @@
 import { convexTest } from "convex-test";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { internal } from "./_generated/api";
 import { MAX_CONFIGS_PER_MACHINE } from "./lib/quotas";
 import schema from "./schema";
@@ -157,6 +157,33 @@ describe("deleteConfig", () => {
 
     const deleted = await t.run(async (ctx) => ctx.db.get("sharedConfigs", published.config_id));
     expect(deleted).toBeNull();
+  });
+
+  it("cleans download dedup rows after deleting a config", async () => {
+    vi.useFakeTimers();
+    const t = convexTest(schema, modules);
+    const args = await buildPublishArgs({ appid: "441" });
+    const published = await t.mutation(internal.configs.publishConfig, args);
+    await t.mutation(internal.configs.recordDownload, {
+      configId: published.config_id,
+      identifier: "sha256:test",
+    });
+    await t.mutation(internal.configs.deleteConfig, {
+      configId: published.config_id,
+      fingerprintHash: args.fingerprintHash,
+    });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+
+    const rows = await t.run(async (ctx) =>
+      ctx.db
+        .query("configDownloadDedup")
+        .withIndex("by_config_id", (q) =>
+          q.eq("configId", published.config_id),
+        )
+        .collect(),
+    );
+    expect(rows).toHaveLength(0);
+    vi.useRealTimers();
   });
 
   it("rejects delete when fingerprint hash does not match", async () => {

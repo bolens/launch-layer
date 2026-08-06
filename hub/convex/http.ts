@@ -56,7 +56,7 @@ async function enforceRouteRateLimit(
 ): Promise<void> {
   await ctx.runMutation(internal.rate_limits.enforceRateLimit, {
     route,
-    identifier: requestIdentifier(request, body),
+    identifier: await requestIdentifier(request, body),
   });
 }
 
@@ -267,7 +267,7 @@ http.route({
       }
       await ctx.runMutation(internal.configs.recordDownload, {
         configId: typedConfigId,
-        identifier: requestIdentifier(request),
+        identifier: await requestIdentifier(request),
       });
       return jsonResponse(config);
     } catch (error) {
