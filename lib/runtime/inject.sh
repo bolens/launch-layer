@@ -53,12 +53,15 @@ inject_store_notice() {
 	} > "$notice"
 }
 
-# inject_verify_sha256 — Opt-in checksum: INJECT_SHA256 or arg; skip when unset.
+# inject_verify_sha256 — Require and verify a SHA-256 digest.
 inject_verify_sha256() {
 	local file=$1
 	local expect=${2:-${INJECT_SHA256:-}}
 	local got
-	[[ -n "$expect" ]] || return 0
+	[[ "$expect" =~ ^[0-9A-Fa-f]{64}$ ]] || {
+		warn "inject fetch requires a 64-character INJECT_SHA256"
+		return 1
+	}
 	[[ -f "$file" ]] || return 1
 	if command_available sha256sum; then
 		got="$(sha256sum "$file" | awk '{print $1}')"
@@ -78,34 +81,59 @@ inject_verify_sha256() {
 
 # inject_fetch_url — Download URL to dest path (honors LAUNCHLAYER_FETCH_CMD for tests).
 # Returns 1 on failure. Does not overwrite unless LAUNCHLAYER_FETCH_FORCE=1.
-# Optional INJECT_SHA256 verifies the downloaded file when set.
+# INJECT_SHA256 is mandatory for remote content.
 inject_fetch_url() {
-	local url=$1 dest=$2
-	local dir
-	[[ -n "$url" && -n "$dest" ]] || return 1
-	dir="$(dirname "$dest")"
+	local url=$1 final_dest=$2
+	local dir dest
+	[[ -n "$url" && -n "$final_dest" ]] || return 1
+	[[ "${INJECT_SHA256:-}" =~ ^[0-9A-Fa-f]{64}$ ]] || {
+		warn "refusing unchecked download: set INJECT_SHA256 for $url"
+		return 1
+	}
+	dir="$(dirname "$final_dest")"
 	mkdir -p "$dir"
-	if [[ -f "$dest" && "${LAUNCHLAYER_FETCH_FORCE:-0}" != "1" ]]; then
-		debug "inject cache hit: $dest"
-		inject_verify_sha256 "$dest" || return 1
+	if [[ -f "$final_dest" && "${LAUNCHLAYER_FETCH_FORCE:-0}" != "1" ]]; then
+		debug "inject cache hit: $final_dest"
+		inject_verify_sha256 "$final_dest" || return 1
 		return 0
 	fi
+	dest="$(mktemp "$dir/.inject-download.XXXXXX")" || return 1
 	if [[ -n "${LAUNCHLAYER_FETCH_CMD:-}" ]]; then
 		# shellcheck disable=SC2086
-		eval "$LAUNCHLAYER_FETCH_CMD" || return 1
-		inject_verify_sha256 "$dest" || return 1
+		eval "$LAUNCHLAYER_FETCH_CMD" || {
+			rm -f "$dest"
+			return 1
+		}
+		inject_verify_sha256 "$dest" || {
+			rm -f "$dest"
+			return 1
+		}
+		chmod 600 "$dest"
+		mv -f "$dest" "$final_dest"
 		return 0
 	fi
 	if command_available curl; then
-		curl -fsSL --connect-timeout 15 -o "$dest" "$url" || return 1
+		curl -fsSL --connect-timeout 15 -o "$dest" "$url" || {
+			rm -f "$dest"
+			return 1
+		}
 	elif command_available wget; then
-		wget -q -O "$dest" "$url" || return 1
+		wget -q -O "$dest" "$url" || {
+			rm -f "$dest"
+			return 1
+		}
 	else
 		warn "inject_fetch_url: curl/wget missing — cannot fetch $url"
+		rm -f "$dest"
 		return 1
 	fi
-	inject_verify_sha256 "$dest" || return 1
-	debug "inject fetched: $url → $dest"
+	inject_verify_sha256 "$dest" || {
+		rm -f "$dest"
+		return 1
+	}
+	chmod 600 "$dest"
+	mv -f "$dest" "$final_dest"
+	debug "inject fetched: $url → $final_dest"
 }
 
 # inject_refuse_proprietary_redistrib — Warn and return 1 (caller should use user-supplied path).

@@ -105,13 +105,14 @@ setup() {
 }
 
 @test "SPECIAL_K_FETCH extracts zip via LAUNCHLAYER_FETCH_CMD" {
-	local fixture dir
+	local fixture dir checksum
 	dir="$BATS_TEST_TMPDIR/sk-fixture"
 	mkdir -p "$dir"
 	printf 'MZ' > "$dir/SpecialK64.dll"
 	command -v zip >/dev/null 2>&1 || skip "zip not installed"
 	(cd "$dir" && zip -q specialk-stub.zip SpecialK64.dll)
 	fixture="$dir/specialk-stub.zip"
+	checksum="$(sha256sum "$fixture" | awk '{print $1}')"
 	[[ -f "$fixture" ]]
 	run bash -c '
 		export CONFIG_DIR="'"$CONFIG_DIR"'"
@@ -121,10 +122,11 @@ setup() {
 		source_lib platform runtime
 		SPECIAL_K_FETCH=1
 		SPECIAL_K_FETCH_URL=https://example.test/sk.zip
+		INJECT_SHA256="'"$checksum"'"
 		SPECIAL_K_VERSION=test
 		dest="$(inject_tool_cache_dir specialk)/test"
 		mkdir -p "$dest"
-		export LAUNCHLAYER_FETCH_CMD="cp -f \"'"$fixture"'\" \"$dest/package.bin\""
+		export LAUNCHLAYER_FETCH_CMD="cp -f \"'"$fixture"'\" \"\$dest\""
 		apply_special_k_fetch
 		echo "SOURCE=$SPECIAL_K_SOURCE"
 		[[ -f "$SPECIAL_K_SOURCE/SpecialK64.dll" ]] || exit 2
@@ -133,6 +135,22 @@ setup() {
 	[[ "$status" -eq 0 ]]
 	[[ "$output" == *"ok"* ]]
 	[[ "$output" == *"SOURCE="* ]]
+}
+
+@test "inject_fetch_url refuses missing or mismatched checksums" {
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		export XDG_DATA_HOME="'"$XDG_DATA_HOME"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform runtime
+		dest="$XDG_DATA_HOME/package.bin"
+		LAUNCHLAYER_FETCH_CMD="printf payload > \"\$dest\""
+		inject_fetch_url https://example.test/package "$dest" && exit 2
+		INJECT_SHA256="$(printf different | sha256sum | awk "{print \$1}")"
+		inject_fetch_url https://example.test/package "$dest" && exit 3
+		[[ ! -e "$dest" ]]
+	'
+	[[ "$status" -eq 0 ]]
 }
 
 @test "apply_lsfg_vk exports ENABLE_LSFGVK" {
