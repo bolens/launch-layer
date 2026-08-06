@@ -84,8 +84,15 @@ resolve_include_under_launchd() {
 
 	is_safe_include_path "$include_path" || return 1
 	candidate="$LAUNCHD_DIR/$include_path"
-	resolved="$(realpath_portable "$candidate" 2>/dev/null || true)"
-	base="$(realpath_portable "$LAUNCHD_DIR" 2>/dev/null || true)"
+	if declare -F realpath_portable >/dev/null 2>&1; then
+		resolved="$(realpath_portable "$candidate" 2>/dev/null || true)"
+		base="$(realpath_portable "$LAUNCHD_DIR" 2>/dev/null || true)"
+	elif command -v python3 >/dev/null 2>&1; then
+		resolved="$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$candidate" 2>/dev/null || true)"
+		base="$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$LAUNCHD_DIR" 2>/dev/null || true)"
+	else
+		return 1
+	fi
 	[[ -n "$resolved" && -n "$base" ]] || return 1
 	[[ "$resolved" == "$base" || "$resolved" == "$base"/* ]] || return 1
 	printf '%s\n' "$resolved"
