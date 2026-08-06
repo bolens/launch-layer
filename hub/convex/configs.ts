@@ -255,6 +255,7 @@ export const recommendConfigs = internalQuery({
     const configs = await ctx.db
       .query("sharedConfigs")
       .withIndex("by_appid", (q) => q.eq("appid", args.appid))
+      .order("desc")
       .take(MAX_CONFIGS_SCORED);
 
     const bounded = capScoredCandidates(configs, MAX_CONFIGS_SCORED);
