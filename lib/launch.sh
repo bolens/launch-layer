@@ -41,7 +41,7 @@ prepare_launch_context() {
 #   5. Apply runtime tuning and build wrapper chain
 #   6. Exec the final command (or print dry-run output)
 run_game_launch() {
-	local exit_code=0 duration=0 needs_vram_cleanup=0
+	local exit_code=0 duration=0
 	local -a launch_args=("$@")
 
 	steam_app_id=""
@@ -89,13 +89,12 @@ run_game_launch() {
 
 	if [[ "${VRAM_HOGS:-0}" == "1" && "$DRY_RUN" != "1" ]]; then
 		pause_vram_hogs
-		needs_vram_cleanup=1
 	fi
 
-	# Trap ensures VRAM services and PipeWire settings restore on normal exit.
-	if [[ "$DRY_RUN" != "1" ]] && [[ "$needs_vram_cleanup" == "1" || "${LAUNCH_WATCHDOG:-0}" == "1" ]]; then
-		trap on_launch_exit EXIT INT TERM
-	fi
+	# Every launch may apply host tuning, so teardown is unconditional.
+	trap on_launch_exit EXIT
+	trap 'exit 130' INT
+	trap 'exit 143' TERM
 
 	apply_network_tuning
 	apply_pipewire_low_latency
@@ -113,16 +112,26 @@ run_game_launch() {
 	warn_launch_chain_issues || true
 
 	playtime_record_start
-	run_pre_launch_cmd
+	local hook_status=0
+	run_pre_launch_cmd || hook_status=$?
+	if (( hook_status != 0 )); then
+		warn "PRE_LAUNCH_CMD failed (exit=$hook_status); launch aborted"
+		exit_code=$hook_status
+	else
+		launch+=("${launch_args[@]}")
+		[[ ${#game_extra_argv[@]} -gt 0 ]] && launch+=("${game_extra_argv[@]}")
 
-	launch+=("${launch_args[@]}")
-	[[ ${#game_extra_argv[@]} -gt 0 ]] && launch+=("${game_extra_argv[@]}")
+		echo $$ > "$ACTIVE_LAUNCH_PID_FILE"
+		[[ "${LAUNCH_WATCHDOG:-0}" == "1" ]] && start_launch_watchdog $$
 
-	echo $$ > "$ACTIVE_LAUNCH_PID_FILE"
-	[[ "${LAUNCH_WATCHDOG:-0}" == "1" ]] && start_launch_watchdog $$
-
-	"${launch[@]}" || exit_code=$?
-	run_post_launch_cmd
+		"${launch[@]}" || exit_code=$?
+		hook_status=0
+		run_post_launch_cmd || hook_status=$?
+		if (( hook_status != 0 )); then
+			warn "POST_LAUNCH_CMD failed (exit=$hook_status)"
+			(( exit_code == 0 )) && exit_code=$hook_status
+		fi
+	fi
 	playtime_record_end
 	inject_cleanup_launch_tracks "${steam_app_id:-}"
 	crash_guess_maybe_prompt "$exit_code"

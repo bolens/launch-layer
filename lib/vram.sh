@@ -190,6 +190,8 @@ cleanup_stale_launch() {
 
 	rm -f "$ACTIVE_LAUNCH_PID_FILE"
 	restore_nvidia_power_mode
+	declare -F restore_pipewire_low_latency >/dev/null 2>&1 && restore_pipewire_low_latency
+	declare -F restore_runtime_tuning >/dev/null 2>&1 && restore_runtime_tuning
 	if [[ -f "$VRAM_STATE_FILE" || -f "$VRAM_PID_STATE_FILE" ]] || (( $(get_vram_ref_count) > 0 )); then
 		resume_vram_hogs_force
 	fi
@@ -236,6 +238,7 @@ on_launch_exit() {
 	stop_launch_watchdog
 	restore_nvidia_power_mode
 	restore_pipewire_low_latency
+	restore_runtime_tuning
 	rm -f "$ACTIVE_LAUNCH_PID_FILE"
 	[[ "${VRAM_HOGS:-0}" == "1" ]] && resume_vram_hogs
 }

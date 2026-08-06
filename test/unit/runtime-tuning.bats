@@ -38,11 +38,14 @@ setup() {
 }
 
 @test "restore_pipewire_low_latency resets pipewire quantum via pw-metadata" {
-	run bash -c '
+	local tmp
+	tmp="$(temp_state_dir)"
+	run env XDG_STATE_HOME="$tmp/state" bash -c '
 		export CONFIG_DIR="'"$CONFIG_DIR"'"
 		export PIPEWIRE_LOW_LATENCY=1
 		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
 		source_lib runtime tools platform
+		touch "$PIPEWIRE_TUNING_STATE_FILE"
 		detect_audio_server() { echo pipewire; }
 		optional_tool_installed() { [[ "$1" == pw-metadata ]]; }
 		pw-metadata() { printf "pw-metadata %s\n" "$*"; return 0; }
@@ -50,6 +53,7 @@ setup() {
 	'
 	[[ $status -eq 0 ]]
 	[[ "$output" == *"pw-metadata -n settings 0 clock.force-quantum 0"* ]]
+	rm -rf "$tmp"
 }
 
 @test "find_malloc_library detects library under MALLOC_LIBRARY_SEARCH_ROOT" {

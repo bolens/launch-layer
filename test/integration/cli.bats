@@ -6,6 +6,31 @@ setup() {
 	bats_integration_setup
 }
 
+@test "failed post-launch hook still records final state" {
+	local tmp
+	tmp="$(mktemp -d)"
+	mkdir -p "$tmp/config/launch.d" "$tmp/games"
+	cat > "$tmp/config/launch.d/default.env" <<'EOF'
+POST_LAUNCH_CMD=false
+PLAYTIME_LOG=1
+GAME_PERFORMANCE=0
+GPU_POWER_CHECK=0
+NVIDIA_POWER_MODE=0
+GAMEMODE=0
+EOF
+	run env \
+		LAUNCHLAYER_CONFIG_DIR="$tmp/config" \
+		LAUNCHLAYER_GAMES_DIR="$tmp/games" \
+		XDG_STATE_HOME="$tmp/state" \
+		"$SCRIPT" /bin/true
+	[[ $status -eq 1 ]]
+	[[ "$output" == *"POST_LAUNCH_CMD failed"* ]]
+	grep -q 'exit=1' "$tmp/state/launchlayer/launch.log"
+	grep -q 'seconds=' "$tmp/state/launchlayer/playtime.log"
+	[[ ! -e "$tmp/state/launchlayer/active-launch.pid" ]]
+	rm -rf "$tmp"
+}
+
 teardown() {
 	bats_integration_teardown
 }
