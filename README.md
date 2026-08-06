@@ -755,6 +755,7 @@ make test-unit         # bats test/unit only
 make test-integration  # bats test/integration only
 make check             # shellcheck + check-hub-git + bats (shell gate)
 make check-hub-git     # fail if hub secrets are staged
+make check-dependency-pins # enforce exact deps, lock integrity, Action SHAs
 make test-hub          # hub unit + convex tests (via scripts/hub-pm.sh)
 make lint-hub          # hub ESLint + tsc
 make check-hub         # lint-hub + test-hub

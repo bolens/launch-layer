@@ -215,6 +215,8 @@ publish_token=<your-token>
 
 Recommend, similar-machines, and config download stay public (no token required). Published `env_content` / settings may not set remote-exec or game-mutating keys listed in [`share/launchlayer/hub-untrusted-keys.txt`](../share/launchlayer/hub-untrusted-keys.txt) (wrappers, `OVERRIDE_PROTON`, VRAM-hog controls, Conty, specialty runtimes, winetricks/registry, Special K / ReShade / inject paths, VR inject toggles, Block Internet, …). Convex `HUB_UNTRUSTED_ENV_KEYS` must match that file. `--hub-apply` strips those keys and unsafe `INCLUDE=` lines before writing a local file. Config import rejects tarballs whose members use absolute or `..` paths.
 
+Rate limits and download deduplication use a SHA-256 hash of one ingress-controlled client identity header. Set `HUB_TRUSTED_CLIENT_IP_HEADER` to a header that your proxy overwrites (default: `CF-Connecting-IP`); client-supplied forwarding fallbacks are ignored. Raw addresses are not stored. Rate-limit buckets expire after 24 hours and download-dedup records after 30 days via a daily bounded cleanup job.
+
 | Route | Auth | Rate limit (per client IP / min) |
 |-------|------|----------------------------------|
 | `GET /api/auth` | Public — returns `{ publish_auth_required: bool }` | — |
@@ -248,6 +250,7 @@ make test-unit         # bats test/unit
 make test-integration  # bats test/integration
 make check             # shellcheck + check-hub-git + bats (shell gate)
 make check-hub-git     # scripts/check-staged-hub-secrets.sh
+make check-dependency-pins # exact npm versions, lockfile integrity, Action SHAs
 make test-hub          # hub unit + convex tests (via scripts/hub-pm.sh)
 make lint-hub          # hub ESLint + tsc
 make check-hub         # lint-hub + test-hub
