@@ -39,16 +39,37 @@ export function rateLimitExceededError(): never {
  * those are trivial to rotate and bypass per-client caps.
  */
 export function trustedClientIdentity(request: Request): string {
-  const header =
-    process.env.HUB_TRUSTED_CLIENT_IP_HEADER?.trim().toLowerCase() ??
-    "cf-connecting-ip";
+  const header = process.env.HUB_TRUSTED_CLIENT_IP_HEADER?.trim().toLowerCase();
+  if (!header) {
+    throw new Error(
+      "CONFIG_ERROR: HUB_TRUSTED_CLIENT_IP_HEADER must name an ingress-controlled header",
+    );
+  }
   const value = request.headers.get(header)?.trim();
-  return value ? `ip:${value}` : "ip:unknown";
+  if (!value) {
+    throw new Error(
+      `CONFIG_ERROR: trusted client identity header ${header} is missing`,
+    );
+  }
+  return `ip:${value}`;
 }
 
-async function sha256(value: string): Promise<string> {
-  const bytes = new TextEncoder().encode(value);
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
+async function hmacSha256(value: string): Promise<string> {
+  const secret = process.env.HUB_IDENTIFIER_HASH_KEY?.trim();
+  if (!secret || secret.length < 32) {
+    throw new Error(
+      "CONFIG_ERROR: HUB_IDENTIFIER_HASH_KEY must contain at least 32 characters",
+    );
+  }
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const digest = await crypto.subtle.sign("HMAC", key, encoder.encode(value));
   return Array.from(new Uint8Array(digest), (byte) =>
     byte.toString(16).padStart(2, "0"),
   ).join("");
@@ -58,5 +79,5 @@ export async function requestIdentifier(
   request: Request,
   _body?: Record<string, unknown>,
 ): Promise<string> {
-  return `sha256:${await sha256(trustedClientIdentity(request))}`;
+  return `hmac-sha256:${await hmacSha256(trustedClientIdentity(request))}`;
 }
