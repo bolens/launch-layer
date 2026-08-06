@@ -1,7 +1,7 @@
 overrides:
   esbuild: 0.28.1
   # GHSA-96hv-2xvq-fx4p — convex 1.41.0 pins ws 8.20.1; force patched
-  ws: ">=8.21.0"
+  ws: 8.21.0
 
 onlyBuiltDependencies:
   - esbuild
