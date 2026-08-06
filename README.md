@@ -563,6 +563,8 @@ cp share/launchlayer/templates/hub.conf.example ~/.config/launchlayer/hub.conf
 
 Hub publish/delete is **fail-closed**: set `HUB_PUBLISH_TOKEN` on the Convex deployment and matching `publish_token` in `hub.conf`. For local open hubs only, set `HUB_ALLOW_OPEN_PUBLISH=1` on the deployment (never in production). Published configs cannot include remote-exec keys (`PRE_LAUNCH_CMD`, wrappers, `OVERRIDE_PROTON`, VRAM-hog controls); hub apply strips those if present. `INCLUDE=` paths must stay under `launch.d/`.
 
+Hub rate limiting also fails closed. Route the HTTP actions endpoint through an ingress that overwrites a client-identity header, then set `HUB_TRUSTED_CLIENT_IP_HEADER` to that header name and `HUB_IDENTIFIER_HASH_KEY` to at least 32 random characters. Direct clients must not be able to supply the trusted header.
+
 **Hub CLI commands:** [docs/cli.md § Community hub](docs/cli.md#community-hub)
 
 Also useful without the hub: `--suggest-config APPID|NAME [--apply]` ranks ProtonDB reports for this machine and can write allowlisted knobs into `games/<AppID>.env` ([docs/cli.md § Games and config](docs/cli.md#games-and-config)). TUI: **Games → *Game* → [Edit] Suggest from ProtonDB**.
