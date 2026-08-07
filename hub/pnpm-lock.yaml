@@ -13,12 +13,12 @@ importers:
   .:
     dependencies:
       convex:
-        specifier: ^1.42.3
-        version: 1.42.3
+        specifier: ^1.43.0
+        version: 1.43.0
     devDependencies:
       '@convex-dev/eslint-plugin':
         specifier: ^1.2.1
-        version: 1.2.2(convex@1.42.3)(eslint@9.39.5)(typescript@5.9.3)
+        version: 1.2.2(convex@1.43.0)(eslint@9.39.5)(typescript@5.9.3)
       '@edge-runtime/vm':
         specifier: ^5.0.0
         version: 5.0.0
@@ -30,7 +30,7 @@ importers:
         version: 26.1.2
       convex-test:
         specifier: ^0.0.54
-        version: 0.0.54(convex@1.42.3)
+        version: 0.0.54(convex@1.43.0)
       eslint:
         specifier: ^9.39.2
         version: 9.39.5
@@ -610,8 +610,8 @@ packages:
     peerDependencies:
       convex: ^1.32.0
 
-  convex@1.42.3:
-    resolution: {integrity: sha512-7Tz/lH6UlZdiqzLPF/zrlH6Rlo/DOp836dL+GZkUMEQ2jaGGNnBIiIDcOOiEqtfSehuQ65r/rdNMnb4LupowaA==}
+  convex@1.43.0:
+    resolution: {integrity: sha512-huZWEUZQYxIRG104o22ZI99HkviSEVltwezZRDi+pQDPrQbc5EoCPa4Y7pJDqUBQw9dc/iEEXj2/rLZg1j7Dww==}
     engines: {node: '>=18.0.0', npm: '>=7.0.0'}
     hasBin: true
     peerDependencies:
@@ -901,8 +901,8 @@ packages:
   ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
 
-  nanoid@3.3.16:
-    resolution: {integrity: sha512-bzlKTyNJ7+LdGIIwy8ijFpIqEQIvafahV7eYykJ8Cvh42EdJeODoJ6gUJXpQJvej1BddH8OqTXZNE/KfbWAu8Q==}
+  nanoid@3.3.18:
+    resolution: {integrity: sha512-DTg4MJbGMWkfi6VZFdNt2/caMbQy4Ou+Op/hJQvGEWcnVfoA1QA+xzRKAzw9jD6+GVOOeYr/mIcuDSdug6F6+w==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
@@ -947,16 +947,16 @@ packages:
     resolution: {integrity: sha512-RvwwcruNjI1ncT5xRakeyS9Lf8lcItv34KD+aif+VH9kduAyfYBipGh12274xtenIPZ119/R9BdTBa8gAwSh0A==}
     engines: {node: '>=12'}
 
-  postcss@8.5.25:
-    resolution: {integrity: sha512-DTPx3RWSSnWyzLxQnlH0rJP+EW5ekl16ZU4/psbIhA0e53kJfdgaN5vKM+xP7yJtXVu+nfdVFmlgFDEKAe4Pyw==}
+  postcss@8.5.26:
+    resolution: {integrity: sha512-u82N74LFzG8ca+dD8puPnplTXoGH4fTPpVGuIbt36G3qvNlkvfD0lEAZSxaly3KX8TS/L1A1gsCEmvKmBcVbkQ==}
     engines: {node: ^10 || ^12 || >=14}
 
   prelude-ls@1.2.1:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
     engines: {node: '>= 0.8.0'}
 
-  prettier@3.9.5:
-    resolution: {integrity: sha512-/FVl766LpUfB5vXgCYOYa0MeV/441Ia99AeICQIQFTY/Nw0roZwULcXpku5i1/m5kt/baz+s4Zogspd839HSMg==}
+  prettier@3.9.6:
+    resolution: {integrity: sha512-OpN0zzVdiaiAhxpuuj5efpIS4sY9j7bY6uR5mnj5yPzGkdkjNKSJeUThPb60Jw29QuAZgA4o+/iB49kFiaBX6g==}
     engines: {node: '>=14'}
     hasBin: true
 
@@ -1156,8 +1156,8 @@ packages:
     resolution: {integrity: sha512-BN22B5eaMMI9UMtjrGd5g5eCYPpCPDUy0FJXbYsaT5zYxjFOckS53SQDE3pWkVoWpHXVb3BrYcEN4Twa55B5cA==}
     engines: {node: '>=0.10.0'}
 
-  ws@8.21.0:
-    resolution: {integrity: sha512-Vsp28b7DRcimFQvrqu2Wek3z1iYxDCWqHYB8Qsnk/S4RfaCQzPGPyBNuVjJV3cd6UiKtUtp6sNM77gWvzcCH+g==}
+  ws@8.21.3:
+    resolution: {integrity: sha512-201TZ/kPWxoPr/OKWjquZR1SWKXcvxdH+e1xrx89b3YbmzLMFCLfnaG1HFIgWzJOEWZ7MvpK++odZufgYR50Rw==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -1174,11 +1174,11 @@ packages:
 
 snapshots:
 
-  '@convex-dev/eslint-plugin@1.2.2(convex@1.42.3)(eslint@9.39.5)(typescript@5.9.3)':
+  '@convex-dev/eslint-plugin@1.2.2(convex@1.43.0)(eslint@9.39.5)(typescript@5.9.3)':
     dependencies:
       '@typescript-eslint/types': 8.58.2
       '@typescript-eslint/utils': 8.58.2(eslint@9.39.5)(typescript@5.9.3)
-      convex: 1.42.3
+      convex: 1.43.0
     transitivePeerDependencies:
       - eslint
       - supports-color
@@ -1671,15 +1671,15 @@ snapshots:
 
   convert-source-map@2.0.0: {}
 
-  convex-test@0.0.54(convex@1.42.3):
+  convex-test@0.0.54(convex@1.43.0):
     dependencies:
-      convex: 1.42.3
+      convex: 1.43.0
 
-  convex@1.42.3:
+  convex@1.43.0:
     dependencies:
       esbuild: 0.28.1
-      prettier: 3.9.5
-      ws: 8.21.0
+      prettier: 3.9.6
+      ws: 8.21.3
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -1949,7 +1949,7 @@ snapshots:
 
   ms@2.1.3: {}
 
-  nanoid@3.3.16: {}
+  nanoid@3.3.18: {}
 
   natural-compare@1.4.0: {}
 
@@ -1986,15 +1986,15 @@ snapshots:
 
   picomatch@4.0.5: {}
 
-  postcss@8.5.25:
+  postcss@8.5.26:
     dependencies:
-      nanoid: 3.3.16
+      nanoid: 3.3.18
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
   prelude-ls@1.2.1: {}
 
-  prettier@3.9.5: {}
+  prettier@3.9.6: {}
 
   punycode@2.3.1: {}
 
@@ -2094,7 +2094,7 @@ snapshots:
     dependencies:
       lightningcss: 1.33.0
       picomatch: 4.0.5
-      postcss: 8.5.25
+      postcss: 8.5.26
       rolldown: 1.0.3
       tinyglobby: 0.2.17
     optionalDependencies:
@@ -2142,6 +2142,6 @@ snapshots:
 
   word-wrap@1.2.5: {}
 
-  ws@8.21.0: {}
+  ws@8.21.3: {}
 
   yocto-queue@0.1.0: {}
