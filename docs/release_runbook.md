@@ -99,11 +99,11 @@ git tag -a "vX.Y.Z" -m "vX.Y.Z"
 git push origin "vX.Y.Z"
 
 gh release create "vX.Y.Z" --title "vX.Y.Z" --notes-file - <<EOF
-See [CHANGELOG.md](https://github.com/bolens/LaunchLayer/blob/main/CHANGELOG.md) for details.
+See [CHANGELOG.md](https://github.com/bolens/launch-layer/blob/main/CHANGELOG.md) for details.
 
 ## Install
 \`\`\`bash
-git clone https://github.com/bolens/LaunchLayer.git ~/launchlayer
+git clone https://github.com/bolens/launch-layer.git ~/launchlayer
 cd ~/launchlayer
 ./launchlayer --setup
 \`\`\`

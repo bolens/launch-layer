@@ -9,7 +9,7 @@
 *One Steam launch string. Per-game configs. GameMode, Gamescope, MangoHUD, and more — assembled automatically.*
 
 [![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](LICENSE)
-[![CI](https://github.com/bolens/LaunchLayer/actions/workflows/ci.yml/badge.svg)](https://github.com/bolens/LaunchLayer/actions/workflows/ci.yml)
+[![CI](https://github.com/bolens/launch-layer/actions/workflows/ci.yml/badge.svg)](https://github.com/bolens/launch-layer/actions/workflows/ci.yml)
 [![Shell](https://img.shields.io/badge/shell-bash-4EAA25?logo=gnu-bash&logoColor=white)](launchlayer)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20BSD%20%7C%20macOS%20%7C%20WSL2-1793D2?logo=linux&logoColor=white)](launch.d/profiles/)
 
@@ -102,7 +102,7 @@ Launch chain:
 1. **Clone to a stable path** (Steam needs a fixed absolute path in Launch Options):
 
 ```bash
-git clone https://github.com/bolens/LaunchLayer.git ~/launchlayer
+git clone https://github.com/bolens/launch-layer.git ~/launchlayer
 cd ~/launchlayer
 ```
 
@@ -810,7 +810,7 @@ This project is [CC BY-NC-SA 4.0](LICENSE). Commercial use requires separate per
 
 ## Contributing
 
-Issues and pull requests are welcome at [github.com/bolens/LaunchLayer](https://github.com/bolens/LaunchLayer).
+Issues and pull requests are welcome at [github.com/bolens/launch-layer](https://github.com/bolens/launch-layer).
 
 ```bash
 make check      # shellcheck + hub secret guard + bats
@@ -830,11 +830,11 @@ make test       # bats only
 
 ## Star history
 
-<a href="https://star-history.com/#bolens/LaunchLayer&Date">
+<a href="https://star-history.com/#bolens/launch-layer&Date">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=bolens/LaunchLayer&type=Date&theme=dark" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=bolens/LaunchLayer&type=Date" />
-    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=bolens/LaunchLayer&type=Date" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=bolens/launch-layer&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=bolens/launch-layer&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=bolens/launch-layer&type=Date" />
   </picture>
 </a>
 
@@ -846,4 +846,4 @@ make test       # bats only
 
 Third-party tools keep their own licenses. See [docs/third-party.md](docs/third-party.md) for upstream links, SPDX notes, purchase gates (e.g. Lossless Scaling for lsfg-vk), and redistrib rules. LaunchLayer never vendors proprietary/GPL binaries into this repository.
 
-You may use, modify, and share this project for personal or non-commercial purposes if you credit **bolens**, link to [github.com/bolens/LaunchLayer](https://github.com/bolens/LaunchLayer), and release any derivatives under the same terms. Commercial use requires separate permission.
+You may use, modify, and share this project for personal or non-commercial purposes if you credit **bolens**, link to [github.com/bolens/launch-layer](https://github.com/bolens/launch-layer), and release any derivatives under the same terms. Commercial use requires separate permission.
