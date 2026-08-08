@@ -185,7 +185,7 @@ HTTP_TIMEOUT_SEC = 15
 def fetch_json(url: str):
     req = urllib.request.Request(
         url,
-        headers={"User-Agent": "LaunchLayer/1.0 (+https://github.com/bolens/LaunchLayer; protondb-suggest)"},
+        headers={"User-Agent": "LaunchLayer/1.0 (+https://github.com/bolens/launch-layer; protondb-suggest)"},
     )
     with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT_SEC) as resp:
         return json.loads(resp.read().decode("utf-8"))
