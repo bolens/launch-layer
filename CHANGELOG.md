@@ -77,7 +77,7 @@ and this project uses [Semantic Versioning](https://semver.org/).
 - Modular `lib/` layout, TUI, backups, profiles, and broad platform detection
 - LaunchLayer Hub client + Convex backend for sharing per-game configs
 
-[Unreleased]: https://github.com/bolens/LaunchLayer/compare/v0.11.0...HEAD
-[0.11.0]: https://github.com/bolens/LaunchLayer/releases/tag/v0.11.0
-[0.10.0]: https://github.com/bolens/LaunchLayer/releases/tag/v0.10.0
-[0.9.0]: https://github.com/bolens/LaunchLayer/tree/2f8d8bc0dda93bf55184f24eb784d903387368b2
+[Unreleased]: https://github.com/bolens/launch-layer/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/bolens/launch-layer/releases/tag/v0.11.0
+[0.10.0]: https://github.com/bolens/launch-layer/releases/tag/v0.10.0
+[0.9.0]: https://github.com/bolens/launch-layer/tree/2f8d8bc0dda93bf55184f24eb784d903387368b2

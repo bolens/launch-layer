@@ -13,12 +13,12 @@ importers:
   .:
     dependencies:
       convex:
-        specifier: ^1.42.3
-        version: 1.42.3
+        specifier: ^1.43.0
+        version: 1.43.0
     devDependencies:
       '@convex-dev/eslint-plugin':
         specifier: ^1.2.1
-        version: 1.2.2(convex@1.42.3)(eslint@9.39.5)(typescript@5.9.3)
+        version: 1.2.2(convex@1.43.0)(eslint@9.39.5)(typescript@5.9.3)
       '@edge-runtime/vm':
         specifier: ^5.0.0
         version: 5.0.0
@@ -30,13 +30,13 @@ importers:
         version: 26.1.2
       convex-test:
         specifier: ^0.0.55
-        version: 0.0.55(convex@1.42.3)
+        version: 0.0.55(convex@1.43.0)
       eslint:
         specifier: ^9.39.2
         version: 9.39.5
       tsx:
         specifier: ^4.23.5
-        version: 4.23.5
+        version: 4.23.11
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -45,7 +45,7 @@ importers:
         version: 8.66.0(eslint@9.39.5)(typescript@5.9.3)
       vitest:
         specifier: ^4.1.10
-        version: 4.1.10(@edge-runtime/vm@5.0.0)(@types/node@26.1.2)(vite@8.0.16(@types/node@26.1.2)(esbuild@0.28.1)(tsx@4.23.5))
+        version: 4.1.10(@edge-runtime/vm@5.0.0)(@types/node@26.1.2)(vite@8.0.16(@types/node@26.1.2)(esbuild@0.28.1)(tsx@4.23.11))
 
 packages:
 
@@ -610,8 +610,8 @@ packages:
     peerDependencies:
       convex: ^1.43.0
 
-  convex@1.42.3:
-    resolution: {integrity: sha512-7Tz/lH6UlZdiqzLPF/zrlH6Rlo/DOp836dL+GZkUMEQ2jaGGNnBIiIDcOOiEqtfSehuQ65r/rdNMnb4LupowaA==}
+  convex@1.43.0:
+    resolution: {integrity: sha512-huZWEUZQYxIRG104o22ZI99HkviSEVltwezZRDi+pQDPrQbc5EoCPa4Y7pJDqUBQw9dc/iEEXj2/rLZg1j7Dww==}
     engines: {node: '>=18.0.0', npm: '>=7.0.0'}
     hasBin: true
     peerDependencies:
@@ -955,8 +955,8 @@ packages:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
     engines: {node: '>= 0.8.0'}
 
-  prettier@3.9.5:
-    resolution: {integrity: sha512-/FVl766LpUfB5vXgCYOYa0MeV/441Ia99AeICQIQFTY/Nw0roZwULcXpku5i1/m5kt/baz+s4Zogspd839HSMg==}
+  prettier@3.9.6:
+    resolution: {integrity: sha512-OpN0zzVdiaiAhxpuuj5efpIS4sY9j7bY6uR5mnj5yPzGkdkjNKSJeUThPb60Jw29QuAZgA4o+/iB49kFiaBX6g==}
     engines: {node: '>=14'}
     hasBin: true
 
@@ -1031,8 +1031,8 @@ packages:
   tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
 
-  tsx@4.23.5:
-    resolution: {integrity: sha512-rw55FUaqOoI7RvlQwLbhO4nSDApnQ4/CykPuiQ/EPvtrX3WA9Ig55jIt9VvbBJbzJuj12ueRu4PMZ2SxPVbihg==}
+  tsx@4.23.11:
+    resolution: {integrity: sha512-Ry2oTEUnhBdeEdWIztY8kf3/nBGnPnjMLVGL0YfdRXMORuPER5NlKmayqxtxRxwB1xBN+RivRaJfe7PM1rtiyw==}
     engines: {node: '>=18.0.0'}
     hasBin: true
 
@@ -1156,8 +1156,8 @@ packages:
     resolution: {integrity: sha512-BN22B5eaMMI9UMtjrGd5g5eCYPpCPDUy0FJXbYsaT5zYxjFOckS53SQDE3pWkVoWpHXVb3BrYcEN4Twa55B5cA==}
     engines: {node: '>=0.10.0'}
 
-  ws@8.21.0:
-    resolution: {integrity: sha512-Vsp28b7DRcimFQvrqu2Wek3z1iYxDCWqHYB8Qsnk/S4RfaCQzPGPyBNuVjJV3cd6UiKtUtp6sNM77gWvzcCH+g==}
+  ws@8.21.3:
+    resolution: {integrity: sha512-201TZ/kPWxoPr/OKWjquZR1SWKXcvxdH+e1xrx89b3YbmzLMFCLfnaG1HFIgWzJOEWZ7MvpK++odZufgYR50Rw==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -1174,11 +1174,11 @@ packages:
 
 snapshots:
 
-  '@convex-dev/eslint-plugin@1.2.2(convex@1.42.3)(eslint@9.39.5)(typescript@5.9.3)':
+  '@convex-dev/eslint-plugin@1.2.2(convex@1.43.0)(eslint@9.39.5)(typescript@5.9.3)':
     dependencies:
       '@typescript-eslint/types': 8.58.2
       '@typescript-eslint/utils': 8.58.2(eslint@9.39.5)(typescript@5.9.3)
-      convex: 1.42.3
+      convex: 1.43.0
     transitivePeerDependencies:
       - eslint
       - supports-color
@@ -1586,13 +1586,13 @@ snapshots:
       chai: 6.2.2
       tinyrainbow: 3.1.0
 
-  '@vitest/mocker@4.1.10(vite@8.0.16(@types/node@26.1.2)(esbuild@0.28.1)(tsx@4.23.5))':
+  '@vitest/mocker@4.1.10(vite@8.0.16(@types/node@26.1.2)(esbuild@0.28.1)(tsx@4.23.11))':
     dependencies:
       '@vitest/spy': 4.1.10
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 8.0.16(@types/node@26.1.2)(esbuild@0.28.1)(tsx@4.23.5)
+      vite: 8.0.16(@types/node@26.1.2)(esbuild@0.28.1)(tsx@4.23.11)
 
   '@vitest/pretty-format@4.1.10':
     dependencies:
@@ -1671,15 +1671,15 @@ snapshots:
 
   convert-source-map@2.0.0: {}
 
-  convex-test@0.0.55(convex@1.42.3):
+  convex-test@0.0.55(convex@1.43.0):
     dependencies:
-      convex: 1.42.3
+      convex: 1.43.0
 
-  convex@1.42.3:
+  convex@1.43.0:
     dependencies:
       esbuild: 0.28.1
-      prettier: 3.9.5
-      ws: 8.21.0
+      prettier: 3.9.6
+      ws: 8.21.3
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -1994,7 +1994,7 @@ snapshots:
 
   prelude-ls@1.2.1: {}
 
-  prettier@3.9.5: {}
+  prettier@3.9.6: {}
 
   punycode@2.3.1: {}
 
@@ -2061,7 +2061,7 @@ snapshots:
   tslib@2.8.1:
     optional: true
 
-  tsx@4.23.5:
+  tsx@4.23.11:
     dependencies:
       esbuild: 0.28.1
     optionalDependencies:
@@ -2090,7 +2090,7 @@ snapshots:
     dependencies:
       punycode: 2.3.1
 
-  vite@8.0.16(@types/node@26.1.2)(esbuild@0.28.1)(tsx@4.23.5):
+  vite@8.0.16(@types/node@26.1.2)(esbuild@0.28.1)(tsx@4.23.11):
     dependencies:
       lightningcss: 1.33.0
       picomatch: 4.0.5
@@ -2101,12 +2101,12 @@ snapshots:
       '@types/node': 26.1.2
       esbuild: 0.28.1
       fsevents: 2.3.3
-      tsx: 4.23.5
+      tsx: 4.23.11
 
-  vitest@4.1.10(@edge-runtime/vm@5.0.0)(@types/node@26.1.2)(vite@8.0.16(@types/node@26.1.2)(esbuild@0.28.1)(tsx@4.23.5)):
+  vitest@4.1.10(@edge-runtime/vm@5.0.0)(@types/node@26.1.2)(vite@8.0.16(@types/node@26.1.2)(esbuild@0.28.1)(tsx@4.23.11)):
     dependencies:
       '@vitest/expect': 4.1.10
-      '@vitest/mocker': 4.1.10(vite@8.0.16(@types/node@26.1.2)(esbuild@0.28.1)(tsx@4.23.5))
+      '@vitest/mocker': 4.1.10(vite@8.0.16(@types/node@26.1.2)(esbuild@0.28.1)(tsx@4.23.11))
       '@vitest/pretty-format': 4.1.10
       '@vitest/runner': 4.1.10
       '@vitest/snapshot': 4.1.10
@@ -2123,7 +2123,7 @@ snapshots:
       tinyexec: 1.2.4
       tinyglobby: 0.2.17
       tinyrainbow: 3.1.0
-      vite: 8.0.16(@types/node@26.1.2)(esbuild@0.28.1)(tsx@4.23.5)
+      vite: 8.0.16(@types/node@26.1.2)(esbuild@0.28.1)(tsx@4.23.11)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@edge-runtime/vm': 5.0.0
@@ -2142,6 +2142,6 @@ snapshots:
 
   word-wrap@1.2.5: {}
 
-  ws@8.21.0: {}
+  ws@8.21.3: {}
 
   yocto-queue@0.1.0: {}
