@@ -4,6 +4,16 @@ set -euo pipefail
 
 status=0
 
+workflow_uses_lines() {
+	if command -v rg >/dev/null 2>&1; then
+		rg -n --glob '*.yml' --glob '*.yaml' \
+			'^[[:space:]]*(-[[:space:]]*)?uses:' .github/workflows
+	else
+		grep -R -n -E --include='*.yml' --include='*.yaml' \
+			'^[[:space:]]*(-[[:space:]]*)?uses:' .github/workflows || true
+	fi
+}
+
 while IFS=: read -r file line content; do
 	ref="${content##*@}"
 	ref="${ref%%[[:space:]#]*}"
@@ -14,8 +24,7 @@ while IFS=: read -r file line content; do
 		status=1
 	fi
 done < <(
-	rg -n --glob '*.yml' --glob '*.yaml' \
-		'^[[:space:]]*(-[[:space:]]*)?uses:' .github/workflows
+	workflow_uses_lines
 )
 
 python3 - <<'PY' || status=1

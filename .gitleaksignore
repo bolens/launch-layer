@@ -1,0 +1,2 @@
+# Synthetic HMAC key used only by the rate-limit unit test.
+d44e2cbc49df70e437fcbcb37b6b741c50c19154:hub/convex/lib/rate_limit.test.ts:generic-api-key:19

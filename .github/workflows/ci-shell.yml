@@ -61,7 +61,7 @@ jobs:
 
       - name: Install Bats on macOS
         if: runner.os == 'macOS'
-        run: brew install bats-core
+        run: brew install bash bats-core
 
       - name: Platform-sensitive unit tests without systemd
         env:
