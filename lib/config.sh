@@ -29,9 +29,19 @@ load_env_file() {
 	local line key value
 	while IFS= read -r line || [[ -n "$line" ]]; do
 		# Strip comments only when they occur outside quoted values.
-		local cleaned="" char quote="" i
+		local cleaned="" char quote="" escaped=0 i
 		for ((i = 0; i < ${#line}; i++)); do
 			char="${line:i:1}"
+			if [[ "$quote" == '"' && "$escaped" == "1" ]]; then
+				cleaned+="$char"
+				escaped=0
+				continue
+			fi
+			if [[ "$quote" == '"' && "$char" == '\' ]]; then
+				cleaned+="$char"
+				escaped=1
+				continue
+			fi
 			if [[ -z "$quote" && "$char" == "#" ]]; then
 				break
 			fi

@@ -37,6 +37,36 @@ setup() {
 	[[ "$output" == *"NETWORK_TUNE=1 skipped: sudo requires a password"* ]]
 }
 
+@test "optional tuning skips mutations when restore state is unwritable" {
+	run env XDG_STATE_HOME=/proc bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		export NETWORK_TUNE=1 GAME_NIC=eth0
+		export PIPEWIRE_LOW_LATENCY=1 GAME_PERFORMANCE=1
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib runtime tools platform
+		sudo() { return 0; }
+		command_available() {
+			[[ "$1" == ip || "$1" == powerprofilesctl ]]
+		}
+		ip() {
+			[[ "$1 $2" == "link show" ]] && return 0
+			echo network-mutated
+		}
+		detect_audio_server() { echo pipewire; }
+		optional_tool_installed() { [[ "$1" == pw-metadata ]]; }
+		pw-metadata() { echo pipewire-mutated; }
+		powerprofilesctl() {
+			[[ "$1" == get ]] && echo balanced || echo cpu-mutated
+		}
+		apply_network_tuning
+		apply_pipewire_low_latency
+		apply_cpu_performance
+	' 2>&1
+	[[ $status -eq 0 ]]
+	[[ "$output" == *"cannot save restore state"* ]]
+	[[ "$output" != *"-mutated"* ]]
+}
+
 @test "restore_pipewire_low_latency resets pipewire quantum via pw-metadata" {
 	local tmp
 	tmp="$(temp_state_dir)"

@@ -104,6 +104,21 @@ EOF
 	rm -f "$tmp"
 }
 
+@test "load_env_file preserves hashes after escaped quotes" {
+	local tmp
+	tmp="$(mktemp)"
+	printf '%s\n' 'PRE_LAUNCH_CMD="printf \"#marker\"" # comment' > "$tmp"
+	run env CONFIG_DIR="$CONFIG_DIR" bash -c '
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform keys config
+		load_env_file "'"$tmp"'" 1
+		printf "%s\n" "$PRE_LAUNCH_CMD"
+	'
+	rm -f "$tmp"
+	[[ $status -eq 0 ]]
+	[[ "$output" == 'printf \"#marker\"' ]]
+}
+
 @test "is_safe_include_path rejects traversal and absolute paths" {
 	run bash -c '
 		export CONFIG_DIR="'"$CONFIG_DIR"'"
