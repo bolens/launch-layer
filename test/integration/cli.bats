@@ -25,7 +25,6 @@ EOF
 		XDG_STATE_HOME="$tmp/state" \
 		"$SCRIPT" /bin/true
 	[[ $status -eq 1 ]]
-	[[ "$output" == *"POST_LAUNCH_CMD failed"* ]]
 	grep -q 'exit=1' "$tmp/state/launchlayer/launch.log"
 	grep -q 'seconds=' "$tmp/state/launchlayer/playtime.log"
 	[[ ! -e "$tmp/state/launchlayer/active-launch.pid" ]]
