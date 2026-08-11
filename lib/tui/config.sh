@@ -246,7 +246,7 @@ tui_advanced_key_prompt() {
 		SBS_VR_PLAYER) printf '%s' "SBS VR player hint (assist-only)" ;;
 		FLAT2VR_SOURCE) printf '%s' "Flat2VR directory (assist-only)" ;;
 		CRASH_GUESS_TIMEOUT) printf '%s' "Crash-guess seconds (0 with CRASH_GUESS=1 → default 5)" ;;
-		INJECT_SHA256) printf '%s' "Optional SHA256 for inject_fetch_url" ;;
+		INJECT_SHA256) printf '%s' "Required SHA256 for remote inject downloads" ;;
 		GAMESCOPE_ADAPTIVE_SYNC) printf '%s' "VRR: empty(auto)|auto|0|1 — picker" ;;
 		SHADER_CACHE_MAX_GB) printf '%s' "Shader cache max GB" ;;
 		SHADER_CACHE_BOOST_GB) printf '%s' "Shader cache boost size GB" ;;

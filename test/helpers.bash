@@ -144,6 +144,9 @@ bats_integration_setup() {
 	source "$BATS_TEST_DIRNAME/../helpers.bash"
 	BATS_SAVED_HOME="${HOME:-}"
 	BATS_SAVED_XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-}"
+	BATS_SAVED_XDG_STATE_HOME="${XDG_STATE_HOME:-}"
+	BATS_TEST_STATE_HOME="$(mktemp -d)"
+	export XDG_STATE_HOME="$BATS_TEST_STATE_HOME"
 	SCRIPT="$(launchlayer_script)"
 	REPO_ROOT="$(launchlayer_root)"
 	export SCRIPT REPO_ROOT
@@ -157,6 +160,12 @@ bats_integration_teardown() {
 		export XDG_CONFIG_HOME="$BATS_SAVED_XDG_CONFIG_HOME"
 	else
 		unset XDG_CONFIG_HOME
+	fi
+	rm -rf "${BATS_TEST_STATE_HOME:-}"
+	if [[ -n "${BATS_SAVED_XDG_STATE_HOME:-}" ]]; then
+		export XDG_STATE_HOME="$BATS_SAVED_XDG_STATE_HOME"
+	else
+		unset XDG_STATE_HOME
 	fi
 	unset LAUNCHLAYER_HUB_FINGERPRINT_LEVEL
 	stop_hub_mock_server

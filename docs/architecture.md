@@ -205,6 +205,8 @@ openssl rand -hex 32
 
 # Set on Convex (dev or prod deployment)
 cd hub && npx convex env set HUB_PUBLISH_TOKEN '<your-token>'
+npx convex env set HUB_TRUSTED_CLIENT_IP_HEADER 'CF-Connecting-IP'
+npx convex env set HUB_IDENTIFIER_HASH_KEY "$(openssl rand -hex 32)"
 
 # Match in ~/.config/launchlayer/hub.conf
 publish_token=<your-token>
@@ -214,6 +216,8 @@ publish_token=<your-token>
 ```
 
 Recommend, similar-machines, and config download stay public (no token required). Published `env_content` / settings may not set remote-exec or game-mutating keys listed in [`share/launchlayer/hub-untrusted-keys.txt`](../share/launchlayer/hub-untrusted-keys.txt) (wrappers, `OVERRIDE_PROTON`, VRAM-hog controls, Conty, specialty runtimes, winetricks/registry, Special K / ReShade / inject paths, VR inject toggles, Block Internet, …). Convex `HUB_UNTRUSTED_ENV_KEYS` must match that file. `--hub-apply` strips those keys and unsafe `INCLUDE=` lines before writing a local file. Config import rejects tarballs whose members use absolute or `..` paths.
+
+Rate limits and download deduplication use HMAC-SHA-256 over one ingress-controlled client identity header. Set `HUB_TRUSTED_CLIENT_IP_HEADER` to a header that your proxy overwrites and set `HUB_IDENTIFIER_HASH_KEY` to at least 32 random characters; the hub fails closed when either setting or the trusted header is missing. Client-supplied forwarding fallbacks are ignored and raw addresses are not stored. Rotating the HMAC key resets deduplication identities. Rate-limit buckets expire after 24 hours and download-dedup records after 30 days via a daily bounded cleanup job.
 
 | Route | Auth | Rate limit (per client IP / min) |
 |-------|------|----------------------------------|
@@ -248,6 +252,7 @@ make test-unit         # bats test/unit
 make test-integration  # bats test/integration
 make check             # shellcheck + check-hub-git + bats (shell gate)
 make check-hub-git     # scripts/check-staged-hub-secrets.sh
+make check-dependency-pins # exact npm versions, lockfile integrity, Action SHAs
 make test-hub          # hub unit + convex tests (via scripts/hub-pm.sh)
 make lint-hub          # hub ESLint + tsc
 make check-hub         # lint-hub + test-hub

@@ -91,6 +91,9 @@ steaml
 # Test artifacts
 test-results/
 .bats-logs/
+coverage/
+__pycache__/
+*.py[cod]
 
 # Packaging / install scratch
 dist/

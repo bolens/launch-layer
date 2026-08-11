@@ -258,6 +258,39 @@ setup() {
 	[[ "$output" == *"trav_bad"* ]]
 }
 
+@test "_tar_archive_members_are_safe rejects links" {
+	local tmp archive
+	tmp="$(mktemp -d)"
+	mkdir -p "$tmp/bundle"
+	ln -s /etc/hosts "$tmp/bundle/escape"
+	archive="$tmp/link.tar.gz"
+	tar -C "$tmp" -czf "$archive" bundle
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform cli inspect
+		_tar_archive_members_are_safe "'"$archive"'"
+	'
+	[[ $status -eq 1 ]]
+	rm -rf "$tmp"
+}
+
+@test "_tar_archive_members_are_safe enforces expanded size limit" {
+	local tmp archive
+	tmp="$(mktemp -d)"
+	printf '1234567890' > "$tmp/file"
+	archive="$tmp/large.tar.gz"
+	tar -C "$tmp" -czf "$archive" file
+	run env LAUNCHLAYER_IMPORT_MAX_BYTES=5 bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform cli inspect
+		_tar_archive_members_are_safe "'"$archive"'"
+	'
+	[[ $status -eq 1 ]]
+	rm -rf "$tmp"
+}
+
 @test "import_config rejects archives with unsafe member paths" {
 	local tmp archive
 	tmp="$(mktemp -d)"

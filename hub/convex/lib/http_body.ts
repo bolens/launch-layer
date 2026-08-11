@@ -1,5 +1,9 @@
 export const MAX_HTTP_BODY_BYTES = 256 * 1024;
 
+export function utf8ByteLength(value: string): number {
+  return new TextEncoder().encode(value).byteLength;
+}
+
 export function assertRequestBodySize(
   contentLength: number,
   bodyLength: number,

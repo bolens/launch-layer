@@ -31,6 +31,7 @@ EOF
 	[[ $status -eq 0 ]]
 	[[ "$output" == *'"file_count"'* ]]
 	[[ -f "$archive" ]]
+	[[ "$(stat -c %a "$archive")" == 600 ]]
 	python3 -c 'import json,sys; d=json.loads(sys.argv[1]); assert d["file_count"]>=3' "$output"
 
 	rm -f "$tmp/games/42424242.env"
@@ -43,6 +44,26 @@ EOF
 	python3 -c 'import json,sys; d=json.loads(sys.argv[1]); assert d["applied"]>=1' "$output"
 
 	rm -rf "$tmp" "$dest"
+}
+
+@test "import-config dry-run does not create games directory" {
+	local tmp source archive games
+	tmp="$(mktemp -d)"
+	source="$tmp/source"
+	games="$tmp/missing-games"
+	mkdir -p "$source/launch.d/presets" "$source/games"
+	echo 'GAMEMODE=1' > "$source/launch.d/default.env"
+	echo 'MANGOHUD=0' > "$source/launch.d/presets/standard.env"
+	echo 'INCLUDE=presets/standard.env' > "$source/games/42424242.env"
+	archive="$tmp/export.tar.gz"
+	run env LAUNCHLAYER_CONFIG_DIR="$source" LAUNCHLAYER_GAMES_DIR="$source/games" \
+		"$SCRIPT" --export-config --output "$archive"
+	[[ $status -eq 0 ]]
+	run env LAUNCHLAYER_CONFIG_DIR="$source" LAUNCHLAYER_GAMES_DIR="$games" \
+		"$SCRIPT" --import-config "$archive" --dry-run
+	[[ $status -eq 0 ]]
+	[[ ! -e "$games" ]]
+	rm -rf "$tmp"
 }
 
 @test "export-config defaults output to backup.conf backup_dir" {
@@ -533,7 +554,7 @@ EOF
 	mkdir -p "$tmp/launch.d/presets" "$tmp/games" "$outdir"
 	echo 'GAMEMODE=1' > "$tmp/launch.d/default.env"
 	echo 'MANGOHUD=0' > "$tmp/launch.d/presets/standard.env"
-	echo 'LOCAL=0' > "$tmp/launch.d/local.env"
+	echo 'DEBUG=0' > "$tmp/launch.d/local.env"
 	cat > "$tmp/games/42424242.env" <<'EOF'
 # Restore Game (Steam AppID 42424242)
 INCLUDE=presets/standard.env
@@ -543,7 +564,7 @@ EOF
 	[[ $status -eq 0 ]]
 
 	echo 'GAMEMODE=0' > "$tmp/launch.d/default.env"
-	echo 'LOCAL=1' > "$tmp/launch.d/local.env"
+	echo 'DEBUG=1' > "$tmp/launch.d/local.env"
 	echo 'INCLUDE=presets/standard.env' > "$tmp/games/42424242.env"
 	run env \
 		LAUNCHLAYER_CONFIG_DIR="$tmp" \
@@ -557,7 +578,7 @@ EOF
 	[[ "$output" == *"games/42424242.env"* ]]
 	[[ "$output" == *"launch.d/local.env"* ]]
 	grep -q 'GAMEMODE=1' "$tmp/launch.d/default.env"
-	grep -q 'LOCAL=0' "$tmp/launch.d/local.env"
+	grep -q 'DEBUG=0' "$tmp/launch.d/local.env"
 	grep -q 'from-backup' "$tmp/games/42424242.env"
 	python3 -c 'import json,sys; d=json.loads(sys.argv[1]); assert d["applied"]>=3' "$output"
 

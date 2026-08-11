@@ -69,11 +69,14 @@ jobs:
       - name: Download actionlint
         env:
           ACTIONLINT_VERSION: "1.7.12"
+          ACTIONLINT_SHA256: "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"
         run: |
           set -euo pipefail
-          bash <(curl --proto '=https' --tlsv1.2 -fsSL \
-            "https://raw.githubusercontent.com/rhysd/actionlint/v${ACTIONLINT_VERSION}/scripts/download-actionlint.bash") \
-            "${ACTIONLINT_VERSION}"
+          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl --proto '=https' --tlsv1.2 -fsSLO \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${archive}"
+          echo "${ACTIONLINT_SHA256}  ${archive}" | sha256sum --check -
+          tar -xzf "${archive}" actionlint
 
       - name: Run actionlint
         run: ./actionlint -color
@@ -83,6 +86,33 @@ jobs:
     if: needs.changes.outputs.shell == 'true'
     uses: ./.github/workflows/ci-shell.yml
 
+  supply_chain:
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Enforce dependency pins and integrity hashes
+        run: bash scripts/check-dependency-pins.sh
+
+      - name: Download Gitleaks
+        env:
+          GITLEAKS_VERSION: "8.30.1"
+          GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+        run: |
+          set -euo pipefail
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl --proto '=https' --tlsv1.2 -fsSLO \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}"
+          echo "${GITLEAKS_SHA256}  ${archive}" | sha256sum --check -
+          tar -xzf "${archive}" gitleaks
+
+      - name: Scan repository history for secrets
+        run: ./gitleaks git --redact --no-banner .
+
   hub:
     needs: changes
     if: needs.changes.outputs.hub == 'true'
@@ -91,7 +121,7 @@ jobs:
   # Always runs. Require this job name ("ci") in branch protection.
   # Succeeds when path-filtered suites are skipped; fails if a needed suite failed.
   ci:
-    needs: [changes, actionlint, shell, hub]
+    needs: [changes, actionlint, shell, hub, supply_chain]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -106,11 +136,17 @@ jobs:
           hub_result='${{ needs.hub.result }}'
           changes_result='${{ needs.changes.result }}'
           actionlint_result='${{ needs.actionlint.result }}'
+          supply_chain_result='${{ needs.supply_chain.result }}'
 
           echo "changes=$changes_result actionlint_needed=$workflows_needed actionlint=$actionlint_result shell_needed=$shell_needed shell=$shell_result hub_needed=$hub_needed hub=$hub_result"
 
           if [[ "$changes_result" != "success" ]]; then
             echo "changes job did not succeed"
+            exit 1
+          fi
+
+          if [[ "$supply_chain_result" != "success" ]]; then
+            echo "supply-chain job did not succeed: $supply_chain_result"
             exit 1
           fi
 

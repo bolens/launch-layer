@@ -8,7 +8,7 @@ LAUNCHLAYER_BACKUP_EXPORT_LOADED=1
 export_config() {
 	local output=${1:-} include_local=${2:-0} include_profiles=${3:-1} include_tui=${4:-0} json=${5:-0}
 	local -a files=()
-	local staging tmpdir rel abs output_abs file_count tui_path
+	local staging tmpdir rel abs output_abs output_tmp file_count tui_path
 	local -a tar_members=(manifest.json)
 
 	command_required_or_fail tar "Config export" || return 1
@@ -61,10 +61,17 @@ export_config() {
 
 	_write_config_bundle_manifest "$staging" "$include_local" "$include_profiles" "$include_tui"
 
+	output_tmp="$(mktemp "$(dirname "$output_abs")/.launchlayer-export.XXXXXX")" || return 1
 	(
+		umask 077
 		cd "$staging" || exit 1
-		tar -czf "$output_abs" "${tar_members[@]}"
-	)
+		tar -czf "$output_tmp" "${tar_members[@]}"
+	) || {
+		rm -f "$output_tmp"
+		return 1
+	}
+	chmod 600 "$output_tmp"
+	mv -f "$output_tmp" "$output_abs"
 
 	if [[ "$json" == "1" ]]; then
 		printf '{"output":%s,"file_count":%s,"includes":{"local":%s,"profiles":%s,"tui":%s}}\n' \

@@ -89,6 +89,36 @@ EOF
 	[[ "$output" == "gamemode:9" ]]
 }
 
+@test "load_env_file preserves hash characters inside quotes" {
+	local tmp
+	tmp="$(mktemp)"
+	printf '%s\n' 'PRE_LAUNCH_CMD="printf #marker" # comment' > "$tmp"
+	run env CONFIG_DIR="$CONFIG_DIR" bash -c '
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform keys config
+		load_env_file "'"$tmp"'" 1
+		printf "%s\n" "$PRE_LAUNCH_CMD"
+	'
+	[[ $status -eq 0 ]]
+	[[ "$output" == "printf #marker" ]]
+	rm -f "$tmp"
+}
+
+@test "load_env_file preserves hashes after escaped quotes" {
+	local tmp
+	tmp="$(mktemp)"
+	printf '%s\n' 'PRE_LAUNCH_CMD="printf \"#marker\"" # comment' > "$tmp"
+	run env CONFIG_DIR="$CONFIG_DIR" bash -c '
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform keys config
+		load_env_file "'"$tmp"'" 1
+		printf "%s\n" "$PRE_LAUNCH_CMD"
+	'
+	rm -f "$tmp"
+	[[ $status -eq 0 ]]
+	[[ "$output" == 'printf \"#marker\"' ]]
+}
+
 @test "is_safe_include_path rejects traversal and absolute paths" {
 	run bash -c '
 		export CONFIG_DIR="'"$CONFIG_DIR"'"
@@ -123,6 +153,38 @@ EOF
 	[[ $status -eq 0 ]]
 	[[ "$output" == *"Refusing unsafe INCLUDE"* ]]
 	[[ "$output" == *"evil:unset"* ]]
+	rm -rf "$tmp"
+}
+
+@test "load_config_file accepts indented INCLUDE directives" {
+	local tmp
+	tmp="$(mktemp -d)"
+	mkdir -p "$tmp/launch.d/presets"
+	echo 'MANGOHUD=1' > "$tmp/launch.d/presets/test.env"
+	echo '  INCLUDE=presets/test.env' > "$tmp/launch.d/local.env"
+	run env CONFIG_DIR="$tmp" bash -c '
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform keys config
+		load_config_file "$LAUNCHD_DIR/local.env" 1
+		printf "%s\n" "${MANGOHUD:-unset}"
+	'
+	[[ $status -eq 0 ]]
+	[[ "$output" == 1 ]]
+	rm -rf "$tmp"
+}
+
+@test "resolve_include_under_launchd rejects symlink escape" {
+	local tmp
+	tmp="$(mktemp -d)"
+	mkdir -p "$tmp/launch.d/presets" "$tmp/outside"
+	echo 'MANGOHUD=1' > "$tmp/outside/evil.env"
+	ln -s "$tmp/outside" "$tmp/launch.d/presets/escape"
+	run env CONFIG_DIR="$tmp" bash -c '
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform keys config
+		resolve_include_under_launchd presets/escape/evil.env
+	'
+	[[ $status -eq 1 ]]
 	rm -rf "$tmp"
 }
 

@@ -1,4 +1,4 @@
-.PHONY: test test-unit test-integration test-hub test-all lint lint-hub shellcheck check-hub-git check check-hub check-all check-version bump-version tui-screenshots
+.PHONY: test test-unit test-integration test-hub test-all lint lint-hub shellcheck check-hub-git check-dependency-pins check check-hub check-all check-version bump-version tui-screenshots
 
 SHELL := /bin/bash
 BATS ?= bats
@@ -30,6 +30,9 @@ lint-hub:
 check-hub-git:
 	bash scripts/check-staged-hub-secrets.sh
 
+check-dependency-pins:
+	bash scripts/check-dependency-pins.sh
+
 check-version:
 	bash scripts/check-version.sh
 
@@ -39,7 +42,7 @@ bump-version:
 	bash scripts/bump-version.sh "$(VERSION)"
 
 # Shell gate (matches CI shell suite). Hub is separate — see check-hub / check-all.
-check: shellcheck check-hub-git test
+check: shellcheck check-hub-git check-dependency-pins test
 
 check-hub: lint-hub test-hub
 

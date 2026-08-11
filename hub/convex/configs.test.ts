@@ -1,10 +1,11 @@
 import { convexTest } from "convex-test";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { internal } from "./_generated/api";
 import { MAX_CONFIGS_PER_MACHINE } from "./lib/quotas";
 import schema from "./schema";
 import { modules } from "../test/convex_test_modules";
 import { buildPublishArgs } from "../test/test_helpers";
+import { MAX_CONFIGS_SCORED, MAX_MACHINES_SCORED } from "./lib/validation";
 
 describe("publishConfig", () => {
   it("inserts a new shared config for a machine", async () => {
@@ -159,6 +160,33 @@ describe("deleteConfig", () => {
     expect(deleted).toBeNull();
   });
 
+  it("cleans download dedup rows after deleting a config", async () => {
+    vi.useFakeTimers();
+    const t = convexTest(schema, modules);
+    const args = await buildPublishArgs({ appid: "441" });
+    const published = await t.mutation(internal.configs.publishConfig, args);
+    await t.mutation(internal.configs.recordDownload, {
+      configId: published.config_id,
+      identifier: "sha256:test",
+    });
+    await t.mutation(internal.configs.deleteConfig, {
+      configId: published.config_id,
+      fingerprintHash: args.fingerprintHash,
+    });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+
+    const rows = await t.run(async (ctx) =>
+      ctx.db
+        .query("configDownloadDedup")
+        .withIndex("by_config_id", (q) =>
+          q.eq("configId", published.config_id),
+        )
+        .collect(),
+    );
+    expect(rows).toHaveLength(0);
+    vi.useRealTimers();
+  });
+
   it("rejects delete when fingerprint hash does not match", async () => {
     const t = convexTest(schema, modules);
     const args = await buildPublishArgs({ appid: "1174180" });
@@ -217,6 +245,37 @@ describe("recommendConfigs", () => {
     });
     expect(results[0]?.similarity).toBeGreaterThan(0);
   });
+
+  it("scores the newest configs when the candidate cap is reached", async () => {
+    const t = convexTest(schema, modules);
+    const args = await buildPublishArgs({ appid: "1086941" });
+    await t.run(async (ctx) => {
+      const machineId = await ctx.db.insert("machines", {
+        fingerprintHash: args.fingerprintHash,
+        fingerprint: args.fingerprint,
+        updatedAt: Date.now(),
+      });
+      for (let i = 0; i <= MAX_CONFIGS_SCORED; i += 1) {
+        await ctx.db.insert("sharedConfigs", {
+          machineId,
+          appid: args.appid,
+          gameName: `Game ${i}`,
+          envContent: "",
+          settings: [],
+          detection: { native: false, anticheat: false },
+          publishedAt: i,
+          downloads: 0,
+        });
+      }
+    });
+
+    const results = await t.query(internal.configs.recommendConfigs, {
+      fingerprint: args.fingerprint,
+      appid: args.appid,
+      limit: 1,
+    });
+    expect(results[0]?.published_at).toBe(MAX_CONFIGS_SCORED);
+  });
 });
 
 describe("similarMachines", () => {
@@ -233,6 +292,29 @@ describe("similarMachines", () => {
     expect(results.length).toBeGreaterThan(0);
     expect(results[0]?.similarity).toBeGreaterThan(0);
     expect(results[0]?.gpu_vendor).toBe(args.fingerprint.gpu_vendor);
+  });
+
+  it("scores the newest machines when the candidate cap is reached", async () => {
+    const t = convexTest(schema, modules);
+    const args = await buildPublishArgs();
+    await t.run(async (ctx) => {
+      for (let i = 0; i <= MAX_MACHINES_SCORED; i += 1) {
+        await ctx.db.insert("machines", {
+          fingerprintHash: i.toString(16).padStart(64, "0"),
+          fingerprint: args.fingerprint,
+          machineLabel: `machine-${i}`,
+          updatedAt: i,
+        });
+      }
+    });
+
+    const results = await t.query(internal.machines.similarMachines, {
+      fingerprint: args.fingerprint,
+      limit: 1,
+    });
+    expect(results[0]?.machine_label).toBe(
+      `machine-${MAX_MACHINES_SCORED}`,
+    );
   });
 });
 

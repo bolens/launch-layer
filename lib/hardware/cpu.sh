@@ -99,9 +99,10 @@ detect_x3d_cpus() {
 	fi
 
 	result="$(compute_x3d_cpus)"
-	mkdir -p "$STATE_DIR"
-	printf '%s\n' "$result" > "$X3D_CPUS_CACHE_FILE"
-	printf '%s %s\n' "$max_l3" "$cpu_count" > "$X3D_CPUS_META_FILE"
+	if mkdir -p "$STATE_DIR" 2>/dev/null; then
+		printf '%s\n' "$result" > "$X3D_CPUS_CACHE_FILE" 2>/dev/null || true
+		printf '%s %s\n' "$max_l3" "$cpu_count" > "$X3D_CPUS_META_FILE" 2>/dev/null || true
+	fi
 	echo "$result"
 }
 
@@ -113,4 +114,3 @@ detect_intel_p_cores() {
 		default_online_cpus
 	fi
 }
-

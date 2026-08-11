@@ -1,15 +1,36 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { after, before, describe, it } from "node:test";
 import {
   RATE_LIMITS,
   RATE_LIMIT_WINDOW_MS,
-  clientIpFromRequest,
   rateLimitAllows,
   rateLimitBucketKey,
   rateLimitExceededError,
   rateLimitWindowStart,
   requestIdentifier,
+  trustedClientIdentity,
 } from "./rate_limit";
+
+const previousHeader = process.env.HUB_TRUSTED_CLIENT_IP_HEADER;
+const previousHashKey = process.env.HUB_IDENTIFIER_HASH_KEY;
+
+before(() => {
+  process.env.HUB_TRUSTED_CLIENT_IP_HEADER = "CF-Connecting-IP";
+  process.env.HUB_IDENTIFIER_HASH_KEY = "test-identifier-key-with-32-characters";
+});
+
+after(() => {
+  if (previousHeader === undefined) {
+    delete process.env.HUB_TRUSTED_CLIENT_IP_HEADER;
+  } else {
+    process.env.HUB_TRUSTED_CLIENT_IP_HEADER = previousHeader;
+  }
+  if (previousHashKey === undefined) {
+    delete process.env.HUB_IDENTIFIER_HASH_KEY;
+  } else {
+    process.env.HUB_IDENTIFIER_HASH_KEY = previousHashKey;
+  }
+});
 
 describe("rateLimitWindowStart", () => {
   it("aligns timestamps to fixed windows", () => {
@@ -36,44 +57,73 @@ describe("rateLimitBucketKey", () => {
 });
 
 describe("requestIdentifier", () => {
-  it("ignores client fingerprint hashes for rate-limit identity", () => {
+  it("hashes the configured trusted ingress identity", async () => {
     const request = new Request("https://example.test/api/recommend", {
       method: "POST",
-      headers: { "X-Forwarded-For": "203.0.113.10" },
+      headers: { "CF-Connecting-IP": "203.0.113.10" },
     });
-    assert.equal(
-      requestIdentifier(request, { fingerprint_hash: "a".repeat(64) }),
-      "ip:203.0.113.10",
+    const identifier = await requestIdentifier(request, {
+      fingerprint_hash: "a".repeat(64),
+    });
+    assert.match(identifier, /^hmac-sha256:[a-f0-9]{64}$/);
+    assert.equal(identifier.includes("203.0.113.10"), false);
+  });
+
+  it("rejects requests missing the configured trusted header", () => {
+    const request = new Request("https://example.test/api/config/id", {
+      headers: {
+        "X-Forwarded-For": "203.0.113.10",
+        "X-Real-IP": "198.51.100.44",
+      },
+    });
+    assert.throws(
+      () => trustedClientIdentity(request),
+      /CONFIG_ERROR: trusted client identity header/,
     );
   });
 
-  it("prefers CF-Connecting-IP over forwarded headers", () => {
+  it("supports an explicitly configured ingress header", () => {
+    const previous = process.env.HUB_TRUSTED_CLIENT_IP_HEADER;
+    process.env.HUB_TRUSTED_CLIENT_IP_HEADER = "True-Client-IP";
     const request = new Request("https://example.test/api/config/id", {
-      headers: {
-        "CF-Connecting-IP": "203.0.113.99",
-        "X-Forwarded-For": "203.0.113.10",
-      },
+      headers: { "True-Client-IP": "203.0.113.10" },
     });
-    assert.equal(clientIpFromRequest(request), "ip:203.0.113.99");
+    assert.equal(trustedClientIdentity(request), "ip:203.0.113.10");
+    if (previous === undefined) {
+      delete process.env.HUB_TRUSTED_CLIENT_IP_HEADER;
+    } else {
+      process.env.HUB_TRUSTED_CLIENT_IP_HEADER = previous;
+    }
   });
 
-  it("falls back to forwarded client IP", () => {
-    const request = new Request("https://example.test/api/config/id", {
-      headers: { "X-Forwarded-For": "203.0.113.10, 198.51.100.2" },
-    });
-    assert.equal(requestIdentifier(request), "ip:203.0.113.10");
+  it("requires explicit identity configuration", () => {
+    const previous = process.env.HUB_TRUSTED_CLIENT_IP_HEADER;
+    delete process.env.HUB_TRUSTED_CLIENT_IP_HEADER;
+    try {
+      const request = new Request("https://example.test/api/config/id");
+      assert.throws(
+        () => trustedClientIdentity(request),
+        /HUB_TRUSTED_CLIENT_IP_HEADER/,
+      );
+    } finally {
+      process.env.HUB_TRUSTED_CLIENT_IP_HEADER = previous;
+    }
   });
 
-  it("falls back to X-Real-IP when forwarded header is absent", () => {
-    const request = new Request("https://example.test/api/config/id", {
-      headers: { "X-Real-IP": "198.51.100.44" },
-    });
-    assert.equal(requestIdentifier(request), "ip:198.51.100.44");
-  });
-
-  it("uses ip:unknown when no client identity headers are present", () => {
-    const request = new Request("https://example.test/api/config/id");
-    assert.equal(requestIdentifier(request), "ip:unknown");
+  it("requires a sufficiently long HMAC key", async () => {
+    const previous = process.env.HUB_IDENTIFIER_HASH_KEY;
+    process.env.HUB_IDENTIFIER_HASH_KEY = "short";
+    try {
+      const request = new Request("https://example.test/api/config/id", {
+        headers: { "CF-Connecting-IP": "203.0.113.10" },
+      });
+      await assert.rejects(
+        () => requestIdentifier(request),
+        /HUB_IDENTIFIER_HASH_KEY/,
+      );
+    } finally {
+      process.env.HUB_IDENTIFIER_HASH_KEY = previous;
+    }
   });
 });
 

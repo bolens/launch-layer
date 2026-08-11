@@ -5,6 +5,7 @@ import {
   MAX_HTTP_BODY_BYTES,
   parseDetection,
   parseJsonObjectBody,
+  utf8ByteLength,
 } from "./http_body";
 
 describe("assertRequestBodySize", () => {
@@ -26,6 +27,13 @@ describe("assertRequestBodySize", () => {
     assert.doesNotThrow(() =>
       assertRequestBodySize(128, 128, MAX_HTTP_BODY_BYTES),
     );
+  });
+});
+
+describe("utf8ByteLength", () => {
+  it("counts encoded bytes rather than UTF-16 code units", () => {
+    assert.equal("🎮".length, 2);
+    assert.equal(utf8ByteLength("🎮"), 4);
   });
 });
 

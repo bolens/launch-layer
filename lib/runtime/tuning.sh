@@ -4,6 +4,95 @@
 [[ -n "${LAUNCHLAYER_RUNTIME_TUNING_LOADED:-}" ]] && return 0
 LAUNCHLAYER_RUNTIME_TUNING_LOADED=1
 
+CPU_TUNING_STATE_FILE="$STATE_DIR/cpu-tuning.saved"
+NETWORK_TUNING_STATE_FILE="$STATE_DIR/network-tuning.saved"
+PIPEWIRE_TUNING_STATE_FILE="$STATE_DIR/pipewire-tuning.saved"
+
+_runtime_state_value() {
+	local file=$1 key=$2 line
+	[[ -f "$file" ]] || return 1
+	while IFS= read -r line; do
+		[[ "$line" == "$key="* ]] || continue
+		printf '%s\n' "${line#*=}"
+		return 0
+	done < "$file"
+	return 1
+}
+
+save_network_tuning_state() {
+	local nic=$1 current_rx="" current_tx="" tcp="" eee="" wifi=""
+	local adaptive_rx="" adaptive_tx="" rx_usecs="" rx_frames=""
+	mkdir -p "$STATE_DIR" 2>/dev/null || return 1
+	tcp="$(sysctl -n net.ipv4.tcp_low_latency 2>/dev/null || true)"
+	if command_available ethtool; then
+		read -r current_rx current_tx < <(ethtool -g "$nic" 2>/dev/null | awk '
+			/Current hardware settings:/ { current=1; next }
+			current && /^RX:/ && rx == "" { rx=$2 }
+			current && /^TX:/ && tx == "" { tx=$2 }
+			END { print rx, tx }
+		')
+		read -r adaptive_rx adaptive_tx < <(
+			ethtool -c "$nic" 2>/dev/null | awk '/^Adaptive RX:/{print $3, $5; exit}'
+		)
+		rx_usecs="$(ethtool -c "$nic" 2>/dev/null | awk '/^rx-usecs:/{print $2; exit}')"
+		rx_frames="$(ethtool -c "$nic" 2>/dev/null | awk '/^rx-frames:/{print $2; exit}')"
+		eee="$(ethtool --show-eee "$nic" 2>/dev/null | awk -F': ' '/EEE status:/{print ($2 ~ /^enabled/) ? "on" : "off"; exit}')"
+	fi
+	if command_available iw; then
+		wifi="$(iw dev "$nic" get power_save 2>/dev/null | awk '{print $3; exit}')"
+	fi
+	if ! {
+		printf 'nic=%s\n' "$nic"
+		printf 'tcp_low_latency=%s\n' "$tcp"
+		printf 'rx=%s\n' "$current_rx"
+		printf 'tx=%s\n' "$current_tx"
+		printf 'adaptive_rx=%s\n' "$adaptive_rx"
+		printf 'adaptive_tx=%s\n' "$adaptive_tx"
+		printf 'rx_usecs=%s\n' "$rx_usecs"
+		printf 'rx_frames=%s\n' "$rx_frames"
+		printf 'eee=%s\n' "$eee"
+		printf 'wifi_power_save=%s\n' "$wifi"
+	} > "$NETWORK_TUNING_STATE_FILE"; then
+		rm -f "$NETWORK_TUNING_STATE_FILE"
+		return 1
+	fi
+	chmod 600 "$NETWORK_TUNING_STATE_FILE" || {
+		rm -f "$NETWORK_TUNING_STATE_FILE"
+		return 1
+	}
+}
+
+restore_network_tuning() {
+	[[ -f "$NETWORK_TUNING_STATE_FILE" ]] || return 0
+	local nic tcp rx tx adaptive_rx adaptive_tx rx_usecs rx_frames eee wifi
+	nic="$(_runtime_state_value "$NETWORK_TUNING_STATE_FILE" nic || true)"
+	tcp="$(_runtime_state_value "$NETWORK_TUNING_STATE_FILE" tcp_low_latency || true)"
+	rx="$(_runtime_state_value "$NETWORK_TUNING_STATE_FILE" rx || true)"
+	tx="$(_runtime_state_value "$NETWORK_TUNING_STATE_FILE" tx || true)"
+	adaptive_rx="$(_runtime_state_value "$NETWORK_TUNING_STATE_FILE" adaptive_rx || true)"
+	adaptive_tx="$(_runtime_state_value "$NETWORK_TUNING_STATE_FILE" adaptive_tx || true)"
+	rx_usecs="$(_runtime_state_value "$NETWORK_TUNING_STATE_FILE" rx_usecs || true)"
+	rx_frames="$(_runtime_state_value "$NETWORK_TUNING_STATE_FILE" rx_frames || true)"
+	eee="$(_runtime_state_value "$NETWORK_TUNING_STATE_FILE" eee || true)"
+	wifi="$(_runtime_state_value "$NETWORK_TUNING_STATE_FILE" wifi_power_save || true)"
+	rm -f "$NETWORK_TUNING_STATE_FILE"
+	[[ -n "$nic" ]] || return 0
+	[[ -n "$tcp" ]] && sudo -n sysctl -w "net.ipv4.tcp_low_latency=$tcp" >/dev/null 2>&1 || true
+	if command_available ethtool; then
+		[[ "$rx" =~ ^[0-9]+$ && "$tx" =~ ^[0-9]+$ ]] \
+			&& sudo -n ethtool -G "$nic" rx "$rx" tx "$tx" >/dev/null 2>&1 || true
+		[[ -n "$adaptive_rx" && -n "$adaptive_tx" ]] \
+			&& sudo -n ethtool -C "$nic" adaptive-rx "$adaptive_rx" adaptive-tx "$adaptive_tx" >/dev/null 2>&1 || true
+		[[ "$rx_usecs" =~ ^[0-9]+$ && "$rx_frames" =~ ^[0-9]+$ ]] \
+			&& sudo -n ethtool -C "$nic" rx-usecs "$rx_usecs" rx-frames "$rx_frames" >/dev/null 2>&1 || true
+		[[ "$eee" == on || "$eee" == off ]] \
+			&& sudo -n ethtool --set-eee "$nic" eee "$eee" >/dev/null 2>&1 || true
+	fi
+	[[ "$wifi" == on || "$wifi" == off ]] \
+		&& command_available iw \
+		&& sudo -n iw dev "$nic" set power_save "$wifi" >/dev/null 2>&1 || true
+}
+
 apply_network_tuning() {
 	[[ "${NETWORK_TUNE:-0}" == "1" ]] || return 0
 	local has_sudo=1
@@ -29,6 +118,10 @@ apply_network_tuning() {
 		warn "NETWORK_TUNE=1 skipped: NIC '$nic' not found"
 		return 0
 	}
+	if ! save_network_tuning_state "$nic"; then
+		warn "NETWORK_TUNE=1 skipped: cannot save restore state"
+		return 0
+	fi
 
 	if command_available ethtool; then
 		local max_rx=256 max_tx=256 ethtool_out
@@ -72,7 +165,14 @@ apply_pipewire_low_latency() {
 		pipewire)
 			export PULSE_LATENCY_MSEC=30
 			if optional_tool_installed pw-metadata; then
-				pw-metadata -n settings 0 clock.force-quantum 512 2>/dev/null || true
+				if mkdir -p "$STATE_DIR" 2>/dev/null \
+					&& : > "$PIPEWIRE_TUNING_STATE_FILE" \
+					&& chmod 600 "$PIPEWIRE_TUNING_STATE_FILE"; then
+					pw-metadata -n settings 0 clock.force-quantum 512 2>/dev/null || true
+				else
+					rm -f "$PIPEWIRE_TUNING_STATE_FILE"
+					warn "PIPEWIRE_LOW_LATENCY skipped quantum tuning: cannot save restore state"
+				fi
 			else
 				debug "PIPEWIRE_LOW_LATENCY: pw-metadata unavailable — using PULSE_LATENCY_MSEC only"
 			fi
@@ -90,7 +190,8 @@ apply_pipewire_low_latency() {
 
 # restore_pipewire_low_latency — Reset PipeWire quantum on launch exit.
 restore_pipewire_low_latency() {
-	[[ "${PIPEWIRE_LOW_LATENCY:-0}" == "1" ]] || return 0
+	[[ -f "$PIPEWIRE_TUNING_STATE_FILE" ]] || return 0
+	rm -f "$PIPEWIRE_TUNING_STATE_FILE"
 	[[ "$(detect_audio_server)" == pipewire ]] || return 0
 	if optional_tool_installed pw-metadata; then
 		pw-metadata -n settings 0 clock.force-quantum 0 2>/dev/null || true
@@ -101,15 +202,50 @@ restore_pipewire_low_latency() {
 apply_cpu_performance() {
 	[[ "${GAME_PERFORMANCE:-1}" == "1" ]] || return 0
 	command_available game-performance && return 0
+	mkdir -p "$STATE_DIR" 2>/dev/null || {
+		warn "GAME_PERFORMANCE=1 skipped: cannot save restore state"
+		return 0
+	}
 	if command_available cpupower && sudo -n true 2>/dev/null; then
-		sudo -n cpupower frequency-set -g performance >/dev/null 2>&1 \
-			&& debug "cpupower performance (fallback)" && return 0
+		find /sys/devices/system/cpu/cpufreq -maxdepth 2 -name scaling_governor -type f \
+			-exec sh -c 'printf "%s=%s\n" "$1" "$(cat "$1")"' _ {} \; \
+			> "$CPU_TUNING_STATE_FILE" 2>/dev/null || true
+		if [[ -s "$CPU_TUNING_STATE_FILE" ]] && chmod 600 "$CPU_TUNING_STATE_FILE"; then
+			sudo -n cpupower frequency-set -g performance >/dev/null 2>&1 \
+				&& debug "cpupower performance (fallback)" && return 0
+		fi
+		rm -f "$CPU_TUNING_STATE_FILE"
 	fi
 	if command_available powerprofilesctl; then
-		powerprofilesctl set performance >/dev/null 2>&1 \
-			&& debug "powerprofilesctl performance (fallback)" && return 0
+		powerprofilesctl get > "$CPU_TUNING_STATE_FILE" 2>/dev/null || true
+		if [[ -s "$CPU_TUNING_STATE_FILE" ]] && chmod 600 "$CPU_TUNING_STATE_FILE"; then
+			powerprofilesctl set performance >/dev/null 2>&1 \
+				&& debug "powerprofilesctl performance (fallback)" && return 0
+		fi
+		rm -f "$CPU_TUNING_STATE_FILE"
 	fi
 	debug "GAME_PERFORMANCE=1: no game-performance/cpupower/powerprofilesctl — continuing without CPU perf tuning"
+}
+
+restore_cpu_performance() {
+	[[ -s "$CPU_TUNING_STATE_FILE" ]] || return 0
+	local line path value
+	if [[ "$(<"$CPU_TUNING_STATE_FILE")" != *=* ]] && command_available powerprofilesctl; then
+		powerprofilesctl set "$(<"$CPU_TUNING_STATE_FILE")" >/dev/null 2>&1 || true
+	else
+		while IFS= read -r line; do
+			path="${line%%=*}"
+			value="${line#*=}"
+			[[ "$path" == /sys/devices/system/cpu/cpufreq/*/scaling_governor ]] || continue
+			printf '%s\n' "$value" | sudo -n tee "$path" >/dev/null 2>&1 || true
+		done < "$CPU_TUNING_STATE_FILE"
+	fi
+	rm -f "$CPU_TUNING_STATE_FILE"
+}
+
+restore_runtime_tuning() {
+	restore_cpu_performance
+	restore_network_tuning
 }
 
 # apply_unset_vars — Remove env vars listed in UNSET_VARS (space-separated).
@@ -566,4 +702,3 @@ apply_disk_tuning() {
 		fi
 	fi
 }
-

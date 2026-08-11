@@ -5,6 +5,7 @@ import {
   type MutationCtx,
 } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
+import { internal } from "./_generated/api";
 import {
   detectionValidator,
   fingerprintValidator,
@@ -21,6 +22,7 @@ import {
 } from "./lib/publish";
 import { resolveDownloadIncrement } from "./lib/download_dedup";
 import {
+  MAX_CONFIGS_PER_MACHINE,
   machineConfigQuotaExceeded,
   quotaExceededError,
 } from "./lib/quotas";
@@ -59,7 +61,7 @@ async function recordConfigHistory(
       q.eq("configId", configId),
     )
     .order("asc")
-    .collect();
+    .take(MAX_CONFIG_HISTORY + 1);
 
   const excess = history.length - MAX_CONFIG_HISTORY;
   if (excess > 0) {
@@ -154,7 +156,7 @@ export const publishConfig = internalMutation({
     const machineConfigs = await ctx.db
       .query("sharedConfigs")
       .withIndex("by_machine_and_appid", (q) => q.eq("machineId", machineId))
-      .collect();
+      .take(MAX_CONFIGS_PER_MACHINE);
     if (machineConfigQuotaExceeded(machineConfigs.length)) {
       quotaExceededError();
     }
@@ -253,7 +255,8 @@ export const recommendConfigs = internalQuery({
     const configs = await ctx.db
       .query("sharedConfigs")
       .withIndex("by_appid", (q) => q.eq("appid", args.appid))
-      .collect();
+      .order("desc")
+      .take(MAX_CONFIGS_SCORED);
 
     const bounded = capScoredCandidates(configs, MAX_CONFIGS_SCORED);
 
@@ -394,6 +397,12 @@ export const deleteConfig = internalMutation({
       await ctx.db.delete("sharedConfigsHistory", h._id);
     }
 
+    await ctx.scheduler.runAfter(
+      0,
+      internal.configs.cleanupConfigDownloadDedup,
+      { configId: args.configId },
+    );
+
     const remaining = await ctx.db
       .query("sharedConfigs")
       .withIndex("by_machine_and_appid", (q) => q.eq("machineId", machineId))
@@ -409,6 +418,30 @@ export const deleteConfig = internalMutation({
       deleted_config_id: args.configId,
       deleted_machine: deletedMachine,
     };
+  },
+});
+
+const CLEANUP_BATCH_SIZE = 200;
+
+export const cleanupConfigDownloadDedup = internalMutation({
+  args: { configId: v.id("sharedConfigs") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("configDownloadDedup")
+      .withIndex("by_config_id", (q) => q.eq("configId", args.configId))
+      .take(CLEANUP_BATCH_SIZE);
+    for (const row of rows) {
+      await ctx.db.delete("configDownloadDedup", row._id);
+    }
+    if (rows.length === CLEANUP_BATCH_SIZE) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.configs.cleanupConfigDownloadDedup,
+        args,
+      );
+    }
+    return null;
   },
 });
 

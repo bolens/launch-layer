@@ -347,7 +347,9 @@ setup() {
 }
 
 @test "apply_cpu_performance uses powerprofilesctl fallback" {
-	run bash -c '
+	local tmp
+	tmp="$(temp_state_dir)"
+	run env XDG_STATE_HOME="$tmp/state" bash -c '
 		export CONFIG_DIR="'"$CONFIG_DIR"'"
 		export GAME_PERFORMANCE=1
 		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
@@ -355,9 +357,67 @@ setup() {
 		command_available() { [[ "$1" == powerprofilesctl ]]; }
 		optional_tool_installed() { [[ "$1" == powerprofilesctl ]]; }
 		debug() { printf "%s\n" "$*"; }
-		powerprofilesctl() { echo switched; return 0; }
+		powerprofilesctl() {
+			[[ "$1" == get ]] && echo balanced
+			return 0
+		}
 		apply_cpu_performance 2>&1
 	'
 	[[ $status -eq 0 ]]
 	[[ "$output" == *"powerprofilesctl performance (fallback)"* ]]
+	rm -rf "$tmp"
+}
+
+@test "restore_cpu_performance restores saved power profile" {
+	local tmp
+	tmp="$(temp_state_dir)"
+	run env XDG_STATE_HOME="$tmp/state" bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform runtime
+		echo balanced > "$CPU_TUNING_STATE_FILE"
+		command_available() { [[ "$1" == powerprofilesctl ]]; }
+		powerprofilesctl() { printf "%s\n" "$*" > "'"$tmp"'/restored"; }
+		restore_cpu_performance
+		[[ ! -e "$CPU_TUNING_STATE_FILE" ]]
+		cat "'"$tmp"'/restored"
+	'
+	[[ $status -eq 0 ]]
+	[[ "$output" == "set balanced" ]]
+	rm -rf "$tmp"
+}
+
+@test "restore_network_tuning replays saved settings" {
+	local tmp
+	tmp="$(temp_state_dir)"
+	run env XDG_STATE_HOME="$tmp/state" bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform runtime
+		cat > "$NETWORK_TUNING_STATE_FILE" <<EOF
+nic=eth0
+tcp_low_latency=0
+rx=128
+tx=256
+adaptive_rx=on
+adaptive_tx=off
+rx_usecs=12
+rx_frames=3
+eee=on
+wifi_power_save=off
+EOF
+		command_available() { [[ "$1" == ethtool || "$1" == iw ]]; }
+		sudo() {
+			[[ "$1" == -n ]] && shift
+			printf "%s\n" "$*" >> "'"$tmp"'/calls"
+		}
+		restore_network_tuning
+		cat "'"$tmp"'/calls"
+		[[ ! -e "$NETWORK_TUNING_STATE_FILE" ]]
+	'
+	[[ $status -eq 0 ]]
+	[[ "$output" == *"sysctl -w net.ipv4.tcp_low_latency=0"* ]]
+	[[ "$output" == *"ethtool -G eth0 rx 128 tx 256"* ]]
+	[[ "$output" == *"iw dev eth0 set power_save off"* ]]
+	rm -rf "$tmp"
 }

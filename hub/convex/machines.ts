@@ -30,14 +30,16 @@ export const similarMachines = internalQuery({
       .withIndex("by_gpu_vendor", (q) =>
         q.eq("fingerprint.gpu_vendor", args.fingerprint.gpu_vendor),
       )
-      .collect();
+      .order("desc")
+      .take(MAX_MACHINES_SCORED);
 
     const byDisplayTier = await ctx.db
       .query("machines")
       .withIndex("by_display_tier", (q) =>
         q.eq("fingerprint.display_tier", args.fingerprint.display_tier),
       )
-      .collect();
+      .order("desc")
+      .take(MAX_MACHINES_SCORED);
 
     const candidates = capScoredCandidates(
       mergeMachineCandidates(byVendor, byDisplayTier),

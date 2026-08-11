@@ -1,7 +1,11 @@
 import { convexTest } from "convex-test";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { internal } from "./_generated/api";
-import { RATE_LIMITS } from "./lib/rate_limit";
+import {
+  DOWNLOAD_DEDUP_RETENTION_MS,
+  RATE_LIMITS,
+  RATE_LIMIT_RETENTION_MS,
+} from "./lib/rate_limit";
 import { modules } from "../test/convex_test_modules";
 import schema from "./schema";
 
@@ -85,5 +89,102 @@ describe("enforceRateLimit", () => {
         identifier: deleteId,
       }),
     ).rejects.toThrowError(/RATE_LIMITED/);
+  });
+});
+
+describe("cleanupExpiredRecords", () => {
+  it("removes expired operational rows and keeps recent rows", async () => {
+    const t = convexTest(schema, modules);
+    const now = Date.now();
+    await t.run(async (ctx) => {
+      await ctx.db.insert("rateLimitBuckets", {
+        bucketKey: "old",
+        windowStart: now - RATE_LIMIT_RETENTION_MS - 1,
+        count: 1,
+      });
+      await ctx.db.insert("rateLimitBuckets", {
+        bucketKey: "new",
+        windowStart: now,
+        count: 1,
+      });
+      const machineId = await ctx.db.insert("machines", {
+        fingerprintHash: "a".repeat(64),
+        fingerprint: {
+          gpu_vendor: "unknown",
+          os_family: "linux",
+          session_type: "unknown",
+          profiles: [],
+          display_tier: "unknown",
+          vrr: false,
+          wsl2: false,
+          flatpak_steam: false,
+          steam_deck: false,
+          immutable: false,
+        },
+        updatedAt: now,
+      });
+      const configId = await ctx.db.insert("sharedConfigs", {
+        machineId,
+        appid: "1",
+        gameName: "Test",
+        envContent: "",
+        settings: [],
+        detection: { native: false, anticheat: false },
+        publishedAt: now,
+        downloads: 0,
+      });
+      await ctx.db.insert("configDownloadDedup", {
+        configId,
+        identifier: "old",
+        recordedAt: now - DOWNLOAD_DEDUP_RETENTION_MS - 1,
+      });
+      await ctx.db.insert("configDownloadDedup", {
+        configId,
+        identifier: "new",
+        recordedAt: now,
+      });
+    });
+
+    const result = await t.mutation(
+      internal.rate_limits.cleanupExpiredRecords,
+      {},
+    );
+    expect(result).toEqual({ rateLimitBuckets: 1, downloadDedup: 1 });
+  });
+
+  it("reschedules cleanup when an expired batch is full", async () => {
+    vi.useFakeTimers();
+    try {
+      const t = convexTest(schema, modules);
+      const expired = Date.now() - RATE_LIMIT_RETENTION_MS - 1;
+      await t.run(async (ctx) => {
+        for (let i = 0; i < 201; i += 1) {
+          await ctx.db.insert("rateLimitBuckets", {
+            bucketKey: `expired-${i}`,
+            windowStart: expired,
+            count: 1,
+          });
+        }
+      });
+
+      const first = await t.mutation(
+        internal.rate_limits.cleanupExpiredRecords,
+        {},
+      );
+      expect(first.rateLimitBuckets).toBe(200);
+      await t.finishAllScheduledFunctions(vi.runAllTimers);
+
+      const remaining = await t.run(async (ctx) =>
+        ctx.db
+          .query("rateLimitBuckets")
+          .withIndex("by_window_start", (q) =>
+            q.lt("windowStart", Date.now() - RATE_LIMIT_RETENTION_MS),
+          )
+          .collect(),
+      );
+      expect(remaining).toHaveLength(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

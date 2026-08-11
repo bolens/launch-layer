@@ -9,14 +9,28 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-08-11
+
+### Added
+
+- TUI access to ProtonDB suggestions, per-game runtime status, hub config history, historical config application, restore merge paths, bulk INCLUDE filtering/preview, and global launch statistics
+
+### Security
+
+- Harden config parsing, INCLUDE containment, backup archives, fetched artifact checksum verification, hub client identity, retention limits, and dependency/action pin enforcement
+- Require explicitly configured trusted ingress identity and HMAC protection for hub rate limiting
+- Patch all known npm advisories in the hub dependency graph, including `js-yaml`, `brace-expansion`, PostCSS, Nano ID, and `ws`
+
 ### Fixed
 
 - Main-menu **Doctor** shortcut (`Doctor ⚠N`) actually runs doctor (case was `Doctor:*`)
+- Preserve launch tuning cleanup, standalone module loading, read-only state-cache behavior, and hub cleanup rescheduling
 
 ### Changed
 
-- TUI parity seams: ProtonDB **Suggest from ProtonDB** (preview/apply), per-game **Runtime status**, restore **merge** paths, hub Apply-by-ID **history** / apply-historical
-- TUI bulk INCLUDE: name **grep** scope plus Preview (dry-run) / Apply; global **Launch stats** on Status and System & tools
+- Bound hub candidate queries, prioritize recent recommendations, and expire stale client data
+- Strengthen CI quality, secret, dependency-pin, and action-pin gates
+- Update compatible hub dependencies while retaining exact version pins
 
 ## [0.11.0] - 2026-07-14
 
@@ -77,7 +91,8 @@ and this project uses [Semantic Versioning](https://semver.org/).
 - Modular `lib/` layout, TUI, backups, profiles, and broad platform detection
 - LaunchLayer Hub client + Convex backend for sharing per-game configs
 
-[Unreleased]: https://github.com/bolens/launch-layer/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/bolens/launch-layer/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/bolens/launch-layer/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/bolens/launch-layer/releases/tag/v0.11.0
 [0.10.0]: https://github.com/bolens/launch-layer/releases/tag/v0.10.0
 [0.9.0]: https://github.com/bolens/launch-layer/tree/2f8d8bc0dda93bf55184f24eb784d903387368b2

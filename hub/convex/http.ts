@@ -17,17 +17,25 @@ import {
   MAX_HTTP_BODY_BYTES,
   parseDetection,
   parseJsonObjectBody,
+  utf8ByteLength,
 } from "./lib/http_body";
 import { validateConfigId } from "./lib/validation";
 
 const http = httpRouter();
+
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Authorization, Content-Type",
+  "Access-Control-Max-Age": "86400",
+} as const;
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
+      ...CORS_HEADERS,
     },
   });
 }
@@ -44,7 +52,11 @@ function errorResponse(error: unknown, fallbackMessage: string): Response {
 async function readJson(request: Request): Promise<Record<string, unknown>> {
   const contentLength = Number(request.headers.get("Content-Length") ?? 0);
   const body = await request.text();
-  assertRequestBodySize(contentLength, body.length, MAX_HTTP_BODY_BYTES);
+  assertRequestBodySize(
+    contentLength,
+    utf8ByteLength(body),
+    MAX_HTTP_BODY_BYTES,
+  );
   return parseJsonObjectBody(body);
 }
 
@@ -56,9 +68,17 @@ async function enforceRouteRateLimit(
 ): Promise<void> {
   await ctx.runMutation(internal.rate_limits.enforceRateLimit, {
     route,
-    identifier: requestIdentifier(request, body),
+    identifier: await requestIdentifier(request, body),
   });
 }
+
+http.route({
+  pathPrefix: "/api/",
+  method: "OPTIONS",
+  handler: httpAction(async () => {
+    return new Response(null, { status: 204, headers: CORS_HEADERS });
+  }),
+});
 
 http.route({
   path: "/api/auth",
@@ -267,7 +287,7 @@ http.route({
       }
       await ctx.runMutation(internal.configs.recordDownload, {
         configId: typedConfigId,
-        identifier: requestIdentifier(request),
+        identifier: await requestIdentifier(request),
       });
       return jsonResponse(config);
     } catch (error) {

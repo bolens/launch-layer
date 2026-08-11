@@ -24,6 +24,7 @@ setup() {
 			stop_launch_watchdog() { CALLS+=("watchdog"); }
 			restore_nvidia_power_mode() { CALLS+=("nvidia"); }
 			restore_pipewire_low_latency() { CALLS+=("pipewire"); }
+			restore_runtime_tuning() { CALLS+=("runtime"); }
 			resume_vram_hogs() { CALLS+=("vram"); set_vram_ref_count 0; }
 			on_launch_exit
 			printf "calls:%s\n" "${CALLS[*]}"
@@ -31,7 +32,7 @@ setup() {
 			echo ref:$(get_vram_ref_count)
 		'
 	[[ $status -eq 0 ]]
-	[[ "$output" == *"calls:watchdog nvidia pipewire vram"* ]]
+	[[ "$output" == *"calls:watchdog nvidia pipewire runtime vram"* ]]
 	[[ "$output" == *"pid:cleared"* ]]
 	[[ "$output" == *"ref:0"* ]]
 	rm -rf "$tmp"

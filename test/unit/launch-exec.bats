@@ -120,6 +120,55 @@ setup() {
 	rm -rf "$fake_steam" "$tmp" "$state_tmp"
 }
 
+@test "failed post-launch hook still records final state" {
+	local fake_steam tmp state_tmp game_bin
+	fake_steam="$(fake_steam_root 42424242 "Hook Fail Game")"
+	tmp="$(temp_config_dir)"
+	state_tmp="$(temp_state_dir)"
+	game_bin="$fake_steam/steamapps/common/TestGame42424242/launch.sh"
+	printf '#!/bin/sh\nexit 0\n' > "$game_bin"
+	chmod +x "$game_bin"
+	run env \
+		CONFIG_DIR="$tmp" \
+		STEAM_ROOT="$fake_steam" \
+		LAUNCHLAYER_GAMES_DIR="$tmp/games" \
+		XDG_STATE_HOME="$state_tmp/state" \
+		bash -c '
+			export CONFIG_DIR="'"$tmp"'"
+			export STEAM_ROOT="'"$fake_steam"'"
+			export LAUNCHLAYER_GAMES_DIR="'"$tmp"'/games"
+			export LAUNCHLAYER_PROFILES=
+			export SteamAppId=42424242
+			export BENCHMARK=1 PLAYTIME_LOG=1 VRAM_HOGS=0 LAUNCH_WATCHDOG=0
+			source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+			source_lib platform keys config steam hardware runtime detected-defaults gpu preflight vram launch
+			optional_tool_installed() { return 1; }
+			command_available() { return 1; }
+			default_online_cpus() { echo 0-3; }
+			apply_network_tuning() { :; }
+			apply_pipewire_low_latency() { :; }
+			apply_cpu_performance() { :; }
+			apply_nvidia_power_mode() { :; }
+			restore_nvidia_power_mode() { :; }
+			restore_pipewire_low_latency() { :; }
+			apply_proton_env() { :; }
+			run_pre_launch_cmd() { :; }
+			run_post_launch_cmd() { return 1; }
+			warn_missing_tools() { :; }
+			recover_stale_vram_state() { :; }
+			apply_anticheat_guardrails() { :; }
+			stop_launch_watchdog() { :; }
+			start_launch_watchdog() { :; }
+			run_game_launch "'"$game_bin"'"
+		'
+	[[ $status -eq 1 ]]
+	[[ "$output" == *"POST_LAUNCH_CMD failed"* ]]
+	grep -q 'exit=1' "$state_tmp/state/launchlayer/launch.log"
+	grep -q 'seconds=' "$state_tmp/state/launchlayer/playtime.log"
+	[[ ! -e "$state_tmp/state/launchlayer/active-launch.pid" ]]
+	rm -rf "$fake_steam" "$tmp" "$state_tmp"
+}
+
 @test "run_game_launch trap cleans up pid file and vram ref on exit" {
 	local fake_steam tmp state_tmp game_bin
 	fake_steam="$(fake_steam_root 42424242 "Trap Game")"

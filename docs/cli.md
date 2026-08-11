@@ -165,7 +165,7 @@ See [docs/third-party.md](third-party.md) for licenses. Prefer user-supplied DLL
 | `SPECIAL_K=1` | `WINEDLLOVERRIDES` + optional `SPECIAL_K_SOURCE` inject |
 | `SPECIAL_K_DLL` / `SPECIAL_K_SOURCE` / `SPECIAL_K_INI` | Proxy DLL name, extract dir, UsingWINE ini path |
 | `SPECIAL_K_FETCH=1` + `SPECIAL_K_FETCH_URL` | Cache fetch + extract (zip/7z/tar); no default mirror |
-| `SPECIAL_K_VERSION` / `INJECT_SHA256` | Cache subdirectory / optional fetch checksum |
+| `SPECIAL_K_VERSION` / `INJECT_SHA256` | Cache subdirectory / required SHA-256 for remote fetches |
 | `RESHADE=1` | Standalone ReShade inject (`RESHADE_SOURCE`, `RESHADE_DLL`) |
 | `RESHADE_SK_VERSION` | Pin hint when both SK + ReShade enabled |
 | `DEPTH3D=1` | Assist-only shader path (`DEPTH3D_SOURCE` or cache); optional `DEPTH3D_FETCH_URL` |

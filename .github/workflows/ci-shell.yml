@@ -43,3 +43,28 @@ jobs:
 
       - name: Bats ${{ matrix.suite }}
         run: make test-${{ matrix.suite }}
+
+  portability:
+    name: Portability / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Install Bats on Ubuntu
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y bats
+
+      - name: Install Bats on macOS
+        if: runner.os == 'macOS'
+        run: brew install bash bats-core
+
+      - name: Platform-sensitive unit tests without systemd
+        env:
+          DBUS_SESSION_BUS_ADDRESS: ""
+          XDG_RUNTIME_DIR: ""
+        run: bats test/unit/platform.bats test/unit/cpu.bats test/unit/systemd-backup.bats test/unit/preflight.bats
