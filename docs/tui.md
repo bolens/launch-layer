@@ -88,10 +88,10 @@ Without fzf, the two-line status banner prints above the numbered menu as before
 
 ## Main menu
 
-Header `LaunchLayer 0.11.0` (version from `LAUNCHLAYER_VERSION`). Footer shows live status, e.g. `filter:all · doctor:0 · vm:ok · backup:off · maint:off · hub:not configured · fp:minimal`. Optional prefix rows appear first when applicable:
+Header `LaunchLayer 0.12.0` (version from `LAUNCHLAYER_VERSION`). Footer shows live status, e.g. `filter:all · doctor:0 · vm:ok · backup:off · maint:off · hub:not configured · fp:minimal`. Optional prefix rows appear first when applicable:
 
 ```
-LaunchLayer 0.11.0                          ← fzf --header
+LaunchLayer 0.12.0                          ← fzf --header
 ────────────────────────────────────────
 Doctor ⚠2                                   ← only when doctor finds issues
 ▶ Resume: Games                            ← when a previous hub was saved
