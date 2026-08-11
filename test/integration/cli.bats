@@ -13,6 +13,7 @@ setup() {
 	cat > "$tmp/config/launch.d/default.env" <<'EOF'
 POST_LAUNCH_CMD=false
 PLAYTIME_LOG=1
+BENCHMARK=1
 GAME_PERFORMANCE=0
 GPU_POWER_CHECK=0
 NVIDIA_POWER_MODE=0

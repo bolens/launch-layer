@@ -40,8 +40,9 @@ setup() {
 }
 
 @test "realpath_portable resolves existing path" {
-	local tmp
+	local tmp expected
 	tmp="$(mktemp -d)"
+	expected="$(cd "$tmp" && pwd -P)"
 	run bash -c '
 		export CONFIG_DIR="'"$CONFIG_DIR"'"
 		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
@@ -49,7 +50,7 @@ setup() {
 		realpath_portable "'"$tmp"'"
 	'
 	[[ $status -eq 0 ]]
-	[[ "$output" == "$tmp" ]]
+	[[ "$output" == "$expected" ]]
 	rm -rf "$tmp"
 }
 
@@ -323,4 +324,3 @@ setup() {
 	[[ $status -eq 0 ]]
 	[[ "$output" == $'yes\nno6600\nno-nv' ]]
 }
-
