@@ -25,7 +25,7 @@
     "typecheck": "tsc -p convex/tsconfig.json --noEmit"
   },
   "dependencies": {
-    "convex": "1.43.0"
+    "convex": "1.44.0"
   },
   "devDependencies": {
     "@convex-dev/eslint-plugin": "1.2.2",
