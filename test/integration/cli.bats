@@ -56,10 +56,12 @@ teardown() {
 	[[ "$output" == *"--tui"* ]]
 }
 
-@test "version reports 0.12.0" {
+@test "version reports the release version" {
+	local expected_version
+	expected_version="$(sed -n 's/^LAUNCHLAYER_VERSION=//p' "$(dirname "$SCRIPT")/lib/cli.sh")"
 	run "$SCRIPT" --version
 	[[ $status -eq 0 ]]
-	[[ "$output" == *"0.12.0"* ]]
+	[[ "$output" == *"$expected_version"* ]]
 }
 
 @test "quiet flag suppresses non-error output" {
