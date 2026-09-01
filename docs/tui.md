@@ -55,7 +55,7 @@ String and numeric keys, grouped:
 |-------|------|
 | Change INCLUDE preset | `INCLUDE=presets/…` |
 | Proton & tools | `OVERRIDE_PROTON`, `DLSS_SWAPPER` (picker), `FRAME_RATE`, `ENABLE_HDR`, `MALLOC_ALLOCATOR`, `SPECIALTY_RUNTIME` (picker) |
-| Gamescope | `GAMESCOPE_W/H/R`, FSR sharpness, `GAMESCOPE_ADAPTIVE_SYNC` (picker: empty/`auto`/`0`/`1`), extra args, output/frame limits, filter, native ReShade effect/technique, focused/unfocused FPS |
+| Gamescope | `GAMESCOPE_W/H/R`, FSR sharpness, `GAMESCOPE_ADAPTIVE_SYNC` (picker: empty/`auto`/`0`/`1`), extra args, output/frame limits, filter, capability-checked native ReShade effect/technique, focused/unfocused FPS |
 | Inject & Wine | vkBasalt/lsfg paths, winetricks verbs, Special K / ReShade / OptiScaler proxy picker / Depth3D / FWS / Conty / OpenVR sources, ValvePlug paths, fetch URL/version |
 | Shader & storage | `SHADER_CACHE_MAX_GB`, `SHADER_CACHE_BOOST_GB`, `SHADER_CACHE_CHECK_INTERVAL_HOURS`, `COMPATDATA_MAX_GB`, `VM_MAX_MAP_COUNT_MIN` |
 | Affinity & network | `X3D_CPUS`, `CPU_AFFINITY_RANGE`, `GAME_NIC`, `GPU_SELECT` picker, `GPU_SELECT_DRIVER` |
