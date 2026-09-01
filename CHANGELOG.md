@@ -19,7 +19,7 @@ and this project uses [Semantic Versioning](https://semver.org/).
 ### Fixed
 
 - Preserve complete post-`%command%` game arguments while excluding wrapper arguments.
-- Keep native games and standard Valve Proton on their default compatibility paths instead of writing stale overrides.
+- Respect effective native/`FORCE_PROTON` selection and keep standard Valve Proton on Steam's default compatibility path instead of writing stale overrides.
 - Recognize Arch-derived profiles and installed Steam Proton version labels during report ranking.
 - Avoid redundant per-game `GAMEMODE=1` overrides.
 
