@@ -9,6 +9,20 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.13.2] - 2026-09-01
+
+### Changed
+
+- Limit automatic ProtonDB settings to recent, corroborated reports with strict key and value validation.
+- Mark generated recommendations so later runs can reconcile stale advice without overwriting user settings.
+
+### Fixed
+
+- Preserve complete post-`%command%` game arguments while excluding wrapper arguments.
+- Keep native games and standard Valve Proton on their default compatibility paths instead of writing stale overrides.
+- Recognize Arch-derived profiles and installed Steam Proton version labels during report ranking.
+- Avoid redundant per-game `GAMEMODE=1` overrides.
+
 ## [0.13.1] - 2026-09-01
 
 ### Changed
@@ -133,7 +147,8 @@ and this project uses [Semantic Versioning](https://semver.org/).
 - Modular `lib/` layout, TUI, backups, profiles, and broad platform detection
 - LaunchLayer Hub client + Convex backend for sharing per-game configs
 
-[Unreleased]: https://github.com/bolens/launch-layer/compare/v0.13.1...HEAD
+[Unreleased]: https://github.com/bolens/launch-layer/compare/v0.13.2...HEAD
+[0.13.2]: https://github.com/bolens/launch-layer/compare/v0.13.1...v0.13.2
 [0.13.1]: https://github.com/bolens/launch-layer/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/bolens/launch-layer/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/bolens/launch-layer/compare/v0.11.0...v0.12.0
