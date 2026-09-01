@@ -1,6 +1,6 @@
 # Release Runbook
 
-Checklist for cutting a `vX.Y.Z` release of LaunchLayer. Follow in order; do not tag until the release commit is on `main` with a green required `ci` check.
+Checklist for cutting a `vX.Y.Z` release of LaunchLayer. Follow it in order. Do not tag until the release commit is on `main` with a green required `ci` check.
 
 [Docs index](README.md) · [README](../README.md) · [CLI](cli.md) · [TUI](tui.md) · [Architecture](architecture.md) · [Third-party](third-party.md) · [Release](release_runbook.md) · [Changelog](../CHANGELOG.md)
 
@@ -13,9 +13,9 @@ Semver guidance: bump **minor** for user-visible features, **patch** for fixes/d
 - [ ] Working tree is clean except for intentional release changes
 - [ ] On an up-to-date `main` (or a `release/vX.Y.Z` branch cut from `main`)
 - [ ] You know the target version
-- [ ] Local tools available: `bash`, `bats`, `shellcheck`, Node **22+** + pnpm (for hub gates)
+- [ ] Local tools available: `bash`, `bats`, `shellcheck`, Node **22.13+** + pnpm (for hub gates)
 
-`main` requires the **`ci`** status check — prefer a release PR over pushing straight to `main`.
+`main` requires the **`ci`** status check: prefer a release PR over pushing straight to `main`.
 
 ---
 
@@ -30,6 +30,9 @@ make check-hub
 
 # Or both:
 make check-all
+
+# Network-backed MCP conformance check when MCP surfaces changed:
+make check-mcp-inspector
 ```
 
 Do **not** skip `make check` / `make check-hub`. Fix failures before bumping.
@@ -124,8 +127,8 @@ gh release view vX.Y.Z
 | Failure | Action |
 | --- | --- |
 | Local `make check` / `check-hub` fail | Fix before opening the PR |
-| CI red on the release PR | Fix on the PR branch; do not tag |
-| Tag pushed with bad notes | `gh release edit vX.Y.Z …`; retag only if unpublished and never relied upon |
+| CI red on the release PR | Fix on the PR branch. Do not tag. |
+| Tag pushed with bad notes | Run `gh release edit vX.Y.Z …`. Retag only if unpublished and never relied upon. |
 | Need a fix after publish | Prefer a new patch tag (`vX.Y.Z+1`) |
 
 Never force-push `main`.
@@ -154,7 +157,7 @@ gh release create vX.Y.Z --generate-notes
 
 ## See also
 
-- [CHANGELOG.md](../CHANGELOG.md) — notes to edit before tagging
-- [architecture.md § Tests](architecture.md#tests) — `make check-all` / CI path filters
+- [CHANGELOG.md](../CHANGELOG.md): notes to edit before tagging
+- [architecture.md § Tests](architecture.md#tests): `make check-all` / CI path filters
 - [README § Testing](../README.md#testing) · [README § Contributing](../README.md#contributing)
 - [Docs index](README.md)

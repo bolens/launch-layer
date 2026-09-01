@@ -2,7 +2,7 @@
 
 ## Purpose
 
-LaunchLayer is a Bash 4.2+ launch orchestrator for Steam games. The repository
+LaunchLayer is a Bash 4.3+ launch orchestrator for Steam games. The repository
 also contains an optional Convex/TypeScript community hub under `hub/`.
 
 Keep changes narrow, portable, and covered by the closest relevant tests.
@@ -37,7 +37,7 @@ Keep changes narrow, portable, and covered by the closest relevant tests.
 
 ### Bash
 
-- Target Bash 4.2+; do not silently introduce newer-only features.
+- Target Bash 4.3+; do not silently introduce newer-only features.
 - Match the existing style: tabs for shell indentation, quoted expansions,
   `[[ ... ]]`, arrays for argv, and `local` variables inside functions.
 - Preserve argv boundaries. Avoid constructing commands as strings or using
