@@ -41,7 +41,7 @@ docs/                       # index: [docs/README.md](README.md)
 scripts/tui-screenshots/    # VHS capture scripts
 ```
 
-`lib/runtime/` includes `tuning.sh` (env), `chain.sh` (wrappers), `inject.sh` (cache/NOTICE/track), and `extras.sh` (Special K, ReShade, Conty, VR, winetricks, …). Upstream license policy: [third-party.md](third-party.md).
+`lib/runtime/` includes `tuning.sh` (env and GPU selection), `chain.sh` (wrappers), `inject.sh` (cache/NOTICE/track plus exclusive proxy-provider claims), and `extras.sh` (Special K, ReShade, OptiScaler, Conty, VR, winetricks, …). Injector implementations share the provider and tracked backup/restore boundary instead of independently overwriting game files. Upstream license policy: [third-party.md](third-party.md).
 
 ## Config layers (later overrides earlier)
 

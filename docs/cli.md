@@ -179,6 +179,8 @@ Env knobs from the [Arch Gaming wiki](https://wiki.archlinux.org/title/Gaming) (
 
 Layer stacking with MangoHud / vkBasalt / Gamescope can conflict: see [third-party.md](third-party.md#lsfg-vk-and-layer-stacking).
 
+For hybrid-GPU systems, `GPU_SELECT=auto|discrete|nvidia|amd|intel` applies standard PRIME and Vulkan-loader hints. `GPU_SELECT_DRIVER` supplies a literal `VK_LOADER_DRIVERS_SELECT` filter. Existing environment values win.
+
 ## Capture / network / Conty
 
 | Key | Effect |
@@ -201,6 +203,7 @@ See [docs/third-party.md](third-party.md) for licenses. Prefer user-supplied DLL
 | `SPECIAL_K_VERSION` / `INJECT_SHA256` | Cache subdirectory / required SHA-256 for remote fetches |
 | `RESHADE=1` | Standalone ReShade inject (`RESHADE_SOURCE`, `RESHADE_DLL`) |
 | `RESHADE_SK_VERSION` | Pin hint when both SK + ReShade enabled |
+| `OPTISCALER=1` | Tracked, user-supplied OptiScaler inject. Set `OPTISCALER_SOURCE`, optional `OPTISCALER_CONFIG`, and `OPTISCALER_PROXY` (`dxgi`, `winmm`, `version`, `dbghelp`, `d3d12`, `wininet`, `winhttp`, `optiscaler`, or `OptiScaler.asi`). Blocked on detected anti-cheat games. |
 | `DEPTH3D=1` | Assist-only shader path from `DEPTH3D_SOURCE` or cache, with optional `DEPTH3D_FETCH_URL` |
 | `WINETRICKS_VERBS=…` | `protontricks -q` or winetricks + resolvable prefix |
 | `WINETRICKS_GUI` / `WINECFG_BEFORE` / `REGISTRY_FILES` | GUI / winecfg / `.reg` apply |
@@ -209,6 +212,7 @@ See [docs/third-party.md](third-party.md) for licenses. Prefer user-supplied DLL
 | `SKIF` / `SKIF_PATH` / `SKIF_LAUNCH` | SKIF path with optional one-shot launch through protontricks-launch |
 | `VALVEPLUG*` | Windows Steam client assist only |
 | `OPENVR_FSR=1` + `OPENVR_FSR_SOURCE` | Tracked `openvr_api.dll` swap (restored after launch) |
+| `OPENCOMPOSITE=1` + `OPENCOMPOSITE_SOURCE` | Tracked OpenComposite `openvr_api.dll` swap, with optional `opencomposite.ini` |
 | `GEO11` / `FLAT2VR` / `SBS_VR*` | **Assist-only** path/HMD markers (no DLL inject) |
 | `SPECIALTY_RUNTIME` | `boxtron\|luxtorpeda\|roberta` → sets `OVERRIDE_PROTON` |
 | `PLAYTIME_LOG` / `CRASH_GUESS` | Optional playtime log and crash retry prompt. `CRASH_GUESS=1` defaults to a five-second timeout. |
@@ -222,10 +226,13 @@ See [docs/third-party.md](third-party.md) for licenses. Prefer user-supplied DLL
 | `GAMESCOPE_PREFER_OUTPUT=…` | `-O` prefer-output |
 | `GAMESCOPE_FRAME_LIMIT=…` | `--framerate-limit` |
 | `GAMESCOPE_FILTER=nis\|fsr\|…` | `--filter` |
+| `GAMESCOPE_RESHADE_EFFECT` / `GAMESCOPE_RESHADE_TECHNIQUE` | Native Gamescope `--reshade-effect` and `--reshade-technique-idx` arguments |
 | `GAMESCOPE_FOCUSED_FPS` / `GAMESCOPE_UNFOCUSED_FPS` | Focused/unfocused FPS caps |
 | `GAMESCOPE_ADAPTIVE_SYNC=` | Empty/`auto` detects VRR. `0`/`1` forces the value. The TUI exposes this under Advanced, not boolean flip. |
 
 Inside gamescope-session, `GAMESCOPE=1` is skipped automatically. Details: [third-party.md](third-party.md).
+
+Only one injector may own a proxy DLL slot. Validation and launch abort when Special K, ReShade, OptiScaler, OpenVR-FSR, or OpenComposite claim the same filename; choose distinct supported proxies instead.
 
 ## Bazzite / Deck identity & frame limits (config keys)
 
