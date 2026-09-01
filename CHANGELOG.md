@@ -9,21 +9,34 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-09-01
+
 ### Added
 
 - Add a dependency-free, read-only MCP stdio server with game, configuration, path, cache, launch-statistics, environment, recommendation, diagnostic, and validation tools.
 - Add MCP 2026 discovery support, cancellation, redacted privacy mode, and a pinned Inspector conformance target.
 - Add a canonical configuration-key metadata registry shared by validation, summaries, the TUI, and Hub trust checks.
+- Add accessible TUI status views, text labels, reduced-motion behavior, and deterministic visual evidence.
+- Add a responsive GitHub Pages guide for players, live release and CI status, and an interactive repository-backed architecture diagram.
 
 ### Changed
 
 - Require Bash 4.3 and verify the minimum runtime in CI.
 - Lazy-load command modules for substantially faster version and help output.
 - Bound Hub HTTP connection time, request time, and response size.
+- Cache Steam manifests and bounded engine indexes to reduce repeated filesystem scans.
+- Update the Hub dependency set and require Node 22.13 or newer.
+- Make ProtonDB recommendation ranking deterministic across report and Proton version ordering.
+- Make version bumps atomic and portable across GNU and BSD systems.
 
 ### Fixed
 
 - Generate direct systemd maintenance and backup commands so failures reach the journal and unit status.
+- Preserve paths containing whitespace throughout Steam discovery and preflight checks.
+- Serialize config, Hub apply, completion, launch-log, and backup writes to prevent lost concurrent updates.
+- Keep rapid Hub applies and same-second backups under unique recovery names.
+- Validate MCP request envelopes and IDs before they reach shared worker state.
+- Scope temporary-file cleanup to its owning operation and keep directory migration out of module loading.
 
 ## [0.12.0] - 2026-08-11
 
@@ -107,7 +120,8 @@ and this project uses [Semantic Versioning](https://semver.org/).
 - Modular `lib/` layout, TUI, backups, profiles, and broad platform detection
 - LaunchLayer Hub client + Convex backend for sharing per-game configs
 
-[Unreleased]: https://github.com/bolens/launch-layer/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/bolens/launch-layer/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/bolens/launch-layer/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/bolens/launch-layer/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/bolens/launch-layer/releases/tag/v0.11.0
 [0.10.0]: https://github.com/bolens/launch-layer/releases/tag/v0.10.0
