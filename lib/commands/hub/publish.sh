@@ -30,6 +30,16 @@ hub_publish_result_message() {
 	fi
 }
 
+# hub_bulk_progress_begin / hub_bulk_progress_end — Keep long bulk hub operations visible.
+hub_bulk_progress_begin() {
+	local index=$1 action=$2 name=$3 appid=$4
+	printf '[%d] %s %s (%s)... ' "$index" "$action" "$name" "$appid" >&2
+}
+
+hub_bulk_progress_end() {
+	printf '%s\n' "$1" >&2
+}
+
 # hub_publish_config — Upload one or more game configs to the hub.
 hub_publish_config() {
 	local appid="" note="" all_configured=0 json=0 config_id="" arg
@@ -58,7 +68,8 @@ hub_publish_config() {
 
 	if [[ "$all_configured" == "1" ]]; then
 		local -a published=() updated=() created=()
-		local line id name path content
+		local line id name path content progress=0
+		echo "Discovering configured games..." >&2
 		while IFS= read -r line; do
 			[[ -n "$line" ]] || continue
 			id="$(hub_json_get "$line" appid 2>/dev/null || true)"
@@ -69,12 +80,19 @@ hub_publish_config() {
 			hub_validate_local_env_file "$path" "Config for $name ($id)" || return 1
 			hub_assert_publish_env_safe "$path" || return 1
 			content="$(cat "$path")"
-			hub_sync_one_game "$fingerprint" "$id" "$name" "$content" "$note" || return 1
+			((progress++)) || true
+			hub_bulk_progress_begin "$progress" Publishing "$name" "$id"
+			if ! hub_sync_one_game "$fingerprint" "$id" "$name" "$content" "$note"; then
+				hub_bulk_progress_end failed
+				return 1
+			fi
 			published+=("$id")
 			if [[ "$HUB_SYNC_UPDATED" == "1" ]]; then
 				updated+=("$id")
+				hub_bulk_progress_end updated
 			else
 				created+=("$id")
+				hub_bulk_progress_end created
 			fi
 		done < <(list_games 1 1 "")
 
@@ -93,7 +111,16 @@ hub_publish_config() {
 		echo "Usage: launchlayer --hub-publish APPID|NAME [--note TEXT] [--config-id ID] [--all-configured] [--json]" >&2
 		return 1
 	}
-	[[ "$appid" =~ ^[0-9]+$ ]] || appid="$(resolve_appid_arg "$appid")" || return $?
+	if [[ "$appid" =~ ^[0-9]+$ ]]; then
+		if declare -f find_app_manifest >/dev/null 2>&1 \
+			&& find_app_manifest "$appid" >/dev/null 2>&1 \
+			&& ! is_installed_game_appid "$appid"; then
+			echo "AppID $appid is an installed Steam tool, not a game." >&2
+			return 1
+		fi
+	else
+		appid="$(resolve_appid_arg "$appid")" || return $?
+	fi
 
 	local name path content
 	name="$(get_game_name "$appid" 2>/dev/null || echo "AppID $appid")"
@@ -149,7 +176,8 @@ hub_update_config() {
 	fingerprint="$(hub_fingerprint_from_detection)"
 
 	if [[ "$all_configured" == "1" ]]; then
-		local line id existing_id
+		local line id existing_id progress=0
+		echo "Discovering configured games..." >&2
 		while IFS= read -r line; do
 			[[ -n "$line" ]] || continue
 			id="$(hub_json_get "$line" appid 2>/dev/null || true)"
@@ -159,20 +187,31 @@ hub_update_config() {
 			[[ -f "$path" ]] || continue
 			hub_validate_local_env_file "$path" "Config for $name ($id)" || return 1
 			hub_assert_publish_env_safe "$path" || return 1
+			((progress++)) || true
+			hub_bulk_progress_begin "$progress" Updating "$name" "$id"
 			existing_id="$(hub_find_my_config_id "$id" "$fingerprint" 2>/dev/null || true)"
 			if [[ -z "$existing_id" ]]; then
 				if [[ "$only_existing" == "1" ]]; then
 					skipped+=("$id")
+					hub_bulk_progress_end skipped
 					continue
 				fi
 				content="$(cat "$path")"
-				hub_sync_one_game "$fingerprint" "$id" "$name" "$content" "$note" || return 1
+				if ! hub_sync_one_game "$fingerprint" "$id" "$name" "$content" "$note"; then
+					hub_bulk_progress_end failed
+					return 1
+				fi
 				updated+=("$id")
+				hub_bulk_progress_end created
 				continue
 			fi
 			content="$(cat "$path")"
-			hub_sync_one_game "$fingerprint" "$id" "$name" "$content" "$note" "$existing_id" || return 1
+			if ! hub_sync_one_game "$fingerprint" "$id" "$name" "$content" "$note" "$existing_id"; then
+				hub_bulk_progress_end failed
+				return 1
+			fi
 			updated+=("$id")
+			hub_bulk_progress_end updated
 		done < <(list_games 1 1 "")
 
 		if [[ "$json" == "1" ]]; then
@@ -187,7 +226,12 @@ hub_update_config() {
 	fi
 
 	if [[ -n "$appid" ]]; then
-		[[ "$appid" =~ ^[0-9]+$ ]] || appid="$(resolve_appid_arg "$appid")" || return $?
+		if declare -f find_app_manifest >/dev/null 2>&1 \
+			&& find_app_manifest "$appid" >/dev/null 2>&1 \
+			&& ! is_installed_game_appid "$appid"; then
+			echo "AppID $appid is an installed Steam tool, not a game." >&2
+			return 1
+		fi
 		config_id="$(hub_find_my_config_id "$appid" "$fingerprint" 2>/dev/null || true)"
 		[[ -n "$config_id" ]] || {
 			echo "No shared hub config for $appid on this machine — use --hub-publish to create one." >&2

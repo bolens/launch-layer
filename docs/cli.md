@@ -125,8 +125,8 @@ Privileged actions (`--hub-publish`, `--hub-update`, `--hub-delete`) need `publi
 | Command | Description |
 |---------|-------------|
 | `--hub-fingerprint [--json] [--fingerprint-level minimal\|standard\|detailed]` | Machine descriptor for matching. `minimal` is the default. Override it through `hub.conf` or the environment. |
-| `--hub-publish APPID\|NAME [--note TEXT] [--config-id ID] [--all-configured] [--json]` | Upload per-game config(s) (rejects untrusted exec keys) |
-| `--hub-update APPID\|NAME\|CONFIG_ID [--all-configured] [--note TEXT] [--include-new] [--json]` | Update existing shared config(s) for this machine |
+| `--hub-publish APPID\|NAME [--note TEXT] [--config-id ID] [--all-configured] [--json]` | Upload per-game config(s); bulk mode reports per-game progress on stderr (rejects untrusted exec keys) |
+| `--hub-update APPID\|NAME\|CONFIG_ID [--all-configured] [--note TEXT] [--include-new] [--json]` | Update existing shared config(s); bulk mode reports updated, created, or skipped status per game on stderr |
 | `--hub-delete CONFIG_ID [--yes] [--json]` | Delete a shared config (requires publish token unless open publish is enabled) |
 | `--hub-recommend APPID\|NAME [--limit N] [--json]` | Configs from similar machines |
 | `--hub-search [--limit N] [--json]` | Machines most like yours |

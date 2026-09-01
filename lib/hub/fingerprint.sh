@@ -275,7 +275,7 @@ hub_fingerprint_hash() {
 	local hash_keys='{
 			gpu_vendor, os_family, session_type, profiles, display_tier, refresh_tier,
 			desktop, has_x3d, vrr, wsl2, flatpak_steam, steam_deck, immutable, container
-		}'
+		} | to_entries | sort_by(.key) | from_entries'
 	if command -v jq >/dev/null 2>&1; then
 		canonical="$(printf '%s' "$json" | jq -c "$hash_keys" 2>/dev/null || printf '%s' "$json")"
 	elif command -v python3 >/dev/null 2>&1; then

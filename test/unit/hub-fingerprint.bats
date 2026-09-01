@@ -140,6 +140,13 @@ setup() {
 	[[ ${#h1} -eq 64 ]]
 }
 
+@test "hub_fingerprint_hash matches Convex canonical key order" {
+	local fp='{"gpu_vendor":"nvidia","os_family":"arch","session_type":"wayland","desktop":"kde","profiles":["arch-linux"],"display_tier":"1440p","refresh_tier":"mid75_120","has_x3d":true,"vrr":true,"wsl2":false,"flatpak_steam":false,"steam_deck":false,"immutable":false,"container":false}'
+	run hub_fingerprint_hash "$fp"
+	[[ $status -eq 0 ]]
+	[[ "$output" == "858056a201fe58437ad682936363e89095ca57930cbe5d00712e4c20316a9ac9" ]]
+}
+
 @test "hub_fingerprint_level_desc documents tiers" {
 	run hub_fingerprint_level_desc minimal
 	[[ "$output" == *"default"* ]]
