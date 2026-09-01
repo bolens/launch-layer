@@ -39,6 +39,19 @@ teardown() {
 	rm -rf "$fake_steam"
 }
 
+@test "list-games output survives an unwritable TUI cache" {
+	local fake_steam blocked_cache
+	fake_steam="$(fake_steam_root 1794680 "Vampire Survivors")"
+	blocked_cache="$(mktemp)"
+	run env STEAM_ROOT="$fake_steam" XDG_CACHE_HOME="$blocked_cache" "$SCRIPT" --list-games --grep "Vampire Survivors"
+	[[ $status -eq 0 ]]
+	[[ "$output" =~ ^APPID[[:space:]] ]]
+	[[ "$output" == *"1794680"* ]]
+	[[ "$output" != *"Not a directory"* ]]
+	rm -rf "$fake_steam"
+	rm -f "$blocked_cache"
+}
+
 @test "list-games updates persisted games cache on full scan" {
 	local fake_steam cache_dir lines_file
 	fake_steam="$(fake_steam_root 1794680 "Vampire Survivors")"

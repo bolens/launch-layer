@@ -83,11 +83,11 @@ hub_apply_config() {
 		return 0
 	fi
 
-	mkdir -p "$(dirname "$path")"
-	if [[ -f "$path" ]]; then
-		cp "$path" "${path}.bak.$(date +%s)"
+	if ! appid_env_replace_from_file "$tmp_env" "$path" 1; then
+		rm -f "$tmp_env"
+		echo "Failed to write hub config: $path" >&2
+		return 1
 	fi
-	cat "$tmp_env" > "$path"
 	rm -f "$tmp_env"
 
 	if [[ "$json" == "1" ]]; then

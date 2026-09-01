@@ -111,20 +111,33 @@ setup() {
 		echo "mangohud:${MANGOHUD:-unset} dxvk:${DXVK_ASYNC:-unset}"
 	'
 	[[ $status -eq 0 ]]
-	[[ "$output" == "mangohud:unset dxvk:1" ]]
+	[[ "$output" == "mangohud:unset dxvk:unset" ]]
 }
 
-@test "apply_proton_env sets Proton defaults for non-native games" {
+@test "apply_proton_env does not force compatibility overrides" {
 	run bash -c '
 		export CONFIG_DIR="'"$CONFIG_DIR"'"
 		export is_native=0
 		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
 		source_lib runtime
 		apply_proton_env
-		echo "wayland:${PROTON_ENABLE_WAYLAND} dxvk:${DXVK_ASYNC}"
+		echo "wayland:${PROTON_ENABLE_WAYLAND:-unset} ntsync:${PROTON_USE_NTSYNC:-unset} dxvk:${DXVK_ASYNC:-unset} feature:${VKD3D_FEATURE_LEVEL:-unset}"
 	'
 	[[ $status -eq 0 ]]
-	[[ "$output" == "wayland:1 dxvk:1" ]]
+	[[ "$output" == "wayland:unset ntsync:unset dxvk:unset feature:unset" ]]
+}
+
+@test "apply_proton_env preserves explicit compatibility overrides" {
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		export is_native=0 PROTON_NO_NTSYNC=1 PROTON_USE_WINED3D=1
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib runtime
+		apply_proton_env
+		echo "ntsync:$PROTON_NO_NTSYNC wined3d:$PROTON_USE_WINED3D"
+	'
+	[[ $status -eq 0 ]]
+	[[ "$output" == "ntsync:1 wined3d:1" ]]
 }
 
 @test "rotate_launch_log trims oversized launch.log" {
@@ -167,6 +180,41 @@ setup() {
 	[[ $status -eq 0 ]]
 	[[ "$output" == *"appid=42424242"* ]]
 	[[ "$output" == *"duration=120s exit=0"* ]]
+	rm -rf "$tmp"
+}
+
+@test "concurrent log rotation retains both launch events" {
+	command -v flock >/dev/null 2>&1 || skip "flock is not installed"
+	local tmp log
+	tmp="$(temp_state_dir)"
+	log="$tmp/state/launchlayer/launch.log"
+	mkdir -p "$(dirname "$log")"
+	printf '%s\n' {1..10} > "$log"
+	run env \
+		CONFIG_DIR="$CONFIG_DIR" \
+		XDG_STATE_HOME="$tmp/state" \
+		LAUNCH_LOG_MAX_LINES=3 \
+		bash -c '
+			source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+			source_lib platform runtime
+			is_native=0
+			is_anticheat=0
+			_log_one() {
+				steam_app_id=$1
+				steam_game_name="Game $1"
+				log_launch_event 0 1
+			}
+			_log_one 111 &
+			first=$!
+			_log_one 222 &
+			second=$!
+			wait "$first" "$second"
+			grep -c "appid=111" "$LAUNCH_LOG_FILE"
+			grep -c "appid=222" "$LAUNCH_LOG_FILE"
+			wc -l < "$LAUNCH_LOG_FILE"
+		'
+	[[ $status -eq 0 ]]
+	[[ "$output" == $'1\n1\n4' ]]
 	rm -rf "$tmp"
 }
 
@@ -396,7 +444,6 @@ setup() {
 		source_lib platform runtime
 		cat > "$NETWORK_TUNING_STATE_FILE" <<EOF
 nic=eth0
-tcp_low_latency=0
 rx=128
 tx=256
 adaptive_rx=on
@@ -416,7 +463,6 @@ EOF
 		[[ ! -e "$NETWORK_TUNING_STATE_FILE" ]]
 	'
 	[[ $status -eq 0 ]]
-	[[ "$output" == *"sysctl -w net.ipv4.tcp_low_latency=0"* ]]
 	[[ "$output" == *"ethtool -G eth0 rx 128 tx 256"* ]]
 	[[ "$output" == *"iw dev eth0 set power_save off"* ]]
 	rm -rf "$tmp"

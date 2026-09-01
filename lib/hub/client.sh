@@ -4,17 +4,57 @@
 [[ -n "${LAUNCHLAYER_HUB_CLIENT_LOADED:-}" ]] && return 0
 LAUNCHLAYER_HUB_CLIENT_LOADED=1
 
+# hub_http_limits — Validate and publish bounded HTTP client limits.
+hub_http_limits() {
+	HUB_HTTP_CONNECT_TIMEOUT=${HUB_CONNECT_TIMEOUT_SEC:-5}
+	HUB_HTTP_REQUEST_TIMEOUT=${HUB_REQUEST_TIMEOUT_SEC:-30}
+	HUB_HTTP_MAX_RESPONSE_BYTES=${HUB_MAX_RESPONSE_BYTES:-131072}
+	[[ "$HUB_HTTP_CONNECT_TIMEOUT" =~ ^[0-9]+$ ]] \
+		&& (( HUB_HTTP_CONNECT_TIMEOUT >= 1 && HUB_HTTP_CONNECT_TIMEOUT <= 60 )) || {
+		echo "HUB_CONNECT_TIMEOUT_SEC must be an integer from 1 to 60" >&2
+		return 1
+	}
+	[[ "$HUB_HTTP_REQUEST_TIMEOUT" =~ ^[0-9]+$ ]] \
+		&& (( HUB_HTTP_REQUEST_TIMEOUT >= 1 && HUB_HTTP_REQUEST_TIMEOUT <= 300 )) || {
+		echo "HUB_REQUEST_TIMEOUT_SEC must be an integer from 1 to 300" >&2
+		return 1
+	}
+	[[ "$HUB_HTTP_MAX_RESPONSE_BYTES" =~ ^[0-9]+$ ]] \
+		&& (( HUB_HTTP_MAX_RESPONSE_BYTES >= 1024 && HUB_HTTP_MAX_RESPONSE_BYTES <= 4194304 )) || {
+		echo "HUB_MAX_RESPONSE_BYTES must be an integer from 1024 to 4194304" >&2
+		return 1
+	}
+}
+
+# hub_curl_status_error — Report a bounded curl transport failure.
+hub_curl_status_error() {
+	local status=$1 url=$2
+	if (( status == 63 )); then
+		echo "Hub response exceeded ${HUB_HTTP_MAX_RESPONSE_BYTES} bytes: $url" >&2
+	elif (( status == 28 )); then
+		echo "Hub request timed out after ${HUB_HTTP_REQUEST_TIMEOUT}s: $url" >&2
+	else
+		echo "Hub request failed: $url" >&2
+	fi
+}
+
 # hub_fetch_publish_auth_required — 1 when hub GET /api/auth reports token required.
 hub_fetch_publish_auth_required() {
-	local url tmp code body
+	local url tmp code body curl_status=0
 	load_hub_prefs
+	hub_http_limits || return 1
 	url="${HUB_PREFS_URL%/}/api/auth"
 	tmp="$(mktemp)"
 	trap 'rm -f "'"$tmp"'"' RETURN
-	code="$(curl -sS -o "$tmp" -w '%{http_code}' "$url" 2>/dev/null)" || {
+	code="$(curl -sS -o "$tmp" -w '%{http_code}' \
+		--connect-timeout "$HUB_HTTP_CONNECT_TIMEOUT" \
+		--max-time "$HUB_HTTP_REQUEST_TIMEOUT" \
+		--max-filesize "$HUB_HTTP_MAX_RESPONSE_BYTES" \
+		"$url" 2>/dev/null)" || curl_status=$?
+	if (( curl_status != 0 )); then
 		echo 0
 		return 0
-	}
+	fi
 	if [[ "$code" != "200" ]]; then
 		echo 0
 		return 0
@@ -96,9 +136,10 @@ for row in data.get("results") or []:
 # hub_curl_json — HTTP JSON call; pass privileged=1 for publish/delete (auth enforced).
 hub_curl_json() {
 	local method=$1 path=$2 body=${3:-} privileged=${4:-0}
-	local url tmp code max_bytes=${HUB_MAX_RESPONSE_BYTES:-131072}
+	local url tmp code curl_status=0
 	hub_require_url || return 1
 	load_hub_prefs
+	hub_http_limits || return 1
 	if [[ "$privileged" == "1" ]]; then
 		hub_require_privileged_auth || return 1
 	fi
@@ -109,31 +150,30 @@ hub_curl_json() {
 	if [[ "$method" == POST ]]; then
 		if [[ -n "${HUB_PREFS_PUBLISH_TOKEN:-}" ]]; then
 			code="$(curl -sS -o "$tmp" -w '%{http_code}' -X POST \
+				--connect-timeout "$HUB_HTTP_CONNECT_TIMEOUT" \
+				--max-time "$HUB_HTTP_REQUEST_TIMEOUT" \
+				--max-filesize "$HUB_HTTP_MAX_RESPONSE_BYTES" \
 				-H 'Content-Type: application/json' \
 				-H "Authorization: Bearer ${HUB_PREFS_PUBLISH_TOKEN}" \
-				-d "$body" "$url")" || {
-				echo "Hub request failed: $url" >&2
-				return 1
-			}
+				-d "$body" "$url")" || curl_status=$?
 		else
 			code="$(curl -sS -o "$tmp" -w '%{http_code}' -X POST \
+				--connect-timeout "$HUB_HTTP_CONNECT_TIMEOUT" \
+				--max-time "$HUB_HTTP_REQUEST_TIMEOUT" \
+				--max-filesize "$HUB_HTTP_MAX_RESPONSE_BYTES" \
 				-H 'Content-Type: application/json' \
-				-d "$body" "$url")" || {
-				echo "Hub request failed: $url" >&2
-				return 1
-			}
+				-d "$body" "$url")" || curl_status=$?
 		fi
 	else
-		local curl_status=0
-		code="$(curl -sS -o "$tmp" -w '%{http_code}' --max-filesize "$max_bytes" "$url")" || curl_status=$?
-		if (( curl_status != 0 )); then
-			if (( curl_status == 63 )); then
-				echo "Hub response exceeded ${max_bytes} bytes: $url" >&2
-			else
-				echo "Hub request failed: $url" >&2
-			fi
-			return 1
-		fi
+		code="$(curl -sS -o "$tmp" -w '%{http_code}' \
+			--connect-timeout "$HUB_HTTP_CONNECT_TIMEOUT" \
+			--max-time "$HUB_HTTP_REQUEST_TIMEOUT" \
+			--max-filesize "$HUB_HTTP_MAX_RESPONSE_BYTES" \
+			"$url")" || curl_status=$?
+	fi
+	if (( curl_status != 0 )); then
+		hub_curl_status_error "$curl_status" "$url"
+		return 1
 	fi
 
 	if [[ "$code" =~ ^2 ]]; then

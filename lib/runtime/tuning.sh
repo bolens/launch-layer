@@ -20,10 +20,9 @@ _runtime_state_value() {
 }
 
 save_network_tuning_state() {
-	local nic=$1 current_rx="" current_tx="" tcp="" eee="" wifi=""
+	local nic=$1 current_rx="" current_tx="" eee="" wifi=""
 	local adaptive_rx="" adaptive_tx="" rx_usecs="" rx_frames=""
 	mkdir -p "$STATE_DIR" 2>/dev/null || return 1
-	tcp="$(sysctl -n net.ipv4.tcp_low_latency 2>/dev/null || true)"
 	if command_available ethtool; then
 		read -r current_rx current_tx < <(ethtool -g "$nic" 2>/dev/null | awk '
 			/Current hardware settings:/ { current=1; next }
@@ -43,7 +42,6 @@ save_network_tuning_state() {
 	fi
 	if ! {
 		printf 'nic=%s\n' "$nic"
-		printf 'tcp_low_latency=%s\n' "$tcp"
 		printf 'rx=%s\n' "$current_rx"
 		printf 'tx=%s\n' "$current_tx"
 		printf 'adaptive_rx=%s\n' "$adaptive_rx"
@@ -64,9 +62,8 @@ save_network_tuning_state() {
 
 restore_network_tuning() {
 	[[ -f "$NETWORK_TUNING_STATE_FILE" ]] || return 0
-	local nic tcp rx tx adaptive_rx adaptive_tx rx_usecs rx_frames eee wifi
+	local nic rx tx adaptive_rx adaptive_tx rx_usecs rx_frames eee wifi
 	nic="$(_runtime_state_value "$NETWORK_TUNING_STATE_FILE" nic || true)"
-	tcp="$(_runtime_state_value "$NETWORK_TUNING_STATE_FILE" tcp_low_latency || true)"
 	rx="$(_runtime_state_value "$NETWORK_TUNING_STATE_FILE" rx || true)"
 	tx="$(_runtime_state_value "$NETWORK_TUNING_STATE_FILE" tx || true)"
 	adaptive_rx="$(_runtime_state_value "$NETWORK_TUNING_STATE_FILE" adaptive_rx || true)"
@@ -77,7 +74,6 @@ restore_network_tuning() {
 	wifi="$(_runtime_state_value "$NETWORK_TUNING_STATE_FILE" wifi_power_save || true)"
 	rm -f "$NETWORK_TUNING_STATE_FILE"
 	[[ -n "$nic" ]] || return 0
-	[[ -n "$tcp" ]] && sudo -n sysctl -w "net.ipv4.tcp_low_latency=$tcp" >/dev/null 2>&1 || true
 	if command_available ethtool; then
 		[[ "$rx" =~ ^[0-9]+$ && "$tx" =~ ^[0-9]+$ ]] \
 			&& sudo -n ethtool -G "$nic" rx "$rx" tx "$tx" >/dev/null 2>&1 || true
@@ -131,7 +127,6 @@ apply_network_tuning() {
 		fi
 		sudo -n ip link set "$nic" up 2>/dev/null || true
 		sudo -n ethtool -G "$nic" rx "$max_rx" tx "$max_tx" 2>/dev/null || true
-		sudo -n sysctl -w net.ipv4.tcp_low_latency=1 >/dev/null 2>&1 || true
 		sudo -n ethtool -C "$nic" adaptive-rx off adaptive-tx off 2>/dev/null || true
 		sudo -n ethtool -C "$nic" rx-usecs 0 rx-frames 1 2>/dev/null || true
 
@@ -454,24 +449,6 @@ apply_proton_env() {
 		return 0
 	}
 
-	export PROTON_ENABLE_WAYLAND=${PROTON_ENABLE_WAYLAND:-1}
-	export PROTON_USE_NTSYNC=${PROTON_USE_NTSYNC:-1}
-	export PROTON_HIDE_NVIDIA_GPU=${PROTON_HIDE_NVIDIA_GPU:-0}
-	export PROTON_ENABLE_NVAPI=${PROTON_ENABLE_NVAPI:-1}
-	export PROTON_NO_ESYNC=${PROTON_NO_ESYNC:-0}
-	export PROTON_NO_FSYNC=${PROTON_NO_FSYNC:-0}
-	export PROTON_BYPASS_WINMENUBUILDER=${PROTON_BYPASS_WINMENUBUILDER:-1}
-	export PROTON_LOG=${PROTON_LOG:-0}
-
-	export __GL_THREADED_OPTIMIZATIONS=${__GL_THREADED_OPTIMIZATIONS:-1}
-	export __GL_YIELD=${__GL_YIELD:-USLEEP}
-	export __GL_MaxFramesAllowed=${__GL_MaxFramesAllowed:-1}
-	export __GL_SYNC_TO_VBLANK=${__GL_SYNC_TO_VBLANK:-0}
-	export __GL_SHADER_DISK_CACHE=${__GL_SHADER_DISK_CACHE:-1}
-	export __VK_LAYER_NV_optimus=${__VK_LAYER_NV_optimus:-NVIDIA_only}
-	export VKD3D_FEATURE_LEVEL=${VKD3D_FEATURE_LEVEL:-12_2}
-	export DXVK_HUD=${DXVK_HUD:-0}
-
 	apply_shader_cache_boost
 	apply_proton_nvidia_libs
 	apply_upscaler_upgrades
@@ -484,16 +461,10 @@ apply_proton_env() {
 
 	if [[ "${BENCHMARK:-0}" == "1" ]]; then
 		unset MANGOHUD MANGOHUD_CONFIG MANGOHUD_LOG
-		export DXVK_ASYNC=${DXVK_ASYNC:-1}
-		export __GL_GSYNC_ALLOWED=${__GL_GSYNC_ALLOWED:-0}
-		export __GL_VRR_ALLOWED=${__GL_VRR_ALLOWED:-0}
 		apply_unset_vars
 		return 0
 	fi
 
-	export __GL_GSYNC_ALLOWED=${__GL_GSYNC_ALLOWED:-1}
-	export __GL_VRR_ALLOWED=${__GL_VRR_ALLOWED:-1}
-	export DXVK_ASYNC=${DXVK_ASYNC:-1}
 	apply_unset_vars
 
 	if [[ "${MANGOHUD:-0}" == "1" && "${DXVK_HUD:-0}" != "0" ]]; then

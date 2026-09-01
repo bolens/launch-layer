@@ -146,3 +146,34 @@ setup() {
 	[[ $status -eq 0 ]]
 	[[ "$output" == unknown ]]
 }
+
+@test "config key metadata exposes type TUI summary and Hub policy" {
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib keys
+		printf "%s|%s|%s\n" \
+			"$(config_key_kind GAMEMODE)" \
+			"$(config_key_tui_surface GAMEMODE)" \
+			"$(config_key_hub_policy PRE_LAUNCH_CMD)"
+	'
+	[[ $status -eq 0 ]]
+	[[ "$output" == "boolean|toggle|untrusted" ]]
+}
+
+@test "config key metadata Hub policy matches shipped untrusted list" {
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib keys
+		metadata="$(mktemp)"
+		list="$(mktemp)"
+		for key in "${!LAUNCHLAYER_CONFIG_KEY_HUB[@]}"; do
+			[[ "${LAUNCHLAYER_CONFIG_KEY_HUB[$key]}" == untrusted ]] && printf "%s\n" "$key"
+		done | sort > "$metadata"
+		sed "/^[[:space:]]*#/d;/^[[:space:]]*$/d" "$(launchlayer_share_dir)/hub-untrusted-keys.txt" | sort > "$list"
+		diff -u "$list" "$metadata"
+		rm -f "$metadata" "$list"
+	'
+	[[ $status -eq 0 ]]
+}

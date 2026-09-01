@@ -79,3 +79,25 @@ teardown() {
 	[[ $status -eq 0 ]]
 	[[ "$output" == $'GAMEMODE=0\nMANGOHUD=0' ]]
 }
+
+@test "appid_env_upsert serializes concurrent key updates" {
+	command -v flock >/dev/null 2>&1 || skip "flock is not installed"
+	run env \
+		CONFIG_DIR="$GAMES_TMP" \
+		LAUNCHLAYER_GAMES_DIR="$GAMES_TMP/games" \
+		bash -c '
+			source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+			source_lib config
+			file="'"$GAMES_TMP"'/games/42424242.env"
+			printf "%s\n" "INCLUDE=presets/standard.env" > "$file"
+			appid_env_upsert "$file" GAMEMODE 1 &
+			first=$!
+			appid_env_upsert "$file" MANGOHUD 1 &
+			second=$!
+			wait "$first" "$second"
+			sort "$file"
+		'
+	[[ $status -eq 0 ]]
+	[[ "$output" == *"GAMEMODE=1"* ]]
+	[[ "$output" == *"MANGOHUD=1"* ]]
+}

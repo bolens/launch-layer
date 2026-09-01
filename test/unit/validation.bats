@@ -114,6 +114,34 @@ EOF
 	rm -rf "$tmp"
 }
 
+@test "validate_config batch reuses profiles and shared include resolution" {
+	local tmp profile_calls include_calls
+	tmp="$(temp_config_dir)"
+	profile_calls="$tmp/profile-calls"
+	include_calls="$tmp/include-calls"
+	printf '%s\n' 'INCLUDE=presets/standard.env' > "$tmp/games/111.env"
+	printf '%s\n' 'INCLUDE=presets/standard.env' > "$tmp/games/222.env"
+	run env CONFIG_DIR="$tmp" LAUNCHLAYER_GAMES_DIR="$tmp/games" \
+		PROFILE_CALLS="$profile_calls" INCLUDE_CALLS="$include_calls" bash -c '
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform steam keys config runtime inspect
+		detect_default_profiles() {
+			printf "call\n" >> "$PROFILE_CALLS"
+			printf "arch-linux\n"
+		}
+		resolve_include_under_launchd() {
+			printf "call\n" >> "$INCLUDE_CALLS"
+			printf "%s/%s\n" "$LAUNCHD_DIR" "$1"
+		}
+		validate_config all 0 >/dev/null
+		printf "profiles=%s includes=%s\n" \
+			"$(wc -l < "$PROFILE_CALLS")" "$(wc -l < "$INCLUDE_CALLS")"
+	'
+	[[ $status -eq 0 ]]
+	[[ "$output" == "profiles=1 includes=1" ]]
+	rm -rf "$tmp"
+}
+
 @test "validate_single_config_file flags invalid FRAME_RATE" {
 	local tmp
 	tmp="$(temp_config_dir)"

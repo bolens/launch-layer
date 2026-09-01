@@ -679,6 +679,7 @@ EOF
 		"path"		"/tmp/secondary"
 	}
 }
+
 EOF
 	run env STEAM_ROOT="$tmp" CONFIG_DIR="${CONFIG_DIR:-$(launchlayer_root)}" bash -c '
 		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
@@ -689,4 +690,38 @@ EOF
 	[[ "$output" == *"/tmp/primary"* ]]
 	[[ "$output" == *"/tmp/secondary"* ]]
 	rm -rf "$tmp"
+}
+
+@test "unknown engine builds one bounded filesystem index" {
+	local tmp calls
+	tmp="$(mktemp -d)"
+	calls="$tmp/find-calls"
+	mkdir -p "$tmp/game/assets/a/b/c"
+	touch "$tmp/game/assets/a/b/c/unknown.dat"
+	run env ENGINE_FIND_CALLS="$calls" CONFIG_DIR="$CONFIG_DIR" bash -c '
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib steam config
+		find() {
+			printf "call\n" >> "$ENGINE_FIND_CALLS"
+			command find "$@"
+		}
+		_detect_engine_markers "'"$tmp"'/game"
+		wc -l < "$ENGINE_FIND_CALLS"
+	'
+	[[ $status -eq 0 ]]
+	[[ "$output" =~ ^[0-6]$ ]]
+}
+
+@test "engine index cap falls back without missing markers" {
+	local tmp
+	tmp="$(mktemp -d)"
+	mkdir -p "$tmp/game/content"
+	touch "$tmp/game/content/gameinfo.txt"
+	run env LAUNCHLAYER_ENGINE_INDEX_MAX_ENTRIES=1 CONFIG_DIR="$CONFIG_DIR" bash -c '
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib steam config
+		_detect_engine_markers "'"$tmp"'/game"
+	'
+	[[ $status -eq 0 ]]
+	[[ "$output" == source ]]
 }

@@ -7,14 +7,17 @@ LAUNCHLAYER_BACKUP_EXPORT_LOADED=1
 # export_config — Pack managed launch.d files (and optional TUI prefs) into a tarball.
 export_config() {
 	local output=${1:-} include_local=${2:-0} include_profiles=${3:-1} include_tui=${4:-0} json=${5:-0}
+	local output_prefix=${6:-launchlayer-export}
 	local -a files=()
 	local staging tmpdir rel abs output_abs output_tmp file_count tui_path
+	local generated_output=0 lock_fd="" status=0
 	local -a tar_members=(manifest.json)
 
 	command_required_or_fail tar "Config export" || return 1
 
 	if [[ "$output" != *.tar.gz ]]; then
-		output="$(_config_bundle_resolve_archive_path "$output" launchlayer-export)" || return 1
+		generated_output=1
+		output="$(_config_bundle_resolve_archive_path "$output" "$output_prefix")" || return 1
 	fi
 	mkdir -p "$(dirname "$output")"
 	output_abs="$(cd "$(dirname "$output")" 2>/dev/null && pwd)/$(basename "$output")" \
@@ -61,17 +64,45 @@ export_config() {
 
 	_write_config_bundle_manifest "$staging" "$include_local" "$include_profiles" "$include_tui"
 
-	output_tmp="$(mktemp "$(dirname "$output_abs")/.launchlayer-export.XXXXXX")" || return 1
+	if (( generated_output )) && command -v flock >/dev/null 2>&1; then
+		exec {lock_fd}>"$(dirname "$output_abs")/.launchlayer-archive.lock" || return 1
+		flock "$lock_fd" || { exec {lock_fd}>&-; return 1; }
+	fi
+	if (( generated_output )); then
+		output_abs="$(_config_bundle_available_output "$output_abs")"
+	fi
+	output_tmp="$(mktemp "$(dirname "$output_abs")/.launchlayer-export.XXXXXX")" || status=$?
+	if (( status != 0 )); then
+		if [[ -n "$lock_fd" ]]; then
+			flock -u "$lock_fd" || true
+			exec {lock_fd}>&-
+		fi
+		return "$status"
+	fi
 	(
 		umask 077
 		cd "$staging" || exit 1
 		tar -czf "$output_tmp" "${tar_members[@]}"
 	) || {
 		rm -f "$output_tmp"
+		if [[ -n "$lock_fd" ]]; then
+			flock -u "$lock_fd" || true
+			exec {lock_fd}>&-
+		fi
 		return 1
 	}
-	chmod 600 "$output_tmp"
-	mv -f "$output_tmp" "$output_abs"
+	chmod 600 "$output_tmp" || status=$?
+	if (( status == 0 )); then
+		mv -f "$output_tmp" "$output_abs" || status=$?
+	fi
+	if (( status != 0 )); then
+		rm -f "$output_tmp"
+	fi
+	if [[ -n "$lock_fd" ]]; then
+		flock -u "$lock_fd" || true
+		exec {lock_fd}>&-
+	fi
+	(( status == 0 )) || return "$status"
 
 	if [[ "$json" == "1" ]]; then
 		printf '{"output":%s,"file_count":%s,"includes":{"local":%s,"profiles":%s,"tui":%s}}\n' \
@@ -91,10 +122,7 @@ export_config() {
 # backup_config — Timestamped export alias (defaults to backup_dir from backup.conf).
 backup_config() {
 	local output=${1:-} include_local=${2:-1} include_profiles=${3:-1} include_tui=${4:-0} json=${5:-0}
-	local path
-
-	path="$(_config_bundle_resolve_archive_path "$output" launchlayer-backup)" || return 1
-	export_config "$path" "$include_local" "$include_profiles" "$include_tui" "$json"
+	export_config "$output" "$include_local" "$include_profiles" "$include_tui" "$json" launchlayer-backup
 }
 # prune_backup_archives — Remove oldest launchlayer-backup-*.tar.gz files beyond --keep.
 # keep=0 means unlimited retention (no files removed).

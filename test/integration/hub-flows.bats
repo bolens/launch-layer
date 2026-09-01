@@ -58,6 +58,23 @@ teardown() {
 	ls "$CONFIG_TMP/games"/42424242.env.bak.* >/dev/null 2>&1
 }
 
+@test "hub_apply_config keeps distinct backups for rapid repeated applies" {
+	echo 'GAMEMODE=0' > "$CONFIG_TMP/games/42424242.env"
+	run env \
+		XDG_CONFIG_HOME="$XDG_CONFIG_HOME" \
+		CONFIG_DIR="$CONFIG_TMP" \
+		LAUNCHLAYER_GAMES_DIR="$CONFIG_TMP/games" \
+		bash -c '
+			source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+			source_lib commands prefs platform cli tools config inspect hub
+			hub_apply_config cfgtest00001 >/dev/null
+			hub_apply_config cfgtest00001 >/dev/null
+			find "'"$CONFIG_TMP"'/games" -maxdepth 1 -name "42424242.env.bak.*" -print | wc -l
+		'
+	[[ $status -eq 0 ]]
+	[[ "$output" -eq 2 ]]
+}
+
 @test "hub_apply_config --json dry-run emits structured payload" {
 	run env \
 		XDG_CONFIG_HOME="$XDG_CONFIG_HOME" \

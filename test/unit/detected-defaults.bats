@@ -173,3 +173,35 @@ setup() {
 	[[ $status -eq 0 ]]
 	[[ "$output" == absent ]]
 }
+
+@test "detected defaults keep invasive network and PipeWire tuning disabled" {
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib detected-defaults platform
+		is_steam_deck() { return 1; }
+		is_wsl2() { return 1; }
+		is_container() { return 1; }
+		has_systemd_user() { return 1; }
+		detect_gpu_vendor() { echo amd; }
+		detect_desktop_session() { echo kde; }
+		detect_audio_server() { echo pipewire; }
+		detect_os_family() { echo arch; }
+		is_immutable_os() { return 1; }
+		is_wayland_session() { return 1; }
+		command_available() { return 0; }
+		detect_default_nic() { echo eth0; }
+		is_multi_ccd_cpu() { return 1; }
+		df_avail_gb() { echo 100; }
+		compute_detected_defaults
+		for key in NETWORK_TUNE PIPEWIRE_LOW_LATENCY; do
+			value=missing
+			for ((i = 0; i < ${#_detected_default_keys[@]}; i++)); do
+				[[ "${_detected_default_keys[$i]}" == "$key" ]] && value="${_detected_default_values[$i]}"
+			done
+			printf "%s=%s\n" "$key" "$value"
+		done
+	'
+	[[ $status -eq 0 ]]
+	[[ "$output" == $'NETWORK_TUNE=0\nPIPEWIRE_LOW_LATENCY=0' ]]
+}

@@ -192,9 +192,11 @@ scan_anticheat() {
 	_scan_anticheat_one() {
 		local appid=$1 name=$2 _manifest=$3
 		fs=no; list=no
-		detect_anticheat_filesystem "$appid" && fs=yes
-		detect_anticheat_in_list "$appid" && list=yes
 		ac_type="$(detect_anticheat_type "$appid")"
+		case "$ac_type" in
+			eac|battleye) fs=yes ;;
+		esac
+		detect_anticheat_in_list "$appid" && list=yes
 		[[ -z "$ac_type" ]] && ac_type="-"
 
 		[[ "$fs" == yes || "$list" == yes ]] || return 0
@@ -263,7 +265,14 @@ scan_detections() {
 validate_config() {
 	local target=${1:-all} json=${2:-0} issues=0 file
 	local -a issue_lines=()
-	local line
+	local line validation_profiles
+
+	# A validation batch resolves many configs against the same machine and
+	# launch.d tree. Detect profiles and canonicalize shared INCLUDEs once.
+	validation_profiles="$(detect_default_profiles 2>/dev/null || true)"
+	local LAUNCHLAYER_PROFILES="$validation_profiles"
+	local LAUNCHLAYER_CACHE_INCLUDE_RESOLUTION=1
+	CONFIG_RESOLVED_INCLUDE_BY_KEY=()
 
 	_run_validation() {
 		local t=${1:-all}
@@ -277,7 +286,8 @@ validate_config() {
 				done
 				for file in "$GAMES_DIR"/[0-9]*.env; do
 					[[ -f "$file" ]] || continue
-					v_appid="$(basename "$file" .env)"
+					v_appid="${file##*/}"
+					v_appid="${v_appid%.env}"
 					[[ -n "${validated_appids[$v_appid]+x}" ]] && continue
 					validated_appids["$v_appid"]=1
 					validate_single_config_file "$file" || issues=$((issues + $?))

@@ -16,28 +16,51 @@ completions_manifest_file() {
 	echo "$(completions_state_dir)/completions.env"
 }
 
-# update_manifest_key — Set or replace one key in the completions manifest.
-update_manifest_key() {
-	local key=$1 value=$2 manifest tmp
+# _rewrite_manifest_key — Atomically set or remove one manifest key.
+_rewrite_manifest_key() {
+	local key=$1 value=${2:-} remove=${3:-0}
+	local manifest dir tmp lock_fd="" status=0
 	manifest="$(completions_manifest_file)"
-	mkdir -p "$(completions_state_dir)"
-	tmp="${manifest}.tmp"
+	dir="$(completions_state_dir)"
+	mkdir -p "$dir"
+	if command -v flock >/dev/null 2>&1; then
+		exec {lock_fd}>"${manifest}.lock" || return 1
+		flock "$lock_fd" || { exec {lock_fd}>&-; return 1; }
+	fi
+	tmp="$(mktemp "$dir/.completions-env.XXXXXX")" || status=$?
 	if [[ -f "$manifest" ]]; then
-		grep -v "^${key}=" "$manifest" > "$tmp" || true
-	else
+		if (( status == 0 )); then
+			grep -v "^${key}=" "$manifest" > "$tmp" || true
+		fi
+	elif (( status == 0 )); then
 		: > "$tmp"
 	fi
-	printf '%s=%q\n' "$key" "$value" >> "$tmp"
-	mv "$tmp" "$manifest"
+	if (( status == 0 && remove == 0 )); then
+		printf '%s=%q\n' "$key" "$value" >> "$tmp" || status=$?
+	fi
+	if (( status == 0 )); then
+		mv -f "$tmp" "$manifest" || status=$?
+	else
+		[[ -n "$tmp" ]] && rm -f "$tmp"
+	fi
+	if [[ -n "$lock_fd" ]]; then
+		flock -u "$lock_fd" || true
+		exec {lock_fd}>&-
+	fi
+	return "$status"
+}
+
+# update_manifest_key — Set or replace one key in the completions manifest.
+update_manifest_key() {
+	_rewrite_manifest_key "$1" "$2" 0
 }
 
 # remove_manifest_key — Remove one key from the completions manifest.
 remove_manifest_key() {
-	local key=$1 manifest
+	local manifest
 	manifest="$(completions_manifest_file)"
 	[[ -f "$manifest" ]] || return 0
-	grep -v "^${key}=" "$manifest" > "${manifest}.tmp" || true
-	mv "${manifest}.tmp" "$manifest"
+	_rewrite_manifest_key "$1" "" 1
 }
 
 # write_completions_manifest — Record CONFIG_DIR and per-shell install method.
@@ -62,31 +85,67 @@ profile_has_completions_block() {
 
 # profile_remove_completions_block — Remove only our marked block from a profile.
 profile_remove_completions_block() {
-	local profile=$1
+	local profile=$1 dir tmp lock_fd="" status=0
 	[[ -f "$profile" ]] || return 0
-	profile_has_completions_block "$profile" || return 0
-	awk -v begin="$COMPLETIONS_MARKER_BEGIN" -v end="$COMPLETIONS_MARKER_END" '
+	dir="$(dirname "$profile")"
+	if command -v flock >/dev/null 2>&1; then
+		exec {lock_fd}>"${profile}.launchlayer.lock" || return 1
+		flock "$lock_fd" || { exec {lock_fd}>&-; return 1; }
+	fi
+	if ! profile_has_completions_block "$profile"; then
+		[[ -n "$lock_fd" ]] && { flock -u "$lock_fd" || true; exec {lock_fd}>&-; }
+		return 0
+	fi
+	tmp="$(mktemp "$dir/.launchlayer-profile.XXXXXX")" || status=$?
+	if (( status == 0 )); then
+		cp -p "$profile" "$tmp" || status=$?
+	fi
+	if (( status == 0 )); then
+		awk -v begin="$COMPLETIONS_MARKER_BEGIN" -v end="$COMPLETIONS_MARKER_END" '
 		$0 == begin { skip=1; next }
 		$0 == end { skip=0; next }
 		!skip { print }
-	' "$profile" > "${profile}.launchlayer.tmp"
-	mv "${profile}.launchlayer.tmp" "$profile"
+		' "$profile" > "$tmp" || status=$?
+	fi
+	if (( status == 0 )); then
+		mv -f "$tmp" "$profile" || status=$?
+	else
+		[[ -n "$tmp" ]] && rm -f "$tmp"
+	fi
+	if [[ -n "$lock_fd" ]]; then
+		flock -u "$lock_fd" || true
+		exec {lock_fd}>&-
+	fi
+	return "$status"
 }
 
 # profile_append_completions_block — Append a single-source line inside marked block.
 profile_append_completions_block() {
-	local profile=$1 drop_in=$2
+	local profile=$1 drop_in=$2 lock_fd="" status=0
 	mkdir -p "$(dirname "$profile")"
+	if command -v flock >/dev/null 2>&1; then
+		exec {lock_fd}>"${profile}.launchlayer.lock" || return 1
+		flock "$lock_fd" || { exec {lock_fd}>&-; return 1; }
+	fi
 	[[ -f "$profile" ]] || touch "$profile"
 	if profile_has_completions_block "$profile"; then
+		if [[ -n "$lock_fd" ]]; then
+			flock -u "$lock_fd" || true
+			exec {lock_fd}>&-
+		fi
 		return 0
 	fi
-	cat >> "$profile" <<EOF
+	cat >> "$profile" <<EOF || status=$?
 
 $COMPLETIONS_MARKER_BEGIN
 [[ -f "$drop_in" ]] && source "$drop_in"
 $COMPLETIONS_MARKER_END
 EOF
+	if [[ -n "$lock_fd" ]]; then
+		flock -u "$lock_fd" || true
+		exec {lock_fd}>&-
+	fi
+	return "$status"
 }
 
 # symlink_points_to — True when path is a symlink to expected target.

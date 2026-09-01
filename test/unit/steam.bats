@@ -29,6 +29,29 @@ EOF
 	rm -rf "$tmp"
 }
 
+@test "read_manifest_game_fields parses scan fields in one pass" {
+	local tmp manifest
+	tmp="$(mktemp -d)"
+	manifest="$tmp/appmanifest_42424242.acf"
+	cat > "$manifest" <<'EOF'
+"AppState"
+{
+	"appid"		"42424242"
+	"name"		"Test Game With Spaces"
+	"installdir"		"Test Game"
+}
+EOF
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib steam
+		read_manifest_game_fields "'"$manifest"'"
+		printf "%s|%s|%s\n" "$MANIFEST_APPID" "$MANIFEST_NAME" "$MANIFEST_INSTALLDIR"
+	'
+	[[ $status -eq 0 ]]
+	[[ "$output" == "42424242|Test Game With Spaces|Test Game" ]]
+}
+
 @test "find_app_manifest locates fake steam game" {
 	local fake_steam
 	fake_steam="$(fake_steam_root 42424242 "Test Game")"
@@ -41,6 +64,33 @@ EOF
 	[[ $status -eq 0 ]]
 	[[ "$output" == *"appmanifest_42424242.acf" ]]
 	rm -rf "$fake_steam"
+}
+
+@test "Steam discovery preserves spaces in library and manifest paths" {
+	local tmp steam_root library manifest
+	tmp="$(mktemp -d)"
+	steam_root="$tmp/Steam Root"
+	library="$tmp/Games Drive"
+	manifest="$library/steamapps/appmanifest_42424242.acf"
+	mkdir -p "$steam_root/steamapps" "$library/steamapps/common/Game With Spaces"
+	printf '"libraryfolders"\n{\n\t"1"\n\t{\n\t\t"path" "%s"\n\t}\n}\n' "$library" \
+		> "$steam_root/steamapps/libraryfolders.vdf"
+	printf '"AppState"\n{\n\t"appid" "42424242"\n\t"name" "Game With Spaces"\n\t"installdir" "Game With Spaces"\n}\n' \
+		> "$manifest"
+	run env STEAM_ROOT="$steam_root" HOME="$tmp/home" bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib steam
+		printf "manifest=%s\n" "$(find_app_manifest 42424242)"
+		printf "game=%s\n" "$(get_game_dir_for_appid 42424242)"
+		_seen_game() { printf "seen=%s:%s:%s\n" "$1" "$2" "$3"; }
+		foreach_installed_game _seen_game
+	'
+	[[ $status -eq 0 ]]
+	[[ "$output" == *"manifest=$manifest"* ]]
+	[[ "$output" == *"game=$library/steamapps/common/Game With Spaces"* ]]
+	[[ "$output" == *"seen=42424242:Game With Spaces:$manifest"* ]]
+	rm -rf "$tmp"
 }
 
 @test "get_game_name resolves installed appid" {
@@ -143,6 +193,21 @@ EOF
 	[[ $status -eq 0 ]]
 	[[ "$output" == native ]]
 	rm -rf "$fake_steam"
+}
+
+@test "detect_native_game uses the shared cached install directory" {
+	local fake_steam
+	fake_steam="$(fake_steam_root 42424242 "Cached Native")"
+	touch "$fake_steam/steamapps/common/TestGame42424242/launcher.sh"
+	run env STEAM_ROOT="$fake_steam" bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib steam platform
+		STEAM_GAME_DIR_BY_APPID[42424242]="'"$fake_steam"'/steamapps/common/TestGame42424242"
+		find_game_dir() { return 99; }
+		detect_native_game 42424242
+	'
+	[[ $status -eq 0 ]]
 }
 
 @test "detect_anticheat_in_list matches anticheat-appids.txt" {
@@ -309,4 +374,49 @@ EOF
 	[[ $status -eq 0 ]]
 	[[ "$output" == "battleye" ]]
 	rm -rf "$fake_steam"
+}
+
+@test "collect_steam_library_roots treats STEAM_ROOT as authoritative" {
+	local root home
+	root="$(mktemp -d)"
+	home="$(mktemp -d)"
+	mkdir -p "$root/steamapps" "$home/.steam/root/steamapps"
+	run env HOME="$home" STEAM_ROOT="$root" bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib steam platform
+		collect_steam_library_roots
+	'
+	[[ $status -eq 0 ]]
+	[[ "$output" == "$root" ]]
+}
+
+@test "foreach_installed_game seeds the manifest cache for detectors" {
+	local root
+	root="$(fake_steam_root 42424242 "Cached Game" CachedGame)"
+	run env STEAM_ROOT="$root" bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib steam platform
+		capture() {
+			STEAM_ROOT=/path/that/does/not/exist
+			find_app_manifest "$1"
+		}
+		foreach_installed_game capture
+	'
+	[[ $status -eq 0 ]]
+	[[ "$output" == "$root/steamapps/appmanifest_42424242.acf" ]]
+}
+
+@test "foreach_installed_game stops when its callback fails" {
+	local root
+	root="$(fake_steam_root 42424242 "Callback Failure")"
+	run env STEAM_ROOT="$root" bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib steam platform
+		fail_callback() { return 23; }
+		foreach_installed_game fail_callback
+	'
+	[[ $status -eq 23 ]]
 }

@@ -50,6 +50,30 @@ setup() {
 	[[ "$output" == "custom-profile other-profile" ]]
 }
 
+@test "detect_default_profiles does not auto-enable NIC tuning profiles" {
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform
+		is_wsl2() { return 1; }
+		is_steam_deck() { return 1; }
+		is_flatpak_steam() { return 1; }
+		is_immutable_os() { return 1; }
+		detect_os_profile() { :; }
+		has_systemd_user() { return 0; }
+		detect_handheld_profile() { :; }
+		detect_cpu_vendor() { echo unknown; }
+		detect_gpu_vendor() { echo unknown; }
+		detect_nic_type() { echo wired; }
+		detect_nic_driver() { echo e1000e; }
+		profiles="$(detect_default_profiles)"
+		[[ "$profiles" != *nic-wired* && "$profiles" != *nic-e1000e* ]]
+		printf "%s\n" safe
+	'
+	[[ $status -eq 0 ]]
+	[[ "$output" == safe ]]
+}
+
 @test "detect_default_profile returns first auto profile" {
 	run bash -c '
 		export CONFIG_DIR="'"$CONFIG_DIR"'"
@@ -151,4 +175,3 @@ setup() {
 	[[ "$output" == *"mesa=true"* ]]
 	[[ "$output" == *"gl=1"* ]]
 }
-

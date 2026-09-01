@@ -32,7 +32,7 @@ profile_list_contains() {
 detect_default_profiles() {
 	local -a profiles=()
 	local -a seen_profiles=()
-	local p vendor access
+	local p vendor
 
 	local profiles_arg="${LAUNCHLAYER_PROFILES:-${STEAM_LAUNCH_PROFILES:-}}"
 	if [[ -n "$profiles_arg" ]]; then
@@ -71,16 +71,6 @@ detect_default_profiles() {
 		intel) profiles+=(intel-gpu) ;;
 		nvidia) profiles+=(nvidia-desktop) ;;
 	esac
-
-	local nic_type nic_driver
-	nic_type="$(detect_nic_type 2>/dev/null || true)"
-	if [[ "$nic_type" == "wired" || "$nic_type" == "wireless" ]]; then
-		profiles+=("nic-$nic_type")
-	fi
-	nic_driver="$(detect_nic_driver 2>/dev/null || true)"
-	if [[ -n "$nic_driver" && "$nic_driver" != "unknown" ]]; then
-		profiles+=("nic-$nic_driver")
-	fi
 
 	for p in "${profiles[@]}"; do
 		profile_list_contains "${seen_profiles[*]}" "$p" && continue

@@ -43,6 +43,19 @@ _config_bundle_resolve_archive_path() {
 	printf '%s\n' "$output"
 }
 
+# _config_bundle_available_output — Add a numeric suffix when an archive path exists.
+_config_bundle_available_output() {
+	local output=$1 stem candidate n=2
+	[[ -e "$output" ]] || { printf '%s\n' "$output"; return 0; }
+	stem=${output%.tar.gz}
+	candidate="${stem}-${n}.tar.gz"
+	while [[ -e "$candidate" ]]; do
+		((n++))
+		candidate="${stem}-${n}.tar.gz"
+	done
+	printf '%s\n' "$candidate"
+}
+
 # _write_config_bundle_manifest — Write manifest.json into a staging directory.
 _write_config_bundle_manifest() {
 	local staging=$1 include_local=$2 include_profiles=$3 include_tui=$4
