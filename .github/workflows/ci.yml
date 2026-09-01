@@ -83,6 +83,23 @@ jobs:
       - name: Run actionlint
         run: ./actionlint -color
 
+  pages:
+    name: Pages / validated artifact
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Validate Pages site
+        run: make check-pages
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: github-pages-site
+          path: site
+          if-no-files-found: error
+          retention-days: 1
+
   shell:
     needs: changes
     if: needs.changes.outputs.shell == 'true'
@@ -123,7 +140,7 @@ jobs:
   # Always runs. Require this job name ("ci") in branch protection.
   # Succeeds when path-filtered suites are skipped; fails if a needed suite failed.
   ci:
-    needs: [changes, actionlint, shell, hub, supply_chain]
+    needs: [changes, actionlint, pages, shell, hub, supply_chain]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -138,9 +155,10 @@ jobs:
           hub_result='${{ needs.hub.result }}'
           changes_result='${{ needs.changes.result }}'
           actionlint_result='${{ needs.actionlint.result }}'
+          pages_result='${{ needs.pages.result }}'
           supply_chain_result='${{ needs.supply_chain.result }}'
 
-          echo "changes=$changes_result actionlint_needed=$workflows_needed actionlint=$actionlint_result shell_needed=$shell_needed shell=$shell_result hub_needed=$hub_needed hub=$hub_result"
+          echo "changes=$changes_result actionlint_needed=$workflows_needed actionlint=$actionlint_result pages=$pages_result shell_needed=$shell_needed shell=$shell_result hub_needed=$hub_needed hub=$hub_result"
 
           if [[ "$changes_result" != "success" ]]; then
             echo "changes job did not succeed"
@@ -149,6 +167,11 @@ jobs:
 
           if [[ "$supply_chain_result" != "success" ]]; then
             echo "supply-chain job did not succeed: $supply_chain_result"
+            exit 1
+          fi
+
+          if [[ "$pages_result" != "success" ]]; then
+            echo "Pages artifact job did not succeed: $pages_result"
             exit 1
           fi
 
