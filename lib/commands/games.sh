@@ -215,7 +215,7 @@ bulk_set_include_preset() {
 # apply: 0 = preview only, 1 = write allowlisted keys into games/<AppID>.env
 suggest_config() {
 	local appid=$1 apply=${2:-0}
-	local env_json game_native=0
+	local env_json game_native=0 steam_app_id
 
 	command_required_or_fail python3 "ProtonDB suggest" || return 1
 	[[ -n "$appid" ]] || {
@@ -233,9 +233,9 @@ suggest_config() {
 		appid="$(resolve_appid_arg "$appid")" || return $?
 	fi
 
-	load_profile_config
-	load_config_file "$LAUNCHD_DIR/default.env" 0
-	[[ -f "$LAUNCHD_DIR/local.env" ]] && load_config_file "$LAUNCHD_DIR/local.env" 0
+	steam_app_id=$appid
+	reset_config_state
+	load_launch_config
 	apply_defaults
 
 	env_json="$(show_detect_environment --json)"

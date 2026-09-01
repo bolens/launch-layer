@@ -94,8 +94,8 @@ _dispatch_config_shell() {
 		source_lib platform config detected-defaults tools
 		show_detect_environment() { echo "{\"gpu\":\"test\"}"; }
 		command_required_or_fail() { return 0; }
-		load_profile_config() { :; }
-		load_config_file() { :; }
+		reset_config_state() { :; }
+		load_launch_config() { :; }
 		apply_defaults() { :; }
 		python3() {
 			echo "python3 called with: $*"
@@ -109,3 +109,19 @@ _dispatch_config_shell() {
 	[[ "$output" == *"1"* ]]
 }
 
+@test "suggest_config respects per-game FORCE_PROTON during native detection" {
+	run _dispatch_config_shell '
+		source_lib platform config detected-defaults tools
+		show_detect_environment() { echo "{\"gpu\":\"test\"}"; }
+		command_required_or_fail() { return 0; }
+		reset_config_state() { :; }
+		load_launch_config() { FORCE_PROTON=1; }
+		apply_defaults() { :; }
+		detect_native_game() { [[ "${FORCE_PROTON:-0}" != 1 ]]; }
+		python3() { printf "native=%s\n" "${!#}"; }
+		export -f python3
+		suggest_config 1091500 1
+	'
+	[[ $status -eq 0 ]]
+	[[ "$output" == *"native=0"* ]]
+}

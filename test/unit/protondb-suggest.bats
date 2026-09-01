@@ -120,6 +120,14 @@ print("ok")
 	[[ "$output" != *"args=-W"* ]]
 }
 
+@test "protondb parse_launch_options never applies arguments without command marker" {
+	run _py "$SCRIPT" parse 'PROTON_USE_WINED3D=1 -screen-width 1920 -window-mode borderless'
+	[[ $status -eq 0 ]]
+	[[ "$output" == *"env=PROTON_USE_WINED3D=1"* ]]
+	[[ "$output" == *"args="* ]]
+	[[ "$output" != *"args=-screen-width"* ]]
+}
+
 @test "protondb gpu_match_bonus does not treat radeon as match for nvidia host" {
 	run _py "$SCRIPT" gpu nvidia "AMD Radeon RX 7800 XT"
 	[[ $status -eq 0 ]]
@@ -260,6 +268,23 @@ m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
 assert m.detect_host_distro({"os_id": "omarchy", "profiles": ["arch-linux", "nvidia-desktop"]}) == "arch"
 assert m.detect_host_distro({"os_id": "fedora", "profiles": []}) == "fedora"
+print("ok")
+'
+	[[ $status -eq 0 ]]
+	[[ "$output" == "ok" ]]
+}
+
+@test "protondb keeps installed match separate from apply consensus" {
+	run python3 -c '
+import importlib.util
+spec = importlib.util.spec_from_file_location("pdb", "'"$SCRIPT"'")
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+installed, accepted = m.proton_matches("10.0-3", ["Proton 10.0"], 1, 9.0, 10.0)
+assert installed == "Proton 10.0"
+assert accepted is None
+installed, accepted = m.proton_matches("GE-Proton11-1", ["GE-Proton11-1"], 2, 8.0, 10.0)
+assert installed == accepted == "GE-Proton11-1"
 print("ok")
 '
 	[[ $status -eq 0 ]]
