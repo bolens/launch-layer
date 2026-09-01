@@ -1,4 +1,4 @@
-.PHONY: test test-unit test-integration test-hub test-all lint lint-hub shellcheck check-hub-git check-dependency-pins check check-hub check-all check-version bump-version tui-screenshots
+.PHONY: test test-unit test-integration test-hub test-all lint lint-hub shellcheck check-hub-git check-dependency-pins check-mcp-inspector check check-hub check-all check-version bump-version tui-screenshots
 
 SHELL := /bin/bash
 BATS ?= bats
@@ -32,6 +32,10 @@ check-hub-git:
 
 check-dependency-pins:
 	bash scripts/check-dependency-pins.sh
+
+# Optional network-backed MCP protocol/schema conformance check.
+check-mcp-inspector:
+	bash scripts/check-mcp-inspector.sh
 
 check-version:
 	bash scripts/check-version.sh

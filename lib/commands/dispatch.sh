@@ -9,6 +9,7 @@ handle_subcommand() {
 	local verb=${1:-}
 	shift || true
 
+	dispatch_mcp_subcommand "$verb" "$@" && return 0
 	dispatch_launch_subcommand "$verb" "$@" && return 0
 	dispatch_config_subcommand "$verb" "$@" && return 0
 	dispatch_setup_subcommand "$verb" "$@" && return 0
