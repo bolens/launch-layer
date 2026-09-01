@@ -75,6 +75,28 @@ setup() {
 	[[ "$output" == *"anti-cheat"* ]]
 }
 
+@test "OptiScaler rolls back its DLL when config installation fails" {
+	local source_dir game_dir config
+	source_dir="$BATS_TEST_TMPDIR/optiscaler-rollback"
+	game_dir="$BATS_TEST_TMPDIR/game-rollback"
+	config="$BATS_TEST_TMPDIR/OptiScaler.ini"
+	mkdir -p "$source_dir" "$game_dir/OptiScaler.ini"
+	printf MZ > "$source_dir/OptiScaler.dll"
+	printf config > "$config"
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'" XDG_DATA_HOME="'"$XDG_DATA_HOME"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform runtime
+		inject_resolve_game_dir() { printf "%s\n" "'"$game_dir"'"; }
+		steam_app_id=42 is_anticheat=0 OPTISCALER=1
+		OPTISCALER_SOURCE="'"$source_dir"'" OPTISCALER_CONFIG="'"$config"'"
+		apply_optiscaler
+		test ! -e "'"$game_dir"'/dxgi.dll"
+	'
+	[[ "$status" -eq 0 ]]
+	[[ "$output" == *"rolled back"* ]]
+}
+
 @test "apply_opencomposite swaps and restores openvr_api.dll" {
 	local source_dir game_dir
 	source_dir="$BATS_TEST_TMPDIR/opencomposite"
@@ -201,6 +223,24 @@ setup() {
 			command cp "$@"
 		}
 		if inject_copy_renamed "$src" "$dest_dir" dxgi.dll 42 test; then exit 2; fi
+		test "$(cat "$dest_dir/dxgi.dll")" = original
+		test ! -e "$dest_dir/dxgi.dll.ll-bak"
+	'
+	[[ "$status" -eq 0 ]]
+}
+
+@test "inject_copy_renamed rolls back when operation tracking fails" {
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'" XDG_DATA_HOME="'"$XDG_DATA_HOME"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform runtime
+		src="'"$BATS_TEST_TMPDIR"'/source.dll"
+		dest_dir="'"$BATS_TEST_TMPDIR"'/game"
+		mkdir -p "$dest_dir"
+		printf replacement > "$src"
+		printf original > "$dest_dir/dxgi.dll"
+		inject_track_operation() { return 1; }
+		! inject_copy_renamed "$src" "$dest_dir" dxgi.dll 42 test
 		test "$(cat "$dest_dir/dxgi.dll")" = original
 		test ! -e "$dest_dir/dxgi.dll.ll-bak"
 	'
@@ -337,6 +377,23 @@ setup() {
 	[[ "$output" == *"d3d11=n,b"* ]]
 }
 
+@test "Special K INI mutation is restored by tracked cleanup" {
+	local ini
+	ini="$BATS_TEST_TMPDIR/SpecialK.ini"
+	printf '%s\n' 'UsingWINE=false' > "$ini"
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'" XDG_DATA_HOME="'"$XDG_DATA_HOME"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform runtime
+		steam_app_id=42 is_native=0 SPECIAL_K=1 SPECIAL_K_INI="'"$ini"'"
+		apply_special_k
+		grep -qx "UsingWINE=true" "'"$ini"'"
+		inject_cleanup_tracked 42 specialk
+		grep -qx "UsingWINE=false" "'"$ini"'"
+	'
+	[[ "$status" -eq 0 ]]
+}
+
 @test "proxy injectors reject unsafe DLL names before setting Wine overrides" {
 	run bash -c '
 		export CONFIG_DIR="'"$CONFIG_DIR"'"
@@ -396,6 +453,43 @@ setup() {
 		INJECT_SHA256="$(printf different | sha256sum | awk "{print \$1}")"
 		inject_fetch_url https://example.test/package "$dest" && exit 3
 		[[ ! -e "$dest" ]]
+	'
+	[[ "$status" -eq 0 ]]
+}
+
+@test "inject_fetch_url rejects downloads above the configured byte limit" {
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'" XDG_DATA_HOME="'"$XDG_DATA_HOME"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform runtime
+		dest="$XDG_DATA_HOME/package.bin"
+		payload="'"$BATS_TEST_TMPDIR"'/large.bin"
+		printf 123456 > "$payload"
+		INJECT_SHA256="$(sha256sum "$payload" | awk "{print \$1}")"
+		LAUNCHLAYER_INJECT_MAX_DOWNLOAD_BYTES=5
+		LAUNCHLAYER_FETCH_CMD="cp -f \"$payload\" \"\$dest\""
+		! inject_fetch_url https://example.test/package "$dest"
+		test ! -e "$dest"
+	'
+	[[ "$status" -eq 0 ]]
+	[[ "$output" == *"exceeds byte limit"* ]]
+}
+
+@test "inject archive validation enforces member count limits" {
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'" LAUNCHLAYER_INJECT_MAX_MEMBERS=1
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform runtime
+		archive="'"$BATS_TEST_TMPDIR"'/many.tar"
+		: > "$archive"
+		tar() {
+			if [[ "$1" == -tvf ]]; then
+				printf "%s\n" "-rw-r--r-- user/group 1 date one" "-rw-r--r-- user/group 1 date two"
+			else
+				printf "%s\n" one two
+			fi
+		}
+		! inject_archive_members_are_safe "$archive"
 	'
 	[[ "$status" -eq 0 ]]
 }
@@ -507,6 +601,7 @@ setup() {
 		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
 		source_lib platform runtime
 		optional_tool_installed() { [[ "$1" == gamescope ]]; }
+		gamescope_supports_option() { return 0; }
 		gamescope_session_active() { return 1; }
 		default_online_cpus() { echo 0-3; }
 		is_native=0
@@ -521,6 +616,27 @@ setup() {
 	[[ "$output" == *"CAS.fx"* ]]
 	[[ "$output" == *"--reshade-technique-idx"* ]]
 	[[ "$output" == *$'2\n--'* ]]
+}
+
+@test "gamescope skips unsupported native ReShade flags" {
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform runtime
+		optional_tool_installed() { [[ "$1" == gamescope ]]; }
+		gamescope_supports_option() { return 1; }
+		gamescope_session_active() { return 1; }
+		default_online_cpus() { echo 0-3; }
+		is_native=0 GAMEMODE=0 GAME_PERFORMANCE=0 DISABLE_CPU_AFFINITY=1 MANGOHUD=0
+		GAMESCOPE=1 GAMESCOPE_NESTED_FIX=0 GAMESCOPE_RESHADE_EFFECT=CAS.fx GAMESCOPE_RESHADE_TECHNIQUE=2
+		launch=()
+		build_launch_chain
+		printf "%s\n" "${launch[@]}"
+	'
+	[[ "$status" -eq 0 ]]
+	[[ "$output" == *"setting skipped"* ]]
+	[[ "$output" != *$'--reshade-effect\n'* ]]
+	[[ "$output" != *$'--reshade-technique-idx\n'* ]]
 }
 
 @test "gamescope skipped inside gamescope session" {

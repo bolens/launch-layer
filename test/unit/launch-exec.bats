@@ -40,6 +40,11 @@ setup() {
 			restore_nvidia_power_mode() { :; }
 			restore_pipewire_low_latency() { :; }
 			apply_proton_env() { :; }
+			apply_launch_extras_inject() {
+				test -f "$ACTIVE_LAUNCH_PID_FILE" \
+					&& test "$(<"$ACTIVE_LAUNCH_APPID_FILE")" = 42424242 \
+					|| echo state-missing-before-inject
+			}
 			run_pre_launch_cmd() { :; }
 			run_post_launch_cmd() { :; }
 			warn_missing_tools() { :; }
@@ -58,6 +63,7 @@ setup() {
 			run_game_launch "'"$game_bin"'" --game-arg
 		'
 	[[ $status -eq 0 ]]
+	[[ "$output" != *"state-missing-before-inject"* ]]
 	[[ -f "$state_tmp/state/launchlayer/launch.log" ]]
 	grep -q 'appid=42424242' "$state_tmp/state/launchlayer/launch.log"
 	grep -q 'exit=0' "$state_tmp/state/launchlayer/launch.log"
