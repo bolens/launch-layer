@@ -84,16 +84,18 @@ inject_verify_sha256() {
 # INJECT_SHA256 is mandatory for remote content.
 inject_fetch_url() {
 	local url=$1 final_dest=$2
-	local dir dest
+	local dir dest max_bytes=${LAUNCHLAYER_INJECT_MAX_DOWNLOAD_BYTES:-268435456}
 	[[ -n "$url" && -n "$final_dest" ]] || return 1
 	[[ "${INJECT_SHA256:-}" =~ ^[0-9A-Fa-f]{64}$ ]] || {
 		warn "refusing unchecked download: set INJECT_SHA256 for $url"
 		return 1
 	}
+	[[ "$max_bytes" =~ ^[1-9][0-9]*$ ]] || max_bytes=268435456
 	dir="$(dirname "$final_dest")"
 	mkdir -p "$dir"
 	if [[ -f "$final_dest" && "${LAUNCHLAYER_FETCH_FORCE:-0}" != "1" ]]; then
 		debug "inject cache hit: $final_dest"
+		inject_file_within_limit "$final_dest" "$max_bytes" || return 1
 		inject_verify_sha256 "$final_dest" || return 1
 		return 0
 	fi
@@ -101,6 +103,10 @@ inject_fetch_url() {
 	if [[ -n "${LAUNCHLAYER_FETCH_CMD:-}" ]]; then
 		# shellcheck disable=SC2086
 		eval "$LAUNCHLAYER_FETCH_CMD" || {
+			rm -f "$dest"
+			return 1
+		}
+		inject_file_within_limit "$dest" "$max_bytes" || {
 			rm -f "$dest"
 			return 1
 		}
@@ -113,12 +119,12 @@ inject_fetch_url() {
 		return 0
 	fi
 	if command_available curl; then
-		curl -fsSL --connect-timeout 15 -o "$dest" "$url" || {
+		curl -fsSL --connect-timeout 15 --max-filesize "$max_bytes" -o "$dest" "$url" || {
 			rm -f "$dest"
 			return 1
 		}
 	elif command_available wget; then
-		wget -q -O "$dest" "$url" || {
+		wget -q --quota="$max_bytes" -O "$dest" "$url" || {
 			rm -f "$dest"
 			return 1
 		}
@@ -127,6 +133,10 @@ inject_fetch_url() {
 		rm -f "$dest"
 		return 1
 	fi
+	inject_file_within_limit "$dest" "$max_bytes" || {
+		rm -f "$dest"
+		return 1
+	}
 	inject_verify_sha256 "$dest" || {
 		rm -f "$dest"
 		return 1
@@ -134,6 +144,16 @@ inject_fetch_url() {
 	chmod 600 "$dest"
 	mv -f "$dest" "$final_dest"
 	debug "inject fetched: $url → $final_dest"
+}
+
+inject_file_within_limit() {
+	local file=$1 max_bytes=$2 size
+	[[ -f "$file" && "$max_bytes" =~ ^[1-9][0-9]*$ ]] || return 1
+	size="$(wc -c < "$file" 2>/dev/null || true)"
+	[[ "$size" =~ ^[0-9]+$ && "$size" -le "$max_bytes" ]] || {
+		warn "inject fetch exceeds byte limit ($max_bytes): $file"
+		return 1
+	}
 }
 
 # inject_refuse_proprietary_redistrib — Warn and return 1 (caller should use user-supplied path).
@@ -207,9 +227,12 @@ inject_archive_member_is_safe() {
 
 # inject_archive_members_are_safe — List members before extraction and validate each.
 inject_archive_members_are_safe() {
-	local archive=$1 member listed=0 seven_zip_entries=0
+	local archive=$1 member listed=0 seven_zip_entries=0 count=0
+	local max_members=${LAUNCHLAYER_INJECT_MAX_MEMBERS:-4096}
 	local -a list_cmd=()
+	[[ "$max_members" =~ ^[1-9][0-9]*$ ]] || max_members=4096
 	inject_archive_contains_links "$archive" && return 1
+	inject_archive_expanded_size_is_safe "$archive" || return 1
 	case "${archive,,}" in
 		*.zip) list_cmd=(unzip -Z1 "$archive") ;;
 		*.7z)
@@ -241,9 +264,58 @@ inject_archive_members_are_safe() {
 			member="${member#Path = }"
 		}
 		listed=1
+		count=$((count + 1))
+		(( count <= max_members )) || return 1
 		inject_archive_member_is_safe "$member" || return 1
 	done < <("${list_cmd[@]}" 2>/dev/null) || return 1
 	(( listed == 1 ))
+}
+
+inject_archive_expanded_size_is_safe() {
+	local archive=$1 line size total=0
+	local max_bytes=${LAUNCHLAYER_INJECT_MAX_EXPANDED_BYTES:-536870912}
+	[[ "$max_bytes" =~ ^[1-9][0-9]*$ ]] || max_bytes=536870912
+	case "${archive,,}" in
+		*.tar|*.tar.gz|*.tgz|*.tar.xz|*.tar.bz2)
+			while IFS= read -r line; do
+				read -r _ _ size _ <<< "$line"
+				[[ "$size" =~ ^[0-9]+$ ]] || return 1
+				total=$((total + size))
+				(( total <= max_bytes )) || return 1
+			done < <(LC_ALL=C tar -tvf "$archive" 2>/dev/null)
+			;;
+		*.zip)
+			while IFS= read -r line; do
+				[[ "$line" == [-dfl]* ]] || continue
+				read -r _ _ _ size _ <<< "$line"
+				[[ "$size" =~ ^[0-9]+$ ]] || return 1
+				total=$((total + size))
+				(( total <= max_bytes )) || return 1
+			done < <(unzip -Z -l "$archive" 2>/dev/null)
+			;;
+		*.7z)
+			local seven_zip=""
+			if command_available 7z; then seven_zip=7z; elif command_available 7za; then seven_zip=7za; else return 1; fi
+			while IFS= read -r line; do
+				[[ "$line" == "Size = "* ]] || continue
+				size="${line#Size = }"
+				[[ "$size" =~ ^[0-9]+$ ]] || return 1
+				total=$((total + size))
+				(( total <= max_bytes )) || return 1
+			done < <("$seven_zip" l -slt "$archive" 2>/dev/null)
+			;;
+		*)
+			[[ "$(head -c 2 "$archive" 2>/dev/null || true)" == PK ]] || return 1
+			while IFS= read -r line; do
+				[[ "$line" == [-dfl]* ]] || continue
+				read -r _ _ _ size _ <<< "$line"
+				[[ "$size" =~ ^[0-9]+$ ]] || return 1
+				total=$((total + size))
+				(( total <= max_bytes )) || return 1
+			done < <(unzip -Z -l "$archive" 2>/dev/null)
+			;;
+	esac
+	return 0
 }
 
 # inject_archive_contains_links — Reject archive links before extracting files.
@@ -257,6 +329,12 @@ inject_archive_contains_links() {
 		*.zip)
 			unzip -Z -l "$archive" 2>/dev/null \
 				| awk 'substr($1, 1, 1) == "l" { found=1 } END { exit !found }'
+			;;
+		*.7z)
+			local seven_zip=""
+			if command_available 7z; then seven_zip=7z; elif command_available 7za; then seven_zip=7za; else return 0; fi
+			"$seven_zip" l -slt "$archive" 2>/dev/null \
+				| awk -F' = ' '/^(Symbolic Link|Hard Link) = / && length($2) { found=1 } END { exit !found }'
 			;;
 		*)
 			if [[ "$(head -c 2 "$archive" 2>/dev/null || true)" == PK ]]; then
@@ -289,6 +367,32 @@ inject_track_file() {
 	grep -Fxq "$path" "$manifest" 2>/dev/null || printf '%s\n' "$path" >> "$manifest"
 }
 
+# inject_track_operation — Persist one reversible operation before replacement.
+inject_track_operation() {
+	local appid=$1 tool=$2 operation=$3 dest=$4 backup=${5:-}
+	local manifest lock_file lock_fd=""
+	inject_track_identifiers_are_safe "$appid" "$tool" || return 1
+	[[ "$operation" == create || "$operation" == replace ]] || return 1
+	[[ "$dest" == /* && "$dest" != *$'\t'* && "$dest" != *$'\n'* && "$dest" != *$'\r'* ]] || return 1
+	if [[ "$operation" == replace ]]; then
+		[[ "$backup" == "${dest}.ll-bak" ]] || return 1
+	else
+		backup=""
+	fi
+	inject_ensure_dirs || return 1
+	manifest="$(inject_track_root)/${appid}-${tool}.txt"
+	lock_file="${manifest}.lock"
+	if command_available flock; then
+		exec {lock_fd}> "$lock_file" || return 1
+		flock "$lock_fd" || { exec {lock_fd}>&-; return 1; }
+	fi
+	printf '%s\t%s\t%s\n' "$operation" "$dest" "$backup" >> "$manifest" || {
+		[[ -n "$lock_fd" ]] && { flock -u "$lock_fd" || true; exec {lock_fd}>&-; }
+		return 1
+	}
+	[[ -n "$lock_fd" ]] && { flock -u "$lock_fd" || true; exec {lock_fd}>&-; }
+}
+
 # inject_track_identifiers_are_safe — Keep manifest names inside the track root.
 inject_track_identifiers_are_safe() {
 	local appid=$1 tool=$2
@@ -298,11 +402,41 @@ inject_track_identifiers_are_safe() {
 # inject_cleanup_tracked — Restore *.ll-bak then remove other tracked inject files.
 inject_cleanup_tracked() {
 	local appid=$1 tool=$2
-	local manifest path orig
+	local manifest path orig operation backup lock_file lock_fd=""
 	local -a restored=()
 	inject_track_identifiers_are_safe "$appid" "$tool" || return 1
 	manifest="$(inject_track_root)/${appid}-${tool}.txt"
 	[[ -f "$manifest" ]] || return 0
+	lock_file="${manifest}.lock"
+	if command_available flock; then
+		exec {lock_fd}> "$lock_file" || return 1
+		flock "$lock_fd" || { exec {lock_fd}>&-; return 1; }
+	fi
+	# Structured manifests are replayed in reverse operation order.
+	if grep -qE $'^(create|replace)\t' "$manifest" 2>/dev/null; then
+		while IFS=$'\t' read -r operation path backup; do
+			if [[ "$operation" == /* && -z "$path" ]]; then
+				path=$operation
+				if [[ "$path" == *.ll-bak && -f "$path" ]]; then
+					mv -f "$path" "${path%.ll-bak}"
+				elif [[ -f "$path" || -L "$path" ]]; then
+					rm -f "$path"
+				fi
+				continue
+			fi
+			[[ "$path" == /* && "$path" != *$'\n'* && "$path" != *$'\r'* ]] || continue
+			case "$operation" in
+				replace)
+					[[ "$backup" == "${path}.ll-bak" ]] || continue
+					[[ -f "$backup" ]] && mv -f "$backup" "$path"
+					;;
+				create) [[ -f "$path" || -L "$path" ]] && rm -f "$path" ;;
+			esac
+		done < <(awk 'BEGIN { ORS="" } { lines[NR]=$0 } END { for (i=NR; i>0; i--) print lines[i] "\n" }' "$manifest")
+		rm -f "$manifest"
+		[[ -n "$lock_fd" ]] && { flock -u "$lock_fd" || true; exec {lock_fd}>&-; }
+		return 0
+	fi
 	# Pass 1: restore backups
 	while IFS= read -r path || [[ -n "$path" ]]; do
 		[[ -n "$path" ]] || continue
@@ -331,6 +465,7 @@ inject_cleanup_tracked() {
 		fi
 	done < "$manifest"
 	rm -f "$manifest"
+	[[ -n "$lock_fd" ]] && { flock -u "$lock_fd" || true; exec {lock_fd}>&-; }
 }
 
 # inject_cleanup_launch_tracks — Clean known inject tools for the current AppID.
@@ -394,33 +529,43 @@ inject_provider_conflict_errors() {
 inject_copy_renamed() {
 	local src=$1 dest_dir=$2 dest_name=$3
 	local appid=${4:-} tool=${5:-}
-	local dest tmp
+	local dest tmp backup_created=0
 	[[ -f "$src" && -n "$dest_dir" && -n "$dest_name" ]] || return 1
 	[[ "$dest_name" =~ ^[A-Za-z0-9._+-]+$ && "$dest_name" != "." && "$dest_name" != ".." ]] || return 1
 	mkdir -p "$dest_dir"
 	dest="${dest_dir%/}/$dest_name"
 	[[ -e "$dest" && "$src" -ef "$dest" ]] && return 1
+	[[ ! -e "$dest" || -f "$dest" ]] || return 1
 	tmp="$(mktemp "${dest_dir%/}/.launchlayer-inject.XXXXXX")" || return 1
 	cp -f "$src" "$tmp" || {
 		rm -f "$tmp"
 		return 1
 	}
-	if [[ -f "$dest" && ! -f "${dest}.ll-bak" ]]; then
-		cp -f "$dest" "${dest}.ll-bak" || {
+	if [[ -f "$dest" ]]; then
+		if [[ ! -f "${dest}.ll-bak" ]]; then
+			cp -f "$dest" "${dest}.ll-bak" || {
+				rm -f "$tmp"
+				return 1
+			}
+			backup_created=1
+		fi
+		if [[ -n "$appid" && -n "$tool" ]] \
+			&& ! inject_track_operation "$appid" "$tool" replace "$dest" "${dest}.ll-bak"; then
+			rm -f "$tmp"
+			(( backup_created == 1 )) && rm -f "${dest}.ll-bak"
+			return 1
+		fi
+	elif [[ -n "$appid" && -n "$tool" ]]; then
+		if ! inject_track_operation "$appid" "$tool" create "$dest"; then
 			rm -f "$tmp"
 			return 1
-		}
-		if [[ -n "$appid" && -n "$tool" ]]; then
-			inject_track_file "$appid" "$tool" "${dest}.ll-bak"
 		fi
 	fi
 	mv -f "$tmp" "$dest" || {
 		rm -f "$tmp"
+		[[ -n "$appid" && -n "$tool" ]] && inject_cleanup_tracked "$appid" "$tool"
 		return 1
 	}
-	if [[ -n "$appid" && -n "$tool" ]]; then
-		inject_track_file "$appid" "$tool" "$dest"
-	fi
 	printf '%s\n' "$dest"
 }
 
@@ -447,12 +592,12 @@ inject_merge_winedlloverrides() {
 
 # inject_ensure_ini_key — Ensure key=value exists in an INI-like file.
 inject_ensure_ini_key() {
-	local file=$1 key=$2 value=$3
+	local file=$1 key=$2 value=$3 appid=${4:-} tool=${5:-}
 	local tmp
 	[[ -n "$file" && -n "$key" ]] || return 1
 	mkdir -p "$(dirname "$file")"
+	tmp="$(mktemp "$(dirname "$file")/.launchlayer-ini.XXXXXX")" || return 1
 	if [[ -f "$file" ]] && grep -qE "^[[:space:]]*${key}[[:space:]]*=" "$file" 2>/dev/null; then
-		tmp="$(mktemp)"
 		awk -v k="$key" -v v="$value" '
 			BEGIN { done=0 }
 			$0 ~ "^[[:space:]]*" k "[[:space:]]*=" {
@@ -462,10 +607,19 @@ inject_ensure_ini_key() {
 			}
 			{ print }
 			END { if (!done) print k "=" v }
-		' "$file" > "$tmp"
-		mv "$tmp" "$file"
+		' "$file" > "$tmp" || { rm -f "$tmp"; return 1; }
 	else
-		printf '%s=%s\n' "$key" "$value" >> "$file"
+		[[ -f "$file" ]] && cp -f "$file" "$tmp"
+		printf '%s=%s\n' "$key" "$value" >> "$tmp" || { rm -f "$tmp"; return 1; }
+	fi
+	if [[ -n "$appid" && -n "$tool" ]]; then
+		inject_copy_renamed "$tmp" "$(dirname "$file")" "$(basename "$file")" "$appid" "$tool" >/dev/null || {
+			rm -f "$tmp"
+			return 1
+		}
+		rm -f "$tmp"
+	else
+		mv -f "$tmp" "$file" || { rm -f "$tmp"; return 1; }
 	fi
 }
 

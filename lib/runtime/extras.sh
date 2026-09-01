@@ -159,7 +159,11 @@ apply_special_k() {
 	dll="${dll%.dll}"
 
 	if [[ -n "${SPECIAL_K_INI:-}" ]]; then
-		inject_ensure_ini_key "$SPECIAL_K_INI" UsingWINE true
+		inject_ensure_ini_key "$SPECIAL_K_INI" UsingWINE true "${steam_app_id:-}" specialk || {
+			warn "SPECIAL_K_INI update failed"
+			inject_cleanup_tracked "${steam_app_id:-}" specialk
+			return 0
+		}
 	fi
 
 	# Phase B: copy from user/cache source into game dir when source set.
@@ -174,15 +178,21 @@ apply_special_k() {
 			if [[ -z "$arch_dll" ]]; then
 				# Accept already-named proxy in source dir
 				if [[ -f "$src/${dll}.dll" ]]; then
-					inject_copy_renamed "$src/${dll}.dll" "$game_dir" "${dll}.dll" "${steam_app_id:-}" specialk >/dev/null \
-						|| warn "SPECIAL_K inject copy failed"
+					if ! inject_copy_renamed "$src/${dll}.dll" "$game_dir" "${dll}.dll" "${steam_app_id:-}" specialk >/dev/null; then
+						warn "SPECIAL_K inject copy failed; rolled back"
+						inject_cleanup_tracked "${steam_app_id:-}" specialk
+						return 0
+					fi
 				else
 					warn "SPECIAL_K_SOURCE missing SpecialK32/64.dll under $src"
 				fi
 			else
 				dest_name="${dll}.dll"
-				inject_copy_renamed "$src/$arch_dll" "$game_dir" "$dest_name" "${steam_app_id:-}" specialk >/dev/null \
-					|| warn "SPECIAL_K inject copy failed"
+				if ! inject_copy_renamed "$src/$arch_dll" "$game_dir" "$dest_name" "${steam_app_id:-}" specialk >/dev/null; then
+					warn "SPECIAL_K inject copy failed; rolled back"
+					inject_cleanup_tracked "${steam_app_id:-}" specialk
+					return 0
+				fi
 			fi
 		fi
 	else
@@ -320,11 +330,17 @@ apply_optiscaler() {
 	else
 		inject_merge_winedlloverrides "$proxy"
 	fi
-	inject_copy_renamed "$source_dll" "$game_dir" "$dest_name" "${steam_app_id:-}" optiscaler >/dev/null \
-		|| warn "OptiScaler inject failed"
+	if ! inject_copy_renamed "$source_dll" "$game_dir" "$dest_name" "${steam_app_id:-}" optiscaler >/dev/null; then
+		warn "OptiScaler inject failed; rolled back"
+		inject_cleanup_tracked "${steam_app_id:-}" optiscaler
+		return 0
+	fi
 	if [[ -n "${OPTISCALER_CONFIG:-}" && -f "${OPTISCALER_CONFIG}" ]]; then
-		inject_copy_renamed "$OPTISCALER_CONFIG" "$game_dir" OptiScaler.ini "${steam_app_id:-}" optiscaler >/dev/null \
-			|| warn "OptiScaler config copy failed"
+		if ! inject_copy_renamed "$OPTISCALER_CONFIG" "$game_dir" OptiScaler.ini "${steam_app_id:-}" optiscaler >/dev/null; then
+			warn "OptiScaler config copy failed; rolled back"
+			inject_cleanup_tracked "${steam_app_id:-}" optiscaler
+			return 0
+		fi
 	fi
 	debug "OptiScaler enabled proxy=$dest_name"
 }
@@ -546,11 +562,19 @@ apply_openvr_api_provider() {
 		return 0
 	}
 	if [[ -f "$src/openvr_api.dll" ]]; then
-		inject_copy_renamed "$src/openvr_api.dll" "$(dirname "$api")" openvr_api.dll \
-			"${steam_app_id:-}" "$provider" >/dev/null || warn "$provider DLL copy failed"
+		if ! inject_copy_renamed "$src/openvr_api.dll" "$(dirname "$api")" openvr_api.dll \
+			"${steam_app_id:-}" "$provider" >/dev/null; then
+			warn "$provider DLL copy failed; rolled back"
+			inject_cleanup_tracked "${steam_app_id:-}" "$provider"
+			return 0
+		fi
 		if [[ -n "$config_name" && -f "$src/$config_name" ]]; then
-			inject_copy_renamed "$src/$config_name" "$(dirname "$api")" "$config_name" \
-				"${steam_app_id:-}" "$provider" >/dev/null || warn "$provider config copy failed"
+			if ! inject_copy_renamed "$src/$config_name" "$(dirname "$api")" "$config_name" \
+				"${steam_app_id:-}" "$provider" >/dev/null; then
+				warn "$provider config copy failed; rolled back"
+				inject_cleanup_tracked "${steam_app_id:-}" "$provider"
+				return 0
+			fi
 		fi
 		debug "$provider installed over $api"
 	else

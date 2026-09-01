@@ -95,6 +95,14 @@ run_game_launch() {
 	trap on_launch_exit EXIT
 	trap 'exit 130' INT
 	trap 'exit 143' TERM
+	mkdir -p "$STATE_DIR"
+	printf '%s\n' "$$" > "$ACTIVE_LAUNCH_PID_FILE"
+	if [[ "${steam_app_id:-}" =~ ^[0-9]+$ ]]; then
+		printf '%s\n' "$steam_app_id" > "$ACTIVE_LAUNCH_APPID_FILE"
+	else
+		rm -f "$ACTIVE_LAUNCH_APPID_FILE"
+	fi
+	[[ "${LAUNCH_WATCHDOG:-0}" == "1" ]] && start_launch_watchdog $$
 
 	apply_network_tuning
 	apply_pipewire_low_latency
@@ -120,14 +128,6 @@ run_game_launch() {
 	else
 		launch+=("${launch_args[@]}")
 		[[ ${#game_extra_argv[@]} -gt 0 ]] && launch+=("${game_extra_argv[@]}")
-
-		echo $$ > "$ACTIVE_LAUNCH_PID_FILE"
-		if [[ "${steam_app_id:-}" =~ ^[0-9]+$ ]]; then
-			printf '%s\n' "$steam_app_id" > "$ACTIVE_LAUNCH_APPID_FILE"
-		else
-			rm -f "$ACTIVE_LAUNCH_APPID_FILE"
-		fi
-		[[ "${LAUNCH_WATCHDOG:-0}" == "1" ]] && start_launch_watchdog $$
 
 		"${launch[@]}" || exit_code=$?
 		hook_status=0
