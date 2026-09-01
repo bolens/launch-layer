@@ -5,7 +5,7 @@
 LAUNCHLAYER_CLI_LOADED=1
 
 # Bump when user-visible CLI behavior or subcommands change materially.
-LAUNCHLAYER_VERSION=0.12.0
+LAUNCHLAYER_VERSION=0.13.0
 
 # All utility subcommands (for completion parity and typo suggestions).
 LAUNCHLAYER_SUBCOMMANDS=(
