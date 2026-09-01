@@ -153,7 +153,11 @@ Useful with Steam Launch Options managed by LaunchLayer (set in `games/<AppID>.e
 | `SHADER_CACHE_BOOST=1` | Raise Mesa / NVIDIA shader cache size limits (`SHADER_CACHE_BOOST_GB`, default 12) |
 | `OVERRIDE_PROTON=…` | Force a compat tool (e.g. `proton-cachyos-slr`) |
 
-`--suggest-config --apply` writes a Proton override only when the selected tool is installed. It applies all accepted recommendations as one locked, atomic update. Preview still reports unavailable tools so you can install them first.
+`--suggest-config --apply` only automates settings supported by a strict key and value allowlist. Recommendations must come from at least two reports no older than one year; compatibility fallbacks, complete game-argument groups, and custom Proton overrides require at least 35% of the matching report weight. Native games never receive a Proton override, and standard Valve Proton remains on Steam's default selection instead of receiving a permanent version pin. Preview may still show older comments, but they cannot change the config.
+
+Generated entries carry a `# launchlayer:protondb-managed KEY` marker. A later apply reconciles those entries, including removing advice that is no longer fresh or corroborated. Unmarked values remain user-owned and are never overwritten. All accepted changes are written as one locked, atomic update.
+
+The recommender does not write `GAMEMODE=1` per game because it is already a shipped default.
 
 `dlss-updater` is detected as an optional GUI tool only: it has no launch CLI. Prefer `DLSS_SWAPPER` or `PROTON_DLSS_UPGRADE` at launch time (not both, and not also via `LAUNCH_WRAPPERS=dlss-swapper`).
 
