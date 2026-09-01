@@ -28,32 +28,21 @@ hub_validate_local_env_file() {
 }
 
 # Keys that must not arrive via hub download (remote code / local damage).
-# Canonical list: share/launchlayer/hub-untrusted-keys.txt (keep Convex Set in sync).
+# Canonical policy: the hub column in share/launchlayer/config-keys.tsv.
 HUB_UNTRUSTED_ENV_KEYS=()
 
-# hub_load_untrusted_env_keys — Populate HUB_UNTRUSTED_ENV_KEYS from shared list file.
+# hub_load_untrusted_env_keys — Populate HUB_UNTRUSTED_ENV_KEYS from key metadata.
 hub_load_untrusted_env_keys() {
-	local file line
+	local key
 	HUB_UNTRUSTED_ENV_KEYS=()
-	file="$(launchlayer_share_dir)/hub-untrusted-keys.txt"
-	if [[ ! -f "$file" ]]; then
-		# debug (not warn): temp CONFIG_DIR fixtures omit share/; keep --json stdout clean.
-		debug "hub-untrusted-keys.txt missing at $file — using minimal builtin strip list"
-		HUB_UNTRUSTED_ENV_KEYS=(
-			PRE_LAUNCH_CMD POST_LAUNCH_CMD
-			LAUNCH_WRAPPERS LAUNCH_WRAPPERS_BEFORE
-			OVERRIDE_PROTON VRAM_HOG_UNITS VRAM_HOG_PIDS VRAM_HOGS
-			CONTY SPECIALTY_RUNTIME BLOCK_INTERNET
-		)
-		return 0
-	fi
-	while IFS= read -r line || [[ -n "$line" ]]; do
-		line="${line%%#*}"
-		line="${line#"${line%%[![:space:]]*}"}"
-		line="${line%"${line##*[![:space:]]}"}"
-		[[ -n "$line" ]] || continue
-		HUB_UNTRUSTED_ENV_KEYS+=("$line")
-	done < "$file"
+	declare -p LAUNCHLAYER_CONFIG_KEY_HUB >/dev/null 2>&1 || {
+		echo "launchlayer: Hub trust policy metadata is not loaded" >&2
+		return 1
+	}
+	for key in "${!LAUNCHLAYER_CONFIG_KEY_HUB[@]}"; do
+		[[ "${LAUNCHLAYER_CONFIG_KEY_HUB[$key]}" == untrusted ]] \
+			&& HUB_UNTRUSTED_ENV_KEYS+=("$key")
+	done
 }
 
 hub_load_untrusted_env_keys

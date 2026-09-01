@@ -16,6 +16,7 @@ declare -gA LAUNCHLAYER_CONFIG_KEY_HUB=()
 
 launchlayer_load_config_key_metadata() {
 	local file candidate key kind tui summary hub
+	local -A seen=()
 	file=""
 	for candidate in \
 		"$(launchlayer_share_dir)/config-keys.tsv" \
@@ -36,6 +37,19 @@ launchlayer_load_config_key_metadata() {
 			echo "launchlayer: invalid config key metadata entry: $key" >&2
 			return 1
 		}
+		[[ -z "${seen[$key]+x}" ]] || {
+			echo "launchlayer: duplicate config key metadata entry: $key" >&2
+			return 1
+		}
+		[[ "$kind" == boolean || "$kind" == enum || "$kind" == value ]] \
+			&& [[ "$tui" == toggle || "$tui" == advanced || "$tui" == both \
+				|| "$tui" == hidden || "$tui" == preset ]] \
+			&& [[ "$summary" == 0 || "$summary" == 1 ]] \
+			&& [[ "$hub" == trusted || "$hub" == untrusted ]] || {
+			echo "launchlayer: invalid metadata fields for config key: $key" >&2
+			return 1
+		}
+		seen["$key"]=1
 		LAUNCHLAYER_CONFIG_KEY_KIND["$key"]=$kind
 		LAUNCHLAYER_CONFIG_KEY_TUI["$key"]=$tui
 		LAUNCHLAYER_CONFIG_KEY_HUB["$key"]=$hub

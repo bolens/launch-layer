@@ -158,6 +158,8 @@ launchlayer_source_dispatch() {
 
 # launchlayer_source_commands_hub — Hub CLI verbs (publish, recommend, apply).
 launchlayer_source_commands_hub() {
+	# shellcheck source=keys.sh
+	[[ -n "${LAUNCHLAYER_KEYS_LOADED:-}" ]] || source "$LIB_DIR/keys.sh"
 	# shellcheck source=commands/hub/context.sh
 	source "$LIB_DIR/commands/hub/context.sh"
 	# shellcheck source=commands/hub/fingerprint.sh

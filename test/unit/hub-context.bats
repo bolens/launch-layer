@@ -19,7 +19,7 @@ teardown() {
 	run bash -c '
 		export CONFIG_DIR="'"$CONFIG_DIR"'"
 		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
-		source_lib commands hub
+		source_lib keys commands hub
 		hub_validate_config_id cfg-test-1 2>&1
 	'
 	[[ $status -ne 0 ]]
@@ -30,7 +30,7 @@ teardown() {
 	run bash -c '
 		export CONFIG_DIR="'"$CONFIG_DIR"'"
 		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
-		source_lib commands hub
+		source_lib keys commands hub
 		hub_validate_config_id cfgtest00001
 		echo ok
 	'
@@ -110,13 +110,16 @@ EOF
 	rm -f "$tmp"
 }
 
-@test "hub untrusted keys match share/launchlayer/hub-untrusted-keys.txt" {
+@test "hub untrusted keys come from config key metadata" {
 	run bash -c '
 		export CONFIG_DIR="'"$CONFIG_DIR"'"
 		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
 		source_lib keys config commands hub
-		file="$(launchlayer_share_dir)/hub-untrusted-keys.txt"
-		mapfile -t from_file < <(grep -vE "^[[:space:]]*(#|$)" "$file" | sed "s/#.*//;s/^[[:space:]]*//;s/[[:space:]]*$//;/^$/d" | sort -u)
+		mapfile -t from_file < <(
+			for key in "${!LAUNCHLAYER_CONFIG_KEY_HUB[@]}"; do
+				[[ "${LAUNCHLAYER_CONFIG_KEY_HUB[$key]}" == untrusted ]] && printf "%s\n" "$key"
+			done | sort -u
+		)
 		mapfile -t from_bash < <(printf "%s\n" "${HUB_UNTRUSTED_ENV_KEYS[@]}" | sort -u)
 		diff -u <(printf "%s\n" "${from_file[@]}") <(printf "%s\n" "${from_bash[@]}")
 	'
