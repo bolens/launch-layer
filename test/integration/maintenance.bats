@@ -86,6 +86,8 @@ teardown() {
 	[[ -f "$unit_dir/launchlayer-maintenance.service" ]]
 	[[ -f "$unit_dir/launchlayer-maintenance.timer" ]]
 	grep -q launchlayer "$unit_dir/launchlayer-maintenance.service"
+	grep -q -- '--run-maintenance' "$unit_dir/launchlayer-maintenance.service"
+	! grep -q '/bin/bash -c' "$unit_dir/launchlayer-maintenance.service"
 	rm -rf "$tmp"
 }
 
