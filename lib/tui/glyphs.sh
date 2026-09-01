@@ -25,6 +25,14 @@ TUI_GLYPH_BAD=$'✕'
 TUI_GLYPH_NA=$'—'
 TUI_GAME_BOOL_COL_WIDTH=2
 
+tui_text_status_enabled() {
+	[[ "${TUI_TEXT_STATUS:-0}" == "1" ]]
+}
+
+tui_game_bool_col_width() {
+	tui_text_status_enabled && printf '3' || printf '%s' "$TUI_GAME_BOOL_COL_WIDTH"
+}
+
 # Legacy alias (tests, no-color fallbacks): use TUI_GLYPH_BAD directly.
 
 # tui_glyph_paint — Apply semantic color to a glyph character.
@@ -42,26 +50,32 @@ tui_glyph_paint() {
 }
 
 tui_glyph_ok() {
+	tui_text_status_enabled && { printf 'ok'; return 0; }
 	tui_glyph_paint "$TUI_GLYPH_OK" ok
 }
 
 tui_glyph_off() {
+	tui_text_status_enabled && { printf 'off'; return 0; }
 	tui_glyph_paint "$TUI_GLYPH_OFF" off
 }
 
 tui_glyph_warn() {
+	tui_text_status_enabled && { printf 'warn'; return 0; }
 	tui_glyph_paint "$TUI_GLYPH_WARN" warn
 }
 
 tui_glyph_mid() {
+	tui_text_status_enabled && { printf 'partial'; return 0; }
 	tui_glyph_paint "$TUI_GLYPH_MID" mid
 }
 
 tui_glyph_bad() {
+	tui_text_status_enabled && { printf 'error'; return 0; }
 	tui_glyph_paint "$TUI_GLYPH_BAD" bad
 }
 
 tui_glyph_na() {
+	tui_text_status_enabled && { printf 'n/a'; return 0; }
 	tui_glyph_paint "$TUI_GLYPH_NA" muted
 }
 
@@ -74,9 +88,11 @@ tui_glyph_no() {
 tui_glyph_yesno() {
 	case "${1,,}" in
 		yes|true|1|on|ok|enabled|running)
+			tui_text_status_enabled && { printf 'yes'; return 0; }
 			tui_glyph_ok
 			;;
 		no|false|0|off|disabled|dead|missing)
+			tui_text_status_enabled && { printf 'no'; return 0; }
 			tui_glyph_off
 			;;
 		low)
@@ -91,6 +107,15 @@ tui_glyph_yesno() {
 
 # tui_glyph_timer — ● enabled · ◑ installed · ○ off.
 tui_glyph_timer() {
+	if tui_text_status_enabled; then
+		case "${1,,}" in
+			enabled|yes|on) printf 'enabled' ;;
+			installed) printf 'installed' ;;
+			off|no|disabled|not_installed) printf 'off' ;;
+			*) printf '%s' "$1" ;;
+		esac
+		return 0
+	fi
 	case "${1,,}" in
 		enabled|yes|on)
 			tui_glyph_ok
@@ -109,6 +134,10 @@ tui_glyph_timer() {
 
 # tui_glyph_vm — ● ok · ⚠ low.
 tui_glyph_vm() {
+	if tui_text_status_enabled; then
+		case "${1,,}" in ok) printf 'ok' ;; low) printf 'low' ;; *) printf '%s' "$1" ;; esac
+		return 0
+	fi
 	case "${1,,}" in
 		ok) tui_glyph_ok ;;
 		low) tui_glyph_warn ;;
@@ -119,6 +148,10 @@ tui_glyph_vm() {
 # tui_glyph_doctor — ● clean · ⚠N issues.
 tui_glyph_doctor() {
 	local issues=${1:-0}
+	if tui_text_status_enabled; then
+		[[ "$issues" =~ ^[0-9]+$ ]] && (( issues == 0 )) && printf 'clean' || printf '%s issues' "$issues"
+		return 0
+	fi
 	if [[ "$issues" =~ ^[0-9]+$ ]] && (( issues == 0 )); then
 		tui_glyph_ok
 		return 0
@@ -133,6 +166,11 @@ tui_glyph_doctor() {
 # tui_glyph_bool_onoff — ● on · ○ off (override off = red ○). Shows dll/mid values.
 tui_glyph_bool_onoff() {
 	local val=$1 dim=${2:-0}
+	if tui_text_status_enabled; then
+		[[ "${val,,}" == dll ]] && { printf 'dll'; return 0; }
+		tui_bool_on "$val" && printf 'on' || printf 'off'
+		return 0
+	fi
 	# Distinct glyph for ternary DLSS dll (on, but labeled in menu line separately).
 	if [[ "${val,,}" == dll ]]; then
 		if [[ "$dim" == 1 ]]; then
@@ -159,6 +197,7 @@ tui_glyph_bool_onoff() {
 
 # tui_glyph_pref — ● on · ○ off for 0/1 prefs.
 tui_glyph_pref() {
+	tui_text_status_enabled && { [[ "${1:-0}" == "1" ]] && printf 'on' || printf 'off'; return 0; }
 	[[ "${1:-0}" == "1" ]] && tui_glyph_ok || tui_glyph_off
 }
 
@@ -166,8 +205,10 @@ tui_glyph_pref() {
 tui_glyph_hub_brief() {
 	local fp=${1:-minimal} connected=${2:-0}
 	if [[ "$connected" == "1" ]]; then
+		tui_text_status_enabled && { printf 'connected · fp:%s' "$fp"; return 0; }
 		printf '%s url · fp:%s' "$(tui_glyph_ok)" "$fp"
 	else
+		tui_text_status_enabled && { printf 'not configured · fp:%s' "$fp"; return 0; }
 		printf '%s fp:%s' "$(tui_glyph_off)" "$fp"
 	fi
 }

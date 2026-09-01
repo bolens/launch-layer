@@ -11,6 +11,8 @@ _tui_prefs_set_defaults() {
 	TUI_LAST_MENU=${TUI_LAST_MENU:-}
 	TUI_JSON_OUTPUT=${TUI_JSON_OUTPUT:-0}
 	TUI_RESUME_LAST_MENU=${TUI_RESUME_LAST_MENU:-0}
+	TUI_TEXT_STATUS=${TUI_TEXT_STATUS:-0}
+	TUI_SPINNER=${TUI_SPINNER:-1}
 	TUI_PRESS_ENTER_LINES=${TUI_PRESS_ENTER_LINES:-8}
 	export LAUNCHLAYER_TUI_HEIGHT="${LAUNCHLAYER_TUI_HEIGHT:-40%}"
 	export LAUNCHLAYER_TUI_PREVIEW="${LAUNCHLAYER_TUI_PREVIEW:-$LAUNCHLAYER_TUI_PREVIEW_DEFAULT}"
@@ -34,6 +36,8 @@ _tui_prefs_parse_file() {
 			last_menu) TUI_LAST_MENU=$val ;;
 			json_output) TUI_JSON_OUTPUT=$val ;;
 			resume_last_menu) TUI_RESUME_LAST_MENU=$val ;;
+			text_status) TUI_TEXT_STATUS=$val ;;
+			spinner) TUI_SPINNER=$val ;;
 			press_enter_lines) TUI_PRESS_ENTER_LINES=$val ;;
 			fzf_height) LAUNCHLAYER_TUI_HEIGHT=$val ;;
 			fzf_preview) LAUNCHLAYER_TUI_PREVIEW=$val ;;
@@ -68,6 +72,8 @@ default_preset=${TUI_DEFAULT_PRESET:-standard}
 last_menu=${TUI_LAST_MENU:-}
 json_output=${TUI_JSON_OUTPUT:-0}
 resume_last_menu=${TUI_RESUME_LAST_MENU:-0}
+text_status=${TUI_TEXT_STATUS:-0}
+spinner=${TUI_SPINNER:-1}
 press_enter_lines=${TUI_PRESS_ENTER_LINES:-8}
 fzf_height=${LAUNCHLAYER_TUI_HEIGHT:-40%}
 fzf_preview=${LAUNCHLAYER_TUI_PREVIEW:-$LAUNCHLAYER_TUI_PREVIEW_DEFAULT}
@@ -116,7 +122,7 @@ show_tui_prefs() {
 	local json=${1:-0}
 	tui_load_config
 	if [[ "$json" == "1" ]]; then
-		printf '{"path":%s,"example":%s,"game_filter":%s,"cache_min_gb":%s,"default_preset":%s,"last_menu":%s,"json_output":%s,"resume_last_menu":%s,"press_enter_lines":%s,"fzf_height":%s,"fzf_preview":%s}\n' \
+		printf '{"path":%s,"example":%s,"game_filter":%s,"cache_min_gb":%s,"default_preset":%s,"last_menu":%s,"json_output":%s,"resume_last_menu":%s,"text_status":%s,"spinner":%s,"press_enter_lines":%s,"fzf_height":%s,"fzf_preview":%s}\n' \
 			"$(json_string "$(tui_config_path)")" \
 			"$(json_string "$(tui_config_example_path)")" \
 			"$(json_string "${TUI_GAME_FILTER:-all}")" \
@@ -125,6 +131,8 @@ show_tui_prefs() {
 			"$(json_string "${TUI_LAST_MENU:-}")" \
 			"${TUI_JSON_OUTPUT:-0}" \
 			"${TUI_RESUME_LAST_MENU:-0}" \
+			"${TUI_TEXT_STATUS:-0}" \
+			"${TUI_SPINNER:-1}" \
 			"${TUI_PRESS_ENTER_LINES:-8}" \
 			"$(json_string "${LAUNCHLAYER_TUI_HEIGHT:-40%}")" \
 			"$(json_string "${LAUNCHLAYER_TUI_PREVIEW:-$LAUNCHLAYER_TUI_PREVIEW_DEFAULT}")"
@@ -139,6 +147,8 @@ show_tui_prefs() {
 	echo "last_menu=${TUI_LAST_MENU:-}"
 	echo "json_output=${TUI_JSON_OUTPUT:-0}"
 	echo "resume_last_menu=${TUI_RESUME_LAST_MENU:-0}"
+	echo "text_status=${TUI_TEXT_STATUS:-0}"
+	echo "spinner=${TUI_SPINNER:-1}"
 	echo "press_enter_lines=${TUI_PRESS_ENTER_LINES:-8}"
 	echo "fzf_height=${LAUNCHLAYER_TUI_HEIGHT:-40%}"
 	echo "fzf_preview=${LAUNCHLAYER_TUI_PREVIEW:-$LAUNCHLAYER_TUI_PREVIEW_DEFAULT}"
@@ -166,7 +176,7 @@ handle_tui_prefs_subcommand() {
 			local key=${1:-} val=${2:-}
 			[[ -n "$key" && -n "$val" ]] || {
 				echo "Usage: $0 --tui-prefs set KEY VALUE" >&2
-				echo "Keys: game_filter, cache_min_gb, default_preset, last_menu, json_output, resume_last_menu, press_enter_lines, fzf_height, fzf_preview" >&2
+				echo "Keys: game_filter, cache_min_gb, default_preset, last_menu, json_output, resume_last_menu, text_status, spinner, press_enter_lines, fzf_height, fzf_preview" >&2
 				return 1
 			}
 			case "$key" in
@@ -176,6 +186,8 @@ handle_tui_prefs_subcommand() {
 				last_menu) TUI_LAST_MENU=$val ;;
 				json_output) TUI_JSON_OUTPUT=$val ;;
 				resume_last_menu) TUI_RESUME_LAST_MENU=$val ;;
+				text_status) TUI_TEXT_STATUS=$val ;;
+				spinner) TUI_SPINNER=$val ;;
 				press_enter_lines) TUI_PRESS_ENTER_LINES=$val ;;
 				fzf_height) LAUNCHLAYER_TUI_HEIGHT=$val ;;
 				fzf_preview) LAUNCHLAYER_TUI_PREVIEW=$val ;;

@@ -92,6 +92,21 @@ _tui_system_shell() {
 	[[ "$output" == "json:1" ]]
 }
 
+@test "tui_interface_ui_menu toggles text labels and animation" {
+	run _tui_system_shell '
+		_test_accessibility_menu() {
+			TUI_TEXT_STATUS=0
+			TUI_SPINNER=1
+			_tui_menu_queue=("Text status labels: ○" "Animated progress: on" "Back")
+			tui_interface_ui_menu
+			printf "text:%s spinner:%s\n" "$TUI_TEXT_STATUS" "$TUI_SPINNER"
+		}
+		_test_accessibility_menu
+	'
+	[[ $status -eq 0 ]]
+	[[ "$output" == "text:1 spinner:0" ]]
+}
+
 @test "tui_vram_menu pauses vram hogs on selection" {
 	run _tui_system_shell '
 		_test_vram_menu() {

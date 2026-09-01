@@ -24,26 +24,20 @@ tui_json_flag() {
 	fi
 }
 
-# Boolean keys exposed in the quick-toggle menu (per-game overrides).
-# Every 0/1 LAUNCHLAYER_CONFIG_KEYS flag that is safe to flip should appear here.
-TUI_TOGGLE_KEYS=(
-	GAMEMODE MANGOHUD MANGOHUD_LOG GAMESCOPE
-	GAMESCOPE_EXPOSE_WAYLAND GAMESCOPE_FSR GAMESCOPE_HDR GAMESCOPE_NESTED_FIX VRAM_HOGS
-	NETWORK_TUNE PIPEWIRE_LOW_LATENCY SHADER_CACHE_CHECK SHADER_CACHE_TRIM SHADER_CACHE_BOOST
-	COMPATDATA_CHECK COMPATDATA_TRIM VM_MAX_MAP_COUNT_FIX
-	LAUNCH_WATCHDOG GAME_PERFORMANCE GPU_POWER_CHECK NVIDIA_POWER_MODE
-	CONCURRENT_LAUNCH_GUARD DISK_TUNE DISABLE_NIC_EEE DISABLE_WIFI_POWER_SAVE
-	DLSS_SWAPPER PROTON_DLSS_UPGRADE PROTON_DLSS_INDICATOR
-	PROTON_FSR4_UPGRADE PROTON_FSR4_RDNA3_UPGRADE PROTON_FSR4_INDICATOR
-	PROTON_XESS_UPGRADE PROTON_NVIDIA_LIBS PROTON_NVIDIA_LIBS_NO_32BIT
-	LD_BIND_NOW VKBASALT LATENCYFLEX DISABLE_VBLANK DISABLE_STEAM_DECK
-	LSFG_VK OBS_VKCAPTURE DISCORD_IPC REPLAY_CAPTURE BLOCK_INTERNET CONTY
-	SPECIAL_K SPECIAL_K_FETCH RESHADE DEPTH3D WINE_FSR WINECFG_BEFORE WINETRICKS_GUI
-	FLAWLESS_WIDESCREEN FWS_COLAUNCH SKIF SKIF_LAUNCH VALVEPLUG
-	OPENVR_FSR GEO11 GEO11_SBS_VR SBS_VR SBS_VR_REQUIRE_HMD FLAT2VR
-	PLAYTIME_LOG CRASH_GUESS
-	BENCHMARK DEBUG FORCE_NATIVE FORCE_PROTON DISABLE_CPU_AFFINITY
-)
+# Per-game editor surfaces are derived from the canonical config-key metadata.
+TUI_TOGGLE_KEYS=()
+TUI_ADVANCED_KEYS=()
+for _tui_key in "${LAUNCHLAYER_CONFIG_KEYS[@]}"; do
+	case "$(config_key_tui_surface "$_tui_key")" in
+		toggle) TUI_TOGGLE_KEYS+=("$_tui_key") ;;
+		advanced) TUI_ADVANCED_KEYS+=("$_tui_key") ;;
+		both)
+			TUI_TOGGLE_KEYS+=("$_tui_key")
+			TUI_ADVANCED_KEYS+=("$_tui_key")
+			;;
+	esac
+done
+unset _tui_key
 
 # Keys that are path/env assist only (no first-party inject) — labeled in toggle rows.
 TUI_ASSIST_ONLY_KEYS=(
@@ -54,34 +48,6 @@ TUI_ASSIST_ONLY_KEYS=(
 TUI_PREVIEW_HOT_KEYS=(
 	GAMEMODE MANGOHUD GAMESCOPE DLSS_SWAPPER SPECIAL_K RESHADE LSFG_VK
 	OBS_VKCAPTURE CONTY BLOCK_INTERNET PLAYTIME_LOG CRASH_GUESS
-)
-
-# Advanced-config string/numeric keys (edited via prompts; not boolean flips).
-# INCLUDE is handled as a preset picker, not listed here.
-# GAMESCOPE_ADAPTIVE_SYNC is 3-state (empty/auto/0/1) — Advanced, not a boolean flip.
-# FWS is an alias of FLAWLESS_WIDESCREEN — Advanced only (prefer the long name in toggles).
-# Coverage source of truth for tui.bats; menus-game groups keys explicitly.
-# shellcheck disable=SC2034
-TUI_ADVANCED_KEYS=(
-	OVERRIDE_PROTON DLSS_SWAPPER FRAME_RATE ENABLE_HDR MALLOC_ALLOCATOR
-	GAMESCOPE_W GAMESCOPE_H GAMESCOPE_R GAMESCOPE_FSR_SHARPNESS GAMESCOPE_ADAPTIVE_SYNC
-	GAMESCOPE_EXTRA_ARGS GAMESCOPE_PREFER_OUTPUT GAMESCOPE_FRAME_LIMIT GAMESCOPE_FILTER
-	GAMESCOPE_FOCUSED_FPS GAMESCOPE_UNFOCUSED_FPS
-	VKBASALT_CONFIG_FILE VKBASALT_LOG_LEVEL LSFG_PROCESS LSFG_CONFIG_FILE
-	REPLAY_TOOL WINETRICKS_VERBS REGISTRY_FILES WINE_FSR_STRENGTH WINE_FSR_MODE
-	SPECIAL_K_DLL SPECIAL_K_SOURCE SPECIAL_K_INI SPECIAL_K_FETCH_URL SPECIAL_K_VERSION
-	RESHADE_DLL RESHADE_SOURCE RESHADE_SK_VERSION DEPTH3D_SOURCE DEPTH3D_FETCH_URL
-	SKIF_PATH VALVEPLUG_SOURCE VALVEPLUG_STEAM_DIR FWS FWS_PATH CONTY_PATH
-	SPECIALTY_RUNTIME OPENVR_FSR_SOURCE GEO11_SOURCE SBS_VR_PLAYER FLAT2VR_SOURCE
-	CRASH_GUESS_TIMEOUT INJECT_SHA256
-	SHADER_CACHE_MAX_GB SHADER_CACHE_BOOST_GB SHADER_CACHE_CHECK_INTERVAL_HOURS
-	COMPATDATA_MAX_GB VM_MAX_MAP_COUNT_MIN
-	X3D_CPUS CPU_AFFINITY_RANGE GAME_NIC
-	VRAM_HOG_UNITS VRAM_HOG_PIDS VRAM_PREFLIGHT_MIN_MB
-	DISK_PREFLIGHT_MIN_GB GPU_VRAM_PROCESS_MIN_MB
-	MANGOHUD_CONFIG MANGOHUD_CONFIGFILE
-	PRE_LAUNCH_CMD POST_LAUNCH_CMD LAUNCH_LOG_MAX_LINES
-	GAME_EXTRA_ARGS LAUNCH_WRAPPERS LAUNCH_WRAPPERS_BEFORE UNSET_VARS
 )
 
 # tui_appid_env_path — Preferred write path for per-game configs (GAMES_DIR).
@@ -102,23 +68,9 @@ tui_env_file_get() {
 	grep -E "^[[:space:]]*${key}=" "$file" 2>/dev/null | tail -1 | cut -d= -f2-
 }
 
-# tui_env_upsert — Set or replace KEY=value in a .env file.
+# tui_env_upsert — Compatibility name for the shared per-game config writer.
 tui_env_upsert() {
-	local file=$1 key=$2 value=$3
-	local tmp found=0 line
-	tmp="$(mktemp)"
-	if [[ -f "$file" ]]; then
-		while IFS= read -r line || [[ -n "$line" ]]; do
-			if [[ "$line" =~ ^[[:space:]]*${key}= ]]; then
-				printf '%s=%s\n' "$key" "$value"
-				found=1
-			else
-				printf '%s\n' "$line"
-			fi
-		done < "$file" > "$tmp"
-	fi
-	(( found )) || printf '%s=%s\n' "$key" "$value" >> "$tmp"
-	mv "$tmp" "$file"
+	appid_env_upsert "$@"
 }
 
 # tui_effective_key — Return effective value for a config key after loading layers.

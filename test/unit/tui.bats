@@ -21,6 +21,53 @@ setup() {
 	[[ "$output" == *"tab toggle"* ]]
 }
 
+@test "tui_fzf_sort_binds succeeds with set -e when default sorting stays enabled" {
+	run bash -c '
+		set -e
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib load-modules
+		launchlayer_source_tui
+		args=()
+		tui_fzf_sort_binds args
+		printf "%s\n" "${args[@]}"
+	'
+	[[ $status -eq 0 ]]
+	[[ "$output" == *"alt-s:toggle-sort"* ]]
+}
+
+@test "tui fzf argument builders succeed with set -e for single-select menus" {
+	run bash -c '
+		set -e
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib load-modules
+		launchlayer_source_tui
+		menu_args=()
+		game_args=()
+		tui_fzf_build_args menu_args "Menu" menu
+		tui_fzf_game_picker_args game_args "Pick a game" single
+		printf "%s %s\n" "${#menu_args[@]}" "${#game_args[@]}"
+	'
+	[[ $status -eq 0 ]]
+	[[ "$output" =~ ^[0-9]+\ [0-9]+$ ]]
+}
+
+@test "tui accessible mode uses a visible filter prompt and ASCII pointer" {
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'" TUI_TEXT_STATUS=1
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib load-modules
+		launchlayer_source_tui
+		args=()
+		tui_fzf_build_args args "Menu" menu
+		printf "%s\n" "${args[@]}"
+	'
+	[[ $status -eq 0 ]]
+	[[ "$output" == *"--prompt=Filter: "* ]]
+	[[ "$output" == *"--pointer=>"* ]]
+}
+
 @test "tui_help_text covers main and game topics" {
 	run bash -c '
 		export CONFIG_DIR="'"$CONFIG_DIR"'"
@@ -114,6 +161,7 @@ setup() {
 @test "tui_games_cache_reconcile recovers stuck loading with persisted lines" {
 	run bash -c '
 		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		export XDG_CACHE_HOME="$(mktemp -d)"
 		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
 		source_lib load-modules
 		launchlayer_load_post_main
@@ -136,6 +184,7 @@ setup() {
 @test "tui_games_cache_reconcile discards orphaned lines.new when loader died" {
 	run bash -c '
 		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		export XDG_CACHE_HOME="$(mktemp -d)"
 		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
 		source_lib load-modules
 		launchlayer_load_post_main
@@ -155,6 +204,34 @@ setup() {
 	[[ "$output" == *"status:error"* ]]
 	[[ "$output" == *"new:absent"* ]]
 	[[ "$output" == *"lines:no"* ]]
+}
+
+@test "stale games cache loader cannot overwrite a newer loader owner" {
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		export XDG_CACHE_HOME="$(mktemp -d)"
+		fake_main="$(mktemp)"
+		allow="$(mktemp)"
+		rm -f "$allow"
+		printf "#!/usr/bin/env bash\nwhile [[ ! -f %q ]]; do sleep 0.01; done\nprintf \\\"HEADER\\\\n42424242 yes no - unknown Game\\\\n\\\"\n" "$allow" > "$fake_main"
+		chmod +x "$fake_main"
+		export LAUNCHLAYER_MAIN_SCRIPT="$fake_main"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib load-modules
+		launchlayer_load_post_main
+		launchlayer_source_tui
+		tui_games_cache_purge
+		tui_games_cache_spawn_loader
+		old_pid="$(<"$TUI_GAMES_CACHE_PID_FILE")"
+		printf "999999\n" > "$TUI_GAMES_CACHE_PID_FILE"
+		touch "$allow"
+		wait "$old_pid"
+		[[ -f "$TUI_GAMES_CACHE_FILE" ]] && echo lines:present || echo lines:absent
+		printf "owner=%s\n" "$(<"$TUI_GAMES_CACHE_PID_FILE")"
+	'
+	[[ $status -eq 0 ]]
+	[[ "$output" == *"lines:absent"* ]]
+	[[ "$output" == *"owner=999999"* ]]
 }
 
 @test "tui_games_cache_apply_filter honors configured filter" {
@@ -478,6 +555,36 @@ setup() {
 	[[ $status -eq 0 ]]
 	[[ "$output" == *"●"* ]]
 	[[ "$output" == *"○"* ]]
+}
+
+@test "tui text status mode spells out state and aligns game columns" {
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'" TUI_TEXT_STATUS=1
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib load-modules
+		launchlayer_source_tui
+		printf "%s|%s|%s|%s\n" \
+			"$(tui_glyph_yesno yes)" "$(tui_glyph_yesno no)" \
+			"$(tui_glyph_doctor 2)" "$(tui_glyph_ac_type -)"
+		line="2357570    yes   no    listed   unknown      Overwatch"
+		tui_format_game_list_body "$line"
+	'
+	[[ $status -eq 0 ]]
+	[[ "${lines[0]}" == "yes|no|2 issues|n/a" ]]
+	[[ "${lines[1]}" == *"yes no"* ]]
+	[[ "${lines[1]}" != *"●"* ]]
+}
+
+@test "tui game cache spinner becomes static when motion is disabled" {
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'" TUI_SPINNER=0
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib load-modules
+		launchlayer_source_tui
+		printf "%s" "$(tui_games_cache_spinner_frame)"
+	'
+	[[ $status -eq 0 ]]
+	[[ "$output" == "…" ]]
 }
 
 @test "tui_format_game_list_body uses glyphs for CFG and NAT" {

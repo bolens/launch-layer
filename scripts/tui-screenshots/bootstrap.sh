@@ -3,11 +3,17 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SCREENSHOT_TMP="${TMPDIR:-/tmp}/launchlayer-tui-screenshots"
+XDG_CACHE_HOME="$SCREENSHOT_TMP/cache"
+XDG_CONFIG_HOME="$SCREENSHOT_TMP/config"
+XDG_STATE_HOME="$SCREENSHOT_TMP/state"
+mkdir -p "$XDG_CACHE_HOME" "$XDG_CONFIG_HOME" "$XDG_STATE_HOME"
 SCRIPT_DIR="$ROOT"
 CONFIG_DIR="$ROOT"
 LIB_DIR="$ROOT/lib"
 LAUNCHLAYER_MAIN_SCRIPT="$ROOT/launchlayer"
 export SCRIPT_DIR CONFIG_DIR LIB_DIR LAUNCHLAYER_MAIN_SCRIPT LAUNCHLAYER_CONFIG_DIR="$ROOT"
+export XDG_CACHE_HOME XDG_CONFIG_HOME XDG_STATE_HOME
 
 # shellcheck source=../../lib/common.sh
 source "$LIB_DIR/common.sh"
@@ -29,7 +35,17 @@ fzf_menu() {
 	shift
 	local -a fzf_args=() context footer=""
 	context="${TUI_MENU_CONTEXT:-menu}"
-	footer="$(tui_fzf_context_footer "$context")"
+	if [[ "${LAUNCHLAYER_SCREENSHOT_FIXTURES:-}" == 1 ]]; then
+		footer="$(tui_fzf_footer_for "$context")"
+	else
+		footer="$(tui_fzf_context_footer "$context")"
+	fi
 	tui_fzf_build_args fzf_args "$header" "$context" "$footer"
+	if [[ "${LAUNCHLAYER_SCREENSHOT_FIXTURES:-}" == 1 && "$context" == main ]]; then
+		fzf_args+=(
+			--preview "cat $(printf '%q' "$ROOT/scripts/tui-screenshots/fixtures/main-status.txt")"
+			--preview-window "$(tui_fzf_panel_window)"
+		)
+	fi
 	printf '%s\n' "$@" | fzf "${fzf_args[@]}"
 }

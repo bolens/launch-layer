@@ -99,6 +99,7 @@ tui_game_picker_name_max() {
 	fi
 	list_w="$(tui_game_picker_list_width)"
 	prefix=$((TUI_GAME_PICKER_TAG_WIDTH + TUI_GAME_PICKER_BODY_PREFIX_WIDTH))
+	tui_text_status_enabled && prefix=$((prefix + 2))
 	max=$((list_w - prefix))
 	(( max < 0 )) && max=0
 	printf '%s' "$max"
@@ -175,21 +176,22 @@ tui_games_cache_coalesce_lines() {
 tui_emit_normalized_game_list_line() {
 	local line=$1
 	local appid cfg nat ac_type engine name
-	local parsed cfg_g nat_g
+	local parsed cfg_g nat_g ac_g bool_width
 	parsed="$(tui_parse_game_list_fields "$line")" || return 0
 	IFS=$'\t' read -r appid cfg nat ac_type engine name <<< "$parsed"
 	cfg_g="$(tui_glyph_yesno "$cfg")"
 	nat_g="$(tui_glyph_yesno "$nat")"
 	ac_g="$(tui_glyph_ac_type "$ac_type")"
+	bool_width="$(tui_game_bool_col_width)"
 	printf '%-10s %-*s %-*s %-8s %-12s %s\n' \
-		"$appid" "$TUI_GAME_BOOL_COL_WIDTH" "$cfg_g" "$TUI_GAME_BOOL_COL_WIDTH" "$nat_g" \
+		"$appid" "$bool_width" "$cfg_g" "$bool_width" "$nat_g" \
 		"$ac_g" "$engine" "$name"
 }
 
 # tui_format_game_list_body — Align list_games fields; truncate NAME with … when needed.
 tui_format_game_list_body() {
 	local line=$1 name_max=${2:-}
-	local appid cfg nat ac_type engine name parsed cfg_g nat_g
+	local appid cfg nat ac_type engine name parsed cfg_g nat_g ac_g bool_width
 	if [[ -z "$name_max" ]]; then
 		name_max="$(tui_game_picker_name_max)"
 	fi
@@ -198,18 +200,20 @@ tui_format_game_list_body() {
 	cfg_g="$(tui_glyph_yesno "$cfg")"
 	nat_g="$(tui_glyph_yesno "$nat")"
 	ac_g="$(tui_glyph_ac_type "$ac_type")"
+	bool_width="$(tui_game_bool_col_width)"
 	name="$(tui_truncate_game_name_if_needed "$name" "$name_max")"
 	printf '%-10s %-*s %-*s %-8s %-12s %s' \
-		"$appid" "$TUI_GAME_BOOL_COL_WIDTH" "$cfg_g" "$TUI_GAME_BOOL_COL_WIDTH" "$nat_g" \
+		"$appid" "$bool_width" "$cfg_g" "$bool_width" "$nat_g" \
 		"$ac_g" "$engine" "$name"
 }
 
 # tui_game_list_column_header — Column labels matching --list-games / picker rows.
 tui_game_list_column_header() {
-	local row
+	local row bool_width
+	bool_width="$(tui_game_bool_col_width)"
 	row="$(printf '%-*s %-10s %-*s %-*s %-8s %-12s %s\n' \
 		"$TUI_GAME_PICKER_TAG_WIDTH" "$TUI_GAME_PICKER_RECENT_MARK" \
-		APPID "$TUI_GAME_BOOL_COL_WIDTH" CFG "$TUI_GAME_BOOL_COL_WIDTH" NAT \
+		APPID "$bool_width" CFG "$bool_width" NAT \
 		AC ENGINE NAME)"
 	if cli_uses_color; then
 		printf '%s\n' "$(cli_dim "$row")"

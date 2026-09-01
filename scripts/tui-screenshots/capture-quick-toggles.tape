@@ -7,7 +7,7 @@ Type "clear"
 Enter
 Show
 
-Type "bash scripts/tui-screenshots/frame-quick-toggles.sh"
+Type "LAUNCHLAYER_SCREENSHOT_FIXTURES=1 bash scripts/tui-screenshots/frame-quick-toggles.sh"
 Enter
-Sleep 3s
+Sleep 5s
 Screenshot docs/assets/tui-quick-toggles.png

@@ -22,9 +22,9 @@
 # machine_label=7900X3D + 3080 Ti workstation
 
 # Fingerprint depth for hub publish/recommend (privacy vs matching quality):
-#   minimal  — GPU vendor, OS, session, profiles, display/refresh tiers, desktop (default)
-#   standard — minimal + audio, VRAM tier, monitor layout, exact display, X3D mask
-#   detailed — standard + full GPU list, all monitors, output names, OS id
+#   minimal: GPU vendor, OS, session, profiles, display/refresh tiers, desktop (default)
+#   standard: minimal + audio, VRAM tier, monitor layout, exact display, X3D mask
+#   detailed: standard + full GPU list, all monitors, output names, OS id
 # fingerprint_level=minimal
 
 # One-shot override: LAUNCHLAYER_HUB_FINGERPRINT_LEVEL=detailed launchlayer --hub-fingerprint

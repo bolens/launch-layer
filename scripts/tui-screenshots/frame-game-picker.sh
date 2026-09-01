@@ -5,6 +5,7 @@ set -euo pipefail
 FRAME_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=bootstrap.sh
 source "$FRAME_DIR/bootstrap.sh"
+clear
 
 picker_lines() {
 	if [[ "${LAUNCHLAYER_SCREENSHOT_FIXTURES:-}" == 1 ]]; then
