@@ -55,10 +55,14 @@ describe("parseJsonObjectBody", () => {
   });
 
   it("rejects invalid JSON", () => {
-    assert.throws(
-      () => parseJsonObjectBody("{bad json"),
-      /VALIDATION_ERROR: request body contains invalid JSON/,
-    );
+    assert.throws(() => parseJsonObjectBody("{bad json"), (error: Error) => {
+      assert.match(
+        error.message,
+        /VALIDATION_ERROR: request body contains invalid JSON/,
+      );
+      assert.ok(error.cause instanceof SyntaxError);
+      return true;
+    });
   });
 });
 

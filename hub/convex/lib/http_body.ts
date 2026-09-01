@@ -28,7 +28,9 @@ export function parseJsonObjectBody(body: string): Record<string, unknown> {
     if (error instanceof Error && error.message.startsWith("VALIDATION_ERROR:")) {
       throw error;
     }
-    throw new Error("VALIDATION_ERROR: request body contains invalid JSON");
+    throw new Error("VALIDATION_ERROR: request body contains invalid JSON", {
+      cause: error,
+    });
   }
 }
 
