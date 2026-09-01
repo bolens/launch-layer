@@ -215,7 +215,7 @@ bulk_set_include_preset() {
 # apply: 0 = preview only, 1 = write allowlisted keys into games/<AppID>.env
 suggest_config() {
 	local appid=$1 apply=${2:-0}
-	local env_json
+	local env_json game_native=0
 
 	command_required_or_fail python3 "ProtonDB suggest" || return 1
 	[[ -n "$appid" ]] || {
@@ -239,5 +239,6 @@ suggest_config() {
 	apply_defaults
 
 	env_json="$(show_detect_environment --json)"
-	python3 "$SCRIPT_DIR/scripts/protondb_suggest.py" "$appid" "$env_json" "$apply" "$GAMES_DIR"
+	detect_native_game "$appid" 1 && game_native=1
+	python3 "$SCRIPT_DIR/scripts/protondb_suggest.py" "$appid" "$env_json" "$apply" "$GAMES_DIR" "$game_native"
 }

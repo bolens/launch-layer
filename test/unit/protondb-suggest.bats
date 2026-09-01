@@ -34,6 +34,12 @@ PY
 	[[ "$output" == "GE-Proton10-10" ]]
 }
 
+@test "protondb match_version recognizes Steam stable version labels" {
+	run _py "$SCRIPT" match 10.0-3 "Proton 9.0" "Proton 10.0"
+	[[ $status -eq 0 ]]
+	[[ "$output" == "Proton 10.0" ]]
+}
+
 @test "protondb report ranking uses timestamp as a stable tie breaker" {
 	run python3 -c '
 import importlib.util
@@ -59,7 +65,7 @@ spec.loader.exec_module(m)
 path = sys.argv[1]
 m.apply_config_updates_atomic(path, {"GAMEMODE": "1", "MANGOHUD": "1"}, "42")
 content = pathlib.Path(path).read_text()
-assert content == "INCLUDE=presets/standard.env\nMANGOHUD=1\nGAMEMODE=1\n"
+assert content == "INCLUDE=presets/standard.env\nMANGOHUD=0\n# launchlayer:protondb-managed GAMEMODE\nGAMEMODE=1\n"
 assert pathlib.Path(path).stat().st_mode & 0o777 == 0o600
 print("ok")
 ' "$tmp/42.env"
@@ -82,7 +88,7 @@ except ValueError:
 	[[ "$output" == "blocked" ]]
 }
 
-@test "protondb atomic update merges existing game arguments" {
+@test "protondb atomic update preserves unmarked game arguments" {
 	tmp="$(mktemp -d)"
 	printf 'GAME_EXTRA_ARGS="-windowed"\n' > "$tmp/42.env"
 	run python3 -c '
@@ -91,7 +97,7 @@ spec = importlib.util.spec_from_file_location("pdb", "'"$SCRIPT"'")
 m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
 m.apply_config_updates_atomic(sys.argv[1], {"GAME_EXTRA_ARGS": "-dx11 -windowed"}, "42")
-assert pathlib.Path(sys.argv[1]).read_text() == "GAME_EXTRA_ARGS=\"-windowed -dx11\"\n"
+assert pathlib.Path(sys.argv[1]).read_text() == "GAME_EXTRA_ARGS=\"-windowed\"\n"
 print("ok")
 ' "$tmp/42.env"
 	[[ $status -eq 0 ]]
@@ -104,6 +110,14 @@ print("ok")
 	[[ "$output" == *"wrappers=GAMEMODE"* ]]
 	[[ "$output" == *"env=MANGOHUD=1,PROTON_ENABLE_NVAPI=1"* ]]
 	[[ "$output" == *"args=-dx11"* ]]
+}
+
+@test "protondb parse_launch_options keeps argument values and drops wrapper arguments" {
+	run _py "$SCRIPT" parse 'gamescope -W 1920 -H 1080 -- %command% -screen-width 1920 -window-mode borderless'
+	[[ $status -eq 0 ]]
+	[[ "$output" == *"wrappers=GAMESCOPE"* ]]
+	[[ "$output" == *"args=-screen-width,1920,-window-mode,borderless"* ]]
+	[[ "$output" != *"args=-W"* ]]
 }
 
 @test "protondb gpu_match_bonus does not treat radeon as match for nvidia host" {
@@ -124,7 +138,9 @@ import importlib.util
 spec = importlib.util.spec_from_file_location("pdb", "'"$SCRIPT"'")
 m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
-assert m.is_allowed_config_key("PROTON_ENABLE_NVAPI")
+assert not m.is_allowed_config_key("PROTON_ENABLE_NVAPI")
+assert not m.is_allowed_config_key("PROTON_ENABLE_WAYLAND")
+assert not m.is_allowed_config_key("PROTON_ENABLE_HDR")
 assert m.is_allowed_config_key("GAMEMODE")
 assert m.is_allowed_config_key("DLSS_SWAPPER")
 assert m.is_allowed_config_key("PROTON_DLSS_UPGRADE")
@@ -142,6 +158,108 @@ assert not m.is_allowed_config_key("PATH")
 assert not m.is_allowed_config_key("DXVK_ASYNC")
 assert not m.is_allowed_config_key("PROTON_USE_NTSYNC")
 assert not m.is_allowed_config_key("PROTON_NO_ESYNC")
+assert not m.is_allowed_config_key("PROTON_USE_WINED3D")
+assert not m.is_allowed_config_key("PROTON_LOG")
+assert not m.is_allowed_config_key("DXVK_HUD")
+assert not m.is_allowed_config_key("VKD3D_CONFIG")
+assert not m.is_allowed_config_key("PROTON_FUTURE_TOGGLE")
+assert m.is_allowed_recommendation_value("GAMEMODE", "1")
+assert not m.is_allowed_recommendation_value("GAMEMODE", "yes")
+assert m.is_allowed_recommendation_value("FRAME_RATE", "120")
+assert not m.is_allowed_recommendation_value("FRAME_RATE", "-1")
+print("ok")
+'
+	[[ $status -eq 0 ]]
+	[[ "$output" == "ok" ]]
+}
+
+@test "protondb actionable reports exclude stale advice without falling back for apply" {
+	run python3 -c '
+import importlib.util
+spec = importlib.util.spec_from_file_location("pdb", "'"$SCRIPT"'")
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+now = 2_000_000_000
+reports = [
+    (8.0, {"timestamp": now - 30 * 86400}),
+    (9.0, {"timestamp": now - 366 * 86400}),
+]
+assert m.actionable_reports(reports, now=now) == [reports[0]]
+assert m.actionable_reports([reports[1]], now=now) == []
+print("ok")
+'
+	[[ $status -eq 0 ]]
+	[[ "$output" == "ok" ]]
+}
+
+@test "protondb consensus requires two fresh reports for risky settings and arguments" {
+	run python3 -c '
+import importlib.util
+spec = importlib.util.spec_from_file_location("pdb", "'"$SCRIPT"'")
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+assert not m.has_apply_consensus("PROTON_USE_WINED3D", 5.0, 10.0, 1)
+assert m.has_apply_consensus("PROTON_USE_WINED3D", 5.0, 10.0, 2)
+assert not m.has_argument_consensus(4.0, 10.0, 1)
+assert m.has_argument_consensus(4.0, 10.0, 2)
+assert not m.should_apply_wrapper("GAMEMODE")
+assert m.should_apply_wrapper("GAMESCOPE")
+print("ok")
+'
+	[[ $status -eq 0 ]]
+	[[ "$output" == "ok" ]]
+}
+
+@test "protondb managed updates reconcile generated keys and preserve manual keys" {
+	tmp="$(mktemp -d)"
+	cat > "$tmp/42.env" <<'EOF'
+INCLUDE=presets/standard.env
+# launchlayer:protondb-managed GAMEMODE
+GAMEMODE=1
+MANGOHUD=0
+# launchlayer:protondb-managed PROTON_ENABLE_NVAPI
+PROTON_ENABLE_NVAPI=1
+EOF
+	run python3 -c '
+import importlib.util, pathlib, sys
+spec = importlib.util.spec_from_file_location("pdb", "'"$SCRIPT"'")
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+m.apply_config_updates_atomic(sys.argv[1], {"GAMEMODE": "1", "MANGOHUD": "1"}, "42")
+content = pathlib.Path(sys.argv[1]).read_text()
+assert "PROTON_ENABLE_NVAPI" not in content
+assert "MANGOHUD=0" in content
+assert content.count("MANGOHUD=") == 1
+assert "# launchlayer:protondb-managed GAMEMODE\nGAMEMODE=1\n" in content
+print("ok")
+' "$tmp/42.env"
+	[[ $status -eq 0 ]]
+	[[ "$output" == "ok" ]]
+}
+
+@test "protondb does not select a Proton override for native games" {
+	run python3 -c '
+import importlib.util
+spec = importlib.util.spec_from_file_location("pdb", "'"$SCRIPT"'")
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+assert m.select_proton_override("GE-Proton11-1", "GE-Proton11-1", True) is None
+assert m.select_proton_override("GE-Proton11-1", "GE-Proton11-1", False) == "GE-Proton11-1"
+assert m.select_proton_override("10.0-3", "Proton 10.0", False) is None
+print("ok")
+'
+	[[ $status -eq 0 ]]
+	[[ "$output" == "ok" ]]
+}
+
+@test "protondb treats Omarchy arch-linux profile as Arch for report ranking" {
+	run python3 -c '
+import importlib.util
+spec = importlib.util.spec_from_file_location("pdb", "'"$SCRIPT"'")
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+assert m.detect_host_distro({"os_id": "omarchy", "profiles": ["arch-linux", "nvidia-desktop"]}) == "arch"
+assert m.detect_host_distro({"os_id": "fedora", "profiles": []}) == "fedora"
 print("ok")
 '
 	[[ $status -eq 0 ]]

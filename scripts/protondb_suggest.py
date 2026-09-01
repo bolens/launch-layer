@@ -133,32 +133,19 @@ def gpu_match_bonus(host_gpu, rep_gpu):
     return -1.0
 
 
-# Mirrors lib/keys.sh known_config_key allowlist for --apply writes.
-_KNOWN_CONFIG_KEYS = {
-    "BENCHMARK", "GAMEMODE", "MANGOHUD", "MANGOHUD_LOG", "MANGOHUD_CONFIG", "MANGOHUD_CONFIGFILE",
-    "NETWORK_TUNE", "DEBUG", "X3D_CPUS", "GAME_NIC", "GAMESCOPE", "GAMESCOPE_W", "GAMESCOPE_H", "GAMESCOPE_R",
-    "GAMESCOPE_ADAPTIVE_SYNC", "GAMESCOPE_EXPOSE_WAYLAND", "GAMESCOPE_FSR", "GAMESCOPE_FSR_SHARPNESS",
-    "SHADER_CACHE_CHECK", "SHADER_CACHE_MAX_GB", "SHADER_CACHE_TRIM", "SHADER_CACHE_CHECK_INTERVAL_HOURS",
-    "COMPATDATA_CHECK", "COMPATDATA_MAX_GB", "COMPATDATA_TRIM", "VM_MAX_MAP_COUNT_MIN", "VM_MAX_MAP_COUNT_FIX",
-    "VRAM_HOG_UNITS", "VRAM_HOGS", "VRAM_HOG_PIDS", "LAUNCH_WATCHDOG", "LAUNCH_WRAPPERS", "LAUNCH_WRAPPERS_BEFORE",
-    "GAME_EXTRA_ARGS", "UNSET_VARS", "FORCE_NATIVE", "FORCE_PROTON", "VRAM_PREFLIGHT_MIN_MB",
-    "PIPEWIRE_LOW_LATENCY", "LAUNCH_LOG_MAX_LINES", "PRE_LAUNCH_CMD", "POST_LAUNCH_CMD",
-    "DISK_PREFLIGHT_MIN_GB", "GPU_POWER_CHECK", "NVIDIA_POWER_MODE", "CONCURRENT_LAUNCH_GUARD", "GPU_VRAM_PROCESS_MIN_MB",
-    "DISABLE_CPU_AFFINITY", "GAME_PERFORMANCE", "CPU_AFFINITY_RANGE", "DISABLE_NIC_EEE", "DISABLE_WIFI_POWER_SAVE",
-    "MALLOC_ALLOCATOR", "ENABLE_HDR", "GAMESCOPE_HDR", "DISK_TUNE", "OVERRIDE_PROTON", "DLSS_SWAPPER",
-    "PROTON_DLSS_UPGRADE", "PROTON_FSR4_UPGRADE", "PROTON_XESS_UPGRADE", "SHADER_CACHE_BOOST",
-    "LD_BIND_NOW", "VKBASALT", "LATENCYFLEX", "DISABLE_VBLANK",
-    "DISABLE_STEAM_DECK", "FRAME_RATE", "INCLUDE",
-    "LSFG_VK", "OBS_VKCAPTURE", "DISCORD_IPC", "REPLAY_CAPTURE", "REPLAY_TOOL",
-    "BLOCK_INTERNET", "CONTY", "SPECIAL_K", "RESHADE", "DEPTH3D", "WINE_FSR",
-    "FLAWLESS_WIDESCREEN", "FWS", "OPENVR_FSR", "GEO11", "SBS_VR", "FLAT2VR",
-    "PLAYTIME_LOG", "CRASH_GUESS", "SPECIALTY_RUNTIME", "SKIF", "VALVEPLUG",
-    "GAMESCOPE_NESTED_FIX", "GAMESCOPE_FRAME_LIMIT", "GAMESCOPE_FILTER",
-    "VKBASALT_CONFIG_FILE", "SHADER_CACHE_BOOST", "SHADER_CACHE_BOOST_GB",
+# Deliberately narrower than LaunchLayer's config registry. Community reports may
+# only automate named, bounded settings; unknown Proton/DXVK/VKD3D keys stay text.
+_AUTO_APPLY_CONFIG_KEYS = {
+    "GAMEMODE", "MANGOHUD", "GAMESCOPE", "DLSS_SWAPPER",
+    "PROTON_DLSS_UPGRADE", "PROTON_FSR4_UPGRADE", "PROTON_XESS_UPGRADE",
+    "SHADER_CACHE_BOOST", "LD_BIND_NOW",
+    "VKBASALT", "LATENCYFLEX", "DISABLE_VBLANK", "DISABLE_STEAM_DECK",
+    "FRAME_RATE",
 }
-_ALLOWED_PREFIXES = (
-    "PROTON_", "DXVK_", "VKD3D_", "__GL_", "__VK_", "WINE", "STEAM_", "SDL_", "MESA_", "mesa_", "RADV_", "AMD_", "INTEL_",
-)
+_COMPATIBILITY_CONFIG_KEYS = {
+    "PROTON_USE_WINED3D", "PROTON_NO_FSYNC", "PROTON_NO_ESYNC",
+    "PROTON_NO_D3D11", "PROTON_NO_D3D10", "PROTON_HIDE_NVIDIA_GPU",
+}
 _BLOCKED_APPLY_KEYS = {
     "LD_PRELOAD", "LD_LIBRARY_PATH", "PATH", "HOME", "USER", "SHELL", "PWD", "OLDPWD",
     "SSH_AUTH_SOCK", "DBUS_SESSION_BUS_ADDRESS", "XDG_RUNTIME_DIR",
@@ -170,11 +157,69 @@ _IGNORED_RECOMMENDATION_KEYS = {
 
 
 def is_allowed_config_key(key: str) -> bool:
-    if not key or key in _BLOCKED_APPLY_KEYS or key in _IGNORED_RECOMMENDATION_KEYS:
-        return False
-    if key in _KNOWN_CONFIG_KEYS:
-        return True
-    return any(key.startswith(prefix) for prefix in _ALLOWED_PREFIXES)
+    return bool(key and key not in _BLOCKED_APPLY_KEYS
+                and key not in _IGNORED_RECOMMENDATION_KEYS
+                and key in _AUTO_APPLY_CONFIG_KEYS)
+
+
+def is_compatibility_key(key: str) -> bool:
+    return key in _COMPATIBILITY_CONFIG_KEYS and key not in _IGNORED_RECOMMENDATION_KEYS
+
+
+def is_allowed_recommendation_value(key: str, value: str) -> bool:
+    value = str(value)
+    if key == "DLSS_SWAPPER":
+        return value in {"0", "1", "dll"}
+    if key == "FRAME_RATE":
+        return value.isdigit() and 1 <= int(value) <= 1000
+    if key in _AUTO_APPLY_CONFIG_KEYS or key in _COMPATIBILITY_CONFIG_KEYS:
+        return value in {"0", "1"}
+    return False
+
+
+def actionable_reports(scored_reports, now=None, max_age_days=365):
+    """Return reports recent enough to drive automatic config changes."""
+    now = time.time() if now is None else now
+    cutoff = now - max_age_days * 86400
+    return [item for item in scored_reports
+            if item[0] > 0 and item[1].get("timestamp", 0) >= cutoff]
+
+
+def has_apply_consensus(key, vote_score, total_score, report_count):
+    """Require corroboration, with a higher bar for compatibility fallbacks."""
+    threshold = 0.35 if is_compatibility_key(key) else 0.15
+    return report_count >= 2 and total_score > 0 and vote_score / total_score >= threshold
+
+
+def has_argument_consensus(vote_score, total_score, report_count):
+    return report_count >= 2 and total_score > 0 and vote_score / total_score >= 0.35
+
+
+def should_apply_wrapper(wrapper):
+    # GAMEMODE=1 is already the shipped default and should not become a
+    # redundant per-game override.
+    return wrapper in {"MANGOHUD", "GAMESCOPE"}
+
+
+def select_proton_override(suggested, matched, game_native):
+    if game_native or not suggested or not matched:
+        return None
+    # Steam keeps Valve's stable Proton current. Pin only a custom tool whose
+    # behavior cannot be obtained from the default compatibility selection.
+    if re.match(r'^Proton\s+\d', matched, re.IGNORECASE):
+        return None
+    return matched
+
+
+def detect_host_distro(env_info: dict) -> str:
+    profiles = env_info.get("profiles", "")
+    if isinstance(profiles, list):
+        tokens = [str(profile).lower() for profile in profiles]
+    else:
+        tokens = str(profiles).lower().replace(",", " ").split()
+    if "arch-linux" in tokens:
+        return "arch"
+    return str(env_info.get("os_id", "unknown")).lower()
 
 
 def detect_host_cpu(env_info: dict) -> str:
@@ -215,13 +260,17 @@ def parse_launch_options(options_str):
     if not options_str:
         return wrappers, env_vars, extra_args
         
-    options_str = options_str.replace("%command%", " ")
     try:
         tokens = shlex.split(options_str)
     except Exception:
         tokens = options_str.split()
         
-    for token in tokens:
+    command_index = tokens.index("%command%") if "%command%" in tokens else len(tokens)
+    prefix_tokens = tokens[:command_index]
+    if command_index < len(tokens):
+        extra_args = [token for token in tokens[command_index + 1:] if token]
+
+    for token in prefix_tokens:
         token = token.strip()
         if not token:
             continue
@@ -239,7 +288,7 @@ def parse_launch_options(options_str):
                 # Ignore generic paths or binaries like LD_PRELOAD=/usr/lib/libtcmalloc.so (though let's keep others)
                 if not (key == "LD_PRELOAD" and "tcmalloc" in val):
                     env_vars[key] = val
-        elif token.startswith('-') or token.startswith('+'):
+        elif command_index == len(tokens) and (token.startswith('-') or token.startswith('+')):
             extra_args.append(token)
             
     return wrappers, env_vars, extra_args
@@ -283,7 +332,7 @@ def match_version(suggested, installed):
                 return inst
                 
     # Specific numbers (e.g. "9.0" or "8.0")
-    num_match = re.search(r'proton\s*(\d+)[\.-](\d+)', s_lower)
+    num_match = re.search(r'(?:proton\s*)?(\d+)[\.-](\d+)', s_lower)
     if num_match:
         version_prefix = f"proton {num_match.group(1)}.{num_match.group(2)}"
         matching_inst = [inst for inst in installed if inst.lower().startswith(version_prefix) or f"proton-{num_match.group(1)}.{num_match.group(2)}" in inst.lower()]
@@ -336,21 +385,35 @@ def apply_config_updates_atomic(file_path, updates, app_id):
 
         pending = dict(updates)
         output = []
-        for line in lines:
+        index = 0
+        while index < len(lines):
+            line = lines[index]
+            managed = re.match(r'^# launchlayer:protondb-managed ([A-Za-z_][A-Za-z0-9_]*)\s*$', line)
+            if managed and index + 1 < len(lines):
+                key = managed.group(1)
+                value_line = lines[index + 1]
+                value_match = re.match(r'^\s*([A-Za-z_][A-Za-z0-9_]*)=', value_line)
+                if value_match and value_match.group(1) == key:
+                    if key in pending:
+                        output.append(f"# launchlayer:protondb-managed {key}\n")
+                        output.append(f"{key}={config_value(pending.pop(key))}\n")
+                    index += 2
+                    continue
             match = re.match(r'^\s*([A-Za-z_][A-Za-z0-9_]*)=', line)
             key = match.group(1) if match else None
             if key in pending:
-                value = pending.pop(key)
-                if key == "GAME_EXTRA_ARGS":
-                    current = line.split("=", 1)[1].strip().strip("\"'")
-                    value = merge_argv(current, value)
-                output.append(f"{key}={config_value(value)}\n")
-            else:
-                output.append(line)
+                # An unmarked value belongs to the user. Do not replace or claim it.
+                pending.pop(key)
+            output.append(line)
+            index += 1
         if output and not output[-1].endswith("\n"):
             output[-1] += "\n"
         for key in sorted(pending):
+            output.append(f"# launchlayer:protondb-managed {key}\n")
             output.append(f"{key}={config_value(pending[key])}\n")
+
+        if output == lines:
+            return False
 
         fd, temp_path = tempfile.mkstemp(prefix=".launchlayer-env.", dir=directory)
         try:
@@ -360,6 +423,7 @@ def apply_config_updates_atomic(file_path, updates, app_id):
                 target.flush()
                 os.fsync(target.fileno())
             os.replace(temp_path, file_path)
+            return True
         except Exception:
             try:
                 os.unlink(temp_path)
@@ -367,21 +431,6 @@ def apply_config_updates_atomic(file_path, updates, app_id):
                 pass
             raise
 
-
-def merge_argv(existing, additions):
-    """Append arguments without changing the existing order or adding duplicates."""
-    try:
-        result = shlex.split(existing)
-    except ValueError:
-        result = existing.split()
-    try:
-        new_items = shlex.split(additions)
-    except ValueError:
-        new_items = additions.split()
-    for item in new_items:
-        if item not in result:
-            result.append(item)
-    return " ".join(result)
 
 def main():
     if len(sys.argv) < 5:
@@ -392,6 +441,7 @@ def main():
     env_json_str = sys.argv[2]
     apply_flag = sys.argv[3] == "1"
     games_dir = sys.argv[4]
+    game_native = len(sys.argv) >= 6 and sys.argv[5] == "1"
     
     try:
         env_info = json.loads(env_json_str)
@@ -403,7 +453,7 @@ def main():
     host_gpu = env_info.get("gpu_vendor", "unknown").lower()
     host_cpu = detect_host_cpu(env_info)
             
-    host_distro = env_info.get("os_id", "unknown").lower()
+    host_distro = detect_host_distro(env_info)
     host_os_family = env_info.get("os_family", "unknown").lower()
     is_steam_deck = env_info.get("steam_deck", False) or "steam-deck" in str(env_info.get("profiles", "")).lower()
     
@@ -534,12 +584,14 @@ def main():
     scored_reports = sort_scored_reports(scored_reports)
     
     # Filter reports with score > 0, fallback to top 20 recency if none
-    valid_reports = [sr for sr in scored_reports if sr[0] > 0]
-    if not valid_reports:
-        valid_reports = sorted(scored_reports, key=lambda x: x[1].get("timestamp", 0), reverse=True)[:20]
+    valid_reports = actionable_reports(scored_reports, now=current_time)
+    display_reports = valid_reports
+    if not display_reports:
+        display_reports = sorted(scored_reports, key=lambda x: x[1].get("timestamp", 0), reverse=True)[:20]
         
     # 1. Aggregate Proton versions
     proton_votes = defaultdict(float)
+    proton_report_counts = defaultdict(int)
     total_score = sum(sr[0] for sr in valid_reports) or 1.0
     
     for score_weight, r in valid_reports:
@@ -551,6 +603,7 @@ def main():
             # remove build numbers, e.g. Proton GE-Proton9-22 (Stable) -> GE-Proton9-22
             ver_norm = re.sub(r'\s*\(.*\)', '', ver_norm)
             proton_votes[ver_norm] += score_weight
+            proton_report_counts[ver_norm] += 1
             
     # Sort proton versions by score
     sorted_proton = sorted(proton_votes.items(),
@@ -558,8 +611,11 @@ def main():
     
     # 2. Aggregate launch options
     wrapper_votes = defaultdict(float)
+    wrapper_report_counts = defaultdict(int)
     env_votes = defaultdict(lambda: defaultdict(float))
+    env_report_counts = defaultdict(lambda: defaultdict(int))
     arg_votes = defaultdict(float)
+    arg_report_counts = defaultdict(int)
     
     for score_weight, r in valid_reports:
         opts_str = r.get("responses", {}).get("launchOptions", "")
@@ -567,28 +623,36 @@ def main():
         
         for w in wrappers:
             wrapper_votes[w] += score_weight
+            wrapper_report_counts[w] += 1
         for k, v in env_vars.items():
             env_votes[k][v] += score_weight
-        for arg in extra_args:
-            arg_votes[arg] += score_weight
+            env_report_counts[k][v] += 1
+        if extra_args:
+            arg_group = tuple(extra_args)
+            arg_votes[arg_group] += score_weight
+            arg_report_counts[arg_group] += 1
             
     # Collect recommendations with >20% vote thresholds
     rec_wrappers = []
     for w, w_score in sorted(wrapper_votes.items()):
-        if w_score / total_score >= 0.20:
+        if wrapper_report_counts[w] >= 2 and w_score / total_score >= 0.20:
             rec_wrappers.append(w)
             
     rec_env_vars = {}
     for k, val_dict in env_votes.items():
         # find best value
         best_val, val_score = sorted(val_dict.items(), key=lambda item: (-item[1], item[0]))[0]
-        if val_score / total_score >= 0.15:
+        if (is_allowed_recommendation_value(k, best_val)
+                and (is_allowed_config_key(k) or is_compatibility_key(k))
+                and has_apply_consensus(k, val_score, total_score,
+                                        env_report_counts[k][best_val])):
             rec_env_vars[k] = best_val
             
     rec_args = []
-    for arg, arg_score in sorted(arg_votes.items()):
-        if arg_score / total_score >= 0.15:
-            rec_args.append(arg)
+    if arg_votes:
+        arg_group, arg_score = sorted(arg_votes.items(), key=lambda item: (-item[1], item[0]))[0]
+        if has_argument_consensus(arg_score, total_score, arg_report_counts[arg_group]):
+            rec_args = list(arg_group)
             
     # Check installed proton versions
     installed_proton_tools = list_installed_proton_tools(steam_root)
@@ -598,6 +662,9 @@ def main():
     if sorted_proton:
         suggested_proton = sorted_proton[0][0]
         matched_installed_proton = match_version(suggested_proton, installed_proton_tools)
+        if (proton_report_counts[suggested_proton] < 2
+                or proton_votes[suggested_proton] / total_score < 0.35):
+            matched_installed_proton = None
         
     # Render Output
     print(f"\n{BOLD}{CYAN}=== ProtonDB Tuning Engine ==={RESET}")
@@ -618,8 +685,7 @@ def main():
             if "ge" in suggested_proton.lower():
                 installed_ge = [inst for inst in installed_proton_tools if "ge-proton" in inst.lower()]
                 if installed_ge:
-                    matched_installed_proton = installed_ge[-1]
-                    print(f"      {YELLOW}'{suggested_proton}' not found. Auto-matched nearest installed: '{matched_installed_proton}'{RESET}")
+                    print(f"      {YELLOW}'{suggested_proton}' lacks enough fresh matching reports; nearest installed is '{installed_ge[-1]}'{RESET}")
                 else:
                     print(f"      {RED}Not installed! Please install '{suggested_proton}' via ProtonUp-Qt.{RESET}")
             else:
@@ -627,8 +693,7 @@ def main():
                 if "experimental" in suggested_proton.lower():
                     installed_exp = [inst for inst in installed_proton_tools if "experimental" in inst.lower()]
                     if installed_exp:
-                        matched_installed_proton = installed_exp[-1]
-                        print(f"      {GREEN}Installed and matched: '{matched_installed_proton}'{RESET}")
+                        print(f"      {YELLOW}Installed as '{installed_exp[-1]}', but lacks enough fresh matching reports{RESET}")
                     else:
                         print(f"      {RED}Not installed! Please install '{suggested_proton}' via Steam.{RESET}")
                 else:
@@ -645,9 +710,8 @@ def main():
         has_tuning = True
         
     for k, v in sorted(rec_env_vars.items()):
-        if not is_allowed_config_key(k):
-            continue
-        print(f"  {BOLD}{k}={v}{RESET} (Environment variable override)")
+        kind = "Compatibility fallback" if is_compatibility_key(k) else "Environment variable override"
+        print(f"  {BOLD}{k}={v}{RESET} ({kind})")
         has_tuning = True
         
     if rec_args:
@@ -661,7 +725,7 @@ def main():
     
     print(f"{BOLD}{CYAN}Key Community Submitter Comments (Similar Hardware):{RESET}")
     printed_comments = 0
-    for score_weight, r in valid_reports:
+    for score_weight, r in display_reports:
         if printed_comments >= 3:
             break
         responses = r.get("responses", {})
@@ -696,21 +760,31 @@ def main():
         
         updates = {}
 
-        if matched_installed_proton:
-            print(f"  Writing OVERRIDE_PROTON=\"{matched_installed_proton}\"")
-            updates["OVERRIDE_PROTON"] = matched_installed_proton
+        selected_proton = select_proton_override(
+            suggested_proton, matched_installed_proton, game_native)
+        if selected_proton:
+            print(f"  Writing OVERRIDE_PROTON=\"{selected_proton}\"")
+            updates["OVERRIDE_PROTON"] = selected_proton
+        elif game_native and suggested_proton:
+            print("  Skipping OVERRIDE_PROTON: native game configuration")
+        elif matched_installed_proton and re.match(
+                r'^Proton\s+\d', matched_installed_proton, re.IGNORECASE):
+            print("  Using installed Valve Proton through Steam default; no permanent pin")
         elif suggested_proton:
-            print(f"  Skipping OVERRIDE_PROTON: '{suggested_proton}' is not installed")
+            print(f"  Skipping OVERRIDE_PROTON: '{suggested_proton}' is unavailable or lacks consensus")
             
         # Write wrappers
         for w in ["GAMEMODE", "MANGOHUD", "GAMESCOPE"]:
             if w in rec_wrappers:
-                print(f"  Writing {w}=1")
-                updates[w] = "1"
+                if should_apply_wrapper(w):
+                    print(f"  Writing {w}=1")
+                    updates[w] = "1"
+                else:
+                    print(f"  Keeping {w}=1 from LaunchLayer defaults")
                 
         # Write custom env vars (allowlisted only)
         for k, v in rec_env_vars.items():
-            if not is_allowed_config_key(k):
+            if not (is_allowed_config_key(k) or is_compatibility_key(k)):
                 print(f"  Skipping disallowed key from community report: {k}")
                 continue
             try:
@@ -727,11 +801,18 @@ def main():
             print(f"  Merging GAME_EXTRA_ARGS=\"{args_val}\"")
             updates["GAME_EXTRA_ARGS"] = args_val
 
-        if updates:
-            apply_config_updates_atomic(config_file, updates, app_id)
-            print(f"\n{BOLD}{GREEN}Saved recommendations.{RESET} Inspect them with '{BOLD}launchlayer --dry-run %command%{RESET}'.")
+        has_managed_settings = False
+        if os.path.isfile(config_file):
+            with open(config_file, encoding="utf-8") as source:
+                has_managed_settings = "# launchlayer:protondb-managed " in source.read()
+        changed = (apply_config_updates_atomic(config_file, updates, app_id)
+                   if updates or has_managed_settings else False)
+        if changed:
+            print(f"\n{BOLD}{GREEN}Reconciled managed recommendations.{RESET} Inspect them with '{BOLD}launchlayer --dry-run %command%{RESET}'.")
+        elif updates:
+            print(f"\n{DIM}Managed recommendations are already current.{RESET}")
         else:
-            print(f"\n{YELLOW}No safe, usable recommendations were written.{RESET}")
+            print(f"\n{YELLOW}No fresh, corroborated recommendations remain.{RESET}")
 
 if __name__ == "__main__":
     main()
