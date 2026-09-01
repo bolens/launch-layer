@@ -222,7 +222,16 @@ suggest_config() {
 		echo "suggest_config: AppID required" >&2
 		return 1
 	}
-	appid="$(resolve_appid_arg "$appid")" || return $?
+	if [[ "$appid" =~ ^[0-9]+$ ]]; then
+		if declare -f find_app_manifest >/dev/null 2>&1 \
+			&& find_app_manifest "$appid" >/dev/null 2>&1 \
+			&& ! is_installed_game_appid "$appid"; then
+			echo "AppID $appid is an installed Steam tool, not a game." >&2
+			return 1
+		fi
+	else
+		appid="$(resolve_appid_arg "$appid")" || return $?
+	fi
 
 	load_profile_config
 	load_config_file "$LAUNCHD_DIR/default.env" 0
