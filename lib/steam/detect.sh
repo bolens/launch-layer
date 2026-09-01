@@ -21,7 +21,7 @@ game_dir_has_native_launcher() {
 detect_native_game() {
 	local appid=${1:-$steam_app_id}
 	local use_heuristic=${2:-1}
-	local installdir game_dir
+	local game_dir
 
 	[[ "${FORCE_PROTON:-0}" == "1" ]] && return 1
 	[[ "${FORCE_NATIVE:-0}" == "1" ]] && return 0
@@ -30,9 +30,7 @@ detect_native_game() {
 	appid_in_list_file "$appid" "$LAUNCHD_DIR/native-appids.txt" && return 0
 	[[ "$use_heuristic" == "0" ]] && return 1
 
-	installdir="$(get_installdir "$appid" 2>/dev/null || true)"
-	[[ -n "$installdir" ]] || return 1
-	game_dir="$(find_game_dir "$installdir" 2>/dev/null || true)"
+	game_dir="$(get_game_dir_for_appid "$appid" 2>/dev/null || true)"
 	[[ -n "$game_dir" ]] || return 1
 
 	if game_dir_has_native_launcher "$game_dir"; then
@@ -131,11 +129,168 @@ _engine_collect_scan_roots() {
 	done < <(find "$game_dir" -maxdepth 2 -type d -name '*.app' 2>/dev/null)
 }
 
-# _engine_find — find(1) across game dir and nested .app bundle roots.
+# Engine rules issue many bounded find queries against the same tree. Build one
+# depth-6 index and evaluate their small predicate grammar in Bash.
+_ENGINE_INDEX_GAME_DIR=""
+_ENGINE_INDEX_PATHS=()
+_ENGINE_INDEX_NAMES=()
+_ENGINE_INDEX_DEPTHS=()
+_ENGINE_INDEX_TYPES=()
+_ENGINE_INDEX_EXECS=()
+_ENGINE_INDEX_COMPLETE=1
+
+_engine_index_build() {
+	local game_dir=$1 root path rel depth slashes type executable stop=0
+	local max_entries=${LAUNCHLAYER_ENGINE_INDEX_MAX_ENTRIES:-50000}
+	[[ "$max_entries" =~ ^[1-9][0-9]*$ ]] || max_entries=50000
+	_ENGINE_INDEX_GAME_DIR="$game_dir"
+	_ENGINE_INDEX_PATHS=()
+	_ENGINE_INDEX_NAMES=()
+	_ENGINE_INDEX_DEPTHS=()
+	_ENGINE_INDEX_TYPES=()
+	_ENGINE_INDEX_EXECS=()
+	_ENGINE_INDEX_COMPLETE=1
+	while IFS= read -r root; do
+		[[ -d "$root" ]] || continue
+		while IFS= read -r -d '' path; do
+			if (( ${#_ENGINE_INDEX_PATHS[@]} >= max_entries )); then
+				_ENGINE_INDEX_COMPLETE=0
+				stop=1
+				break
+			fi
+			if [[ "$path" == "$root" ]]; then
+				rel=""
+				depth=0
+			else
+				rel="${path#"$root"/}"
+				slashes="${rel//[^\/]/}"
+				depth=$(( ${#slashes} + 1 ))
+			fi
+			if [[ -d "$path" ]]; then
+				type=d
+			elif [[ -f "$path" ]]; then
+				type=f
+			else
+				type=o
+			fi
+			executable=0
+			[[ -x "$path" ]] && executable=1
+			_ENGINE_INDEX_PATHS+=("$path")
+			_ENGINE_INDEX_NAMES+=("${path##*/}")
+			_ENGINE_INDEX_DEPTHS+=("$depth")
+			_ENGINE_INDEX_TYPES+=("$type")
+			_ENGINE_INDEX_EXECS+=("$executable")
+		done < <(find "$root" -maxdepth 6 -print0 2>/dev/null)
+		(( stop )) && break
+	done < <(_engine_collect_scan_roots "$game_dir")
+}
+
+_engine_index_entry_matches() {
+	local idx=$1
+	shift
+	local token pattern actual
+	while (( $# > 0 )); do
+		token=$1
+		shift
+		case "$token" in
+			-type)
+				(( $# > 0 )) || return 1
+				[[ "${_ENGINE_INDEX_TYPES[$idx]}" == "$1" ]] || return 1
+				shift
+				;;
+			-name|-iname|-path|-ipath)
+				(( $# > 0 )) || return 1
+				pattern=$1
+				shift
+				case "$token" in
+					-name|-iname) actual="${_ENGINE_INDEX_NAMES[$idx]}" ;;
+					*) actual="${_ENGINE_INDEX_PATHS[$idx]}" ;;
+				esac
+				if [[ "$token" == -iname || "$token" == -ipath ]]; then
+					actual="${actual,,}"
+					pattern="${pattern,,}"
+				fi
+				# shellcheck disable=SC2053 # Marker rules intentionally use find-style globs.
+				[[ "$actual" == $pattern ]] || return 1
+				;;
+			-perm)
+				(( $# > 0 )) || return 1
+				[[ "$1" == /111 && "${_ENGINE_INDEX_EXECS[$idx]}" == 1 ]] || return 1
+				shift
+				;;
+			*) return 1 ;;
+		esac
+	done
+	return 0
+}
+
+# _engine_find — Query the shared engine index using the find predicates used below.
+_engine_encode_clause() {
+	local output_var=$1 item result=""
+	shift
+	for item in "$@"; do
+		[[ -z "$result" ]] || result+=$'\034'
+		result+="$item"
+	done
+	printf -v "$output_var" '%s' "$result"
+}
+
 _engine_find() {
 	local game_dir=$1 maxdepth=$2
 	shift 2
-	local root
+	[[ "$_ENGINE_INDEX_GAME_DIR" == "$game_dir" ]] || _engine_index_build "$game_dir"
+	if [[ "$_ENGINE_INDEX_COMPLETE" != 1 ]]; then
+		_engine_find_legacy "$game_dir" "$maxdepth" "$@"
+		return $?
+	fi
+
+	local -a prefix=() clause=()
+	local -a clauses=()
+	local token in_group=0 encoded idx
+	local -a predicate=()
+	for token in "$@"; do
+		case "$token" in
+			'(') in_group=1 ;;
+			')')
+				if [[ ${#clause[@]} -gt 0 ]]; then
+					_engine_encode_clause encoded "${clause[@]}"
+					clauses+=("$encoded")
+				fi
+				clause=()
+				in_group=0
+				;;
+			-o)
+				_engine_encode_clause encoded "${clause[@]}"
+				clauses+=("$encoded")
+				clause=()
+				;;
+			*)
+				if (( in_group )); then clause+=("$token"); else prefix+=("$token"); fi
+				;;
+		esac
+	done
+	if [[ ${#clauses[@]} -eq 0 ]]; then
+		_engine_encode_clause encoded "${prefix[@]}"
+		clauses+=("$encoded")
+		prefix=()
+	elif [[ ${#clause[@]} -gt 0 ]]; then
+		_engine_encode_clause encoded "${clause[@]}"
+		clauses+=("$encoded")
+	fi
+
+	for (( idx = 0; idx < ${#_ENGINE_INDEX_PATHS[@]}; idx++ )); do
+		(( ${_ENGINE_INDEX_DEPTHS[$idx]} <= maxdepth )) || continue
+		for encoded in "${clauses[@]}"; do
+			IFS=$'\034' read -r -a predicate <<< "$encoded"
+			_engine_index_entry_matches "$idx" "${prefix[@]}" "${predicate[@]}" && return 0
+		done
+	done
+	return 1
+}
+
+_engine_find_legacy() {
+	local game_dir=$1 maxdepth=$2 root
+	shift 2
 	while IFS= read -r root; do
 		[[ -d "$root" ]] || continue
 		find "$root" -maxdepth "$maxdepth" "$@" -print -quit 2>/dev/null | grep -q . && return 0
@@ -158,6 +313,7 @@ _engine_has_packr_manifest() {
 _detect_engine_markers() {
 	local game_dir=$1
 	[[ -n "$game_dir" && -d "$game_dir" ]] || return 0
+	_engine_index_build "$game_dir"
 
 	# Source 2 (CS2, Dota 2, Half-Life: Alyx, etc.)
 	if _engine_find "$game_dir" 4 -iname 'gameinfo.gi'; then

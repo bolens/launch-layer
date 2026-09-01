@@ -58,12 +58,25 @@ prune_uninstalled_configs() {
 	local removed=0 scanned=0
 	local file appid name path entry
 
+	if ! steam_library_discovery_available; then
+		if [[ "$json" == "1" ]]; then
+			printf '{"error":"steam_library_unavailable","message":"No readable Steam library was found; no configs were removed."}\n'
+		else
+			echo "No readable Steam library was found; refusing to classify configs as uninstalled." >&2
+		fi
+		return 1
+	fi
+
 	_collect_prune_installed() {
 		installed["$1"]=1
 	}
 
 	cli_scan_progress_begin "Scanning installed games"
-	foreach_installed_game _collect_prune_installed || true
+	if ! foreach_installed_game _collect_prune_installed; then
+		cli_scan_progress_end
+		echo "Steam inventory failed; no configs were removed." >&2
+		return 1
+	fi
 	cli_scan_progress_end
 
 	_prune_scan_file() {

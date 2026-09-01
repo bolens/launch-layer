@@ -277,27 +277,35 @@ EOF
 	rm -rf "$tmp"
 }
 
-@test "backup-config allows consecutive backups to same dir in same second" {
+@test "backup-config preserves concurrent backups created in same second" {
 	local tmp outdir
 	tmp="$(mktemp -d)"
 	outdir="$tmp/backups"
-	mkdir -p "$tmp/launch.d/presets" "$outdir"
+	mkdir -p "$tmp/launch.d/presets" "$outdir" "$tmp/bin"
+	printf '%s\n' \
+		'#!/usr/bin/env bash' \
+		'if [[ "$*" == "-u +%Y%m%d-%H%M%S" ]]; then' \
+		'  printf "%s\\n" 20260901-120000' \
+		'else' \
+		'  exec /usr/bin/date "$@"' \
+		'fi' > "$tmp/bin/date"
+	chmod +x "$tmp/bin/date"
 	echo 'GAMEMODE=1' > "$tmp/launch.d/default.env"
 	echo 'MANGOHUD=0' > "$tmp/launch.d/presets/standard.env"
 	run env \
+		PATH="$tmp/bin:$PATH" \
 		LAUNCHLAYER_CONFIG_DIR="$tmp" \
 		XDG_CONFIG_HOME="$tmp" \
 		HOME="$tmp" \
-		"$SCRIPT" --backup-config --output "$outdir" --json
+		bash -c '
+			"'"$SCRIPT"'" --backup-config --output "'"$outdir"'" --json &
+			first=$!
+			"'"$SCRIPT"'" --backup-config --output "'"$outdir"'" --json &
+			second=$!
+			wait "$first" "$second"
+		'
 	[[ $status -eq 0 ]]
-	run env \
-		LAUNCHLAYER_CONFIG_DIR="$tmp" \
-		XDG_CONFIG_HOME="$tmp" \
-		HOME="$tmp" \
-		"$SCRIPT" --backup-config --output "$outdir" --json
-	[[ $status -eq 0 ]]
-	[[ "$output" == *launchlayer-backup-* ]]
-	[[ $(find "$outdir" -maxdepth 1 -name 'launchlayer-backup-*.tar.gz' | wc -l) -ge 1 ]]
+	[[ $(find "$outdir" -maxdepth 1 -name 'launchlayer-backup-*.tar.gz' | wc -l) -eq 2 ]]
 	rm -rf "$tmp"
 }
 

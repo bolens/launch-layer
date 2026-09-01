@@ -137,6 +137,10 @@ class HubMockHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         body = self._read_json()
 
+        if self.path == "/api/huge-post":
+            self._send_json(200, {"data": "x" * 20_000})
+            return
+
         if self.path in ("/api/publish", "/api/delete"):
             if not self._privileged_ok():
                 self._send_json(

@@ -31,18 +31,16 @@ list_games() {
 		cfg=no; native=no; eac=no
 		appid_env_exists "$appid" && cfg=yes
 		detect_native_game "$appid" 1 && native=yes
-		detect_anticheat_game "$appid" && eac=yes
 		ac_type="$(detect_anticheat_type "$appid")"
 		engine="$(detect_engine_hint "$appid")"
 		[[ -z "$ac_type" ]] && ac_type="-"
+		[[ "$ac_type" != "-" ]] && eac=yes
 		name="${name//$'\r'/ }"
 		name="${name//$'\n'/ }"
 		name="${name//$'\t'/ }"
 
-		row="$(
-			printf '%-10s %-5s %-5s %-8s %-12s %s' \
-				"$appid" "$cfg" "$native" "$ac_type" "$engine" "$name"
-		)"
+		printf -v row '%-10s %-5s %-5s %-8s %-12s %s' \
+			"$appid" "$cfg" "$native" "$ac_type" "$engine" "$name"
 		_list_games_cache_rows+=("$row")
 
 		game_name_matches_grep "$name" "$grep_pattern" || return 0
@@ -66,7 +64,9 @@ list_games() {
 	foreach_installed_game _list_games_one
 	cli_scan_progress_end
 	if [[ "${LAUNCH_QUIET:-0}" != "1" && "${LIST_GAMES_UPDATE_CACHE:-1}" != "0" && ${#_list_games_cache_rows[@]} -gt 0 ]]; then
-		tui_games_cache_persist_lines "${_list_games_cache_rows[@]}"
+		if ! tui_games_cache_persist_lines "${_list_games_cache_rows[@]}" 2>/dev/null; then
+			debug "TUI games cache update skipped: cache directory is not writable"
+		fi
 	fi
 
 	if [[ "$json" != "1" ]]; then
@@ -114,25 +114,6 @@ init_appid_config() {
 	else
 		echo "Created $path (preset: $preset)"
 	fi
-}
-
-# appid_env_upsert — Set or replace KEY=value in a per-game .env file.
-appid_env_upsert() {
-	local file=$1 key=$2 value=$3
-	local tmp found=0 line
-	tmp="$(mktemp)"
-	if [[ -f "$file" ]]; then
-		while IFS= read -r line || [[ -n "$line" ]]; do
-			if [[ "$line" =~ ^[[:space:]]*${key}= ]]; then
-				printf '%s=%s\n' "$key" "$value"
-				found=1
-			else
-				printf '%s\n' "$line"
-			fi
-		done < "$file" > "$tmp"
-	fi
-	(( found )) || printf '%s=%s\n' "$key" "$value" >> "$tmp"
-	mv "$tmp" "$file"
 }
 
 # set_include_preset — Point per-game INCLUDE= at a named preset.

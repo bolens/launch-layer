@@ -21,9 +21,81 @@ if cmd == "parse":
     print("args=" + ",".join(args))
 elif cmd == "gpu":
     print(mod.gpu_match_bonus(sys.argv[3], sys.argv[4]))
+elif cmd == "match":
+    print(mod.match_version(sys.argv[3], sys.argv[4:]) or "none")
 else:
     raise SystemExit(f"unknown cmd {cmd}")
 PY
+}
+
+@test "protondb match_version compares numeric GE releases" {
+	run _py "$SCRIPT" match GE-Proton10-8 GE-Proton10-9 GE-Proton10-10 GE-Proton9-27
+	[[ $status -eq 0 ]]
+	[[ "$output" == "GE-Proton10-10" ]]
+}
+
+@test "protondb report ranking uses timestamp as a stable tie breaker" {
+	run python3 -c '
+import importlib.util
+spec = importlib.util.spec_from_file_location("pdb", "'"$SCRIPT"'")
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+ranked = m.sort_scored_reports([(3.0, {"timestamp": 10}), (3.0, {"timestamp": 20})])
+assert [r[1]["timestamp"] for r in ranked] == [20, 10]
+print("ok")
+'
+	[[ $status -eq 0 ]]
+	[[ "$output" == "ok" ]]
+}
+
+@test "protondb atomic update applies a batch and preserves unrelated config" {
+	tmp="$(mktemp -d)"
+	printf 'INCLUDE=presets/standard.env\nMANGOHUD=0\n' > "$tmp/42.env"
+	run python3 -c '
+import importlib.util, pathlib, sys
+spec = importlib.util.spec_from_file_location("pdb", "'"$SCRIPT"'")
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+path = sys.argv[1]
+m.apply_config_updates_atomic(path, {"GAMEMODE": "1", "MANGOHUD": "1"}, "42")
+content = pathlib.Path(path).read_text()
+assert content == "INCLUDE=presets/standard.env\nMANGOHUD=1\nGAMEMODE=1\n"
+assert pathlib.Path(path).stat().st_mode & 0o777 == 0o600
+print("ok")
+' "$tmp/42.env"
+	[[ $status -eq 0 ]]
+	[[ "$output" == "ok" ]]
+}
+
+@test "protondb config values reject line injection" {
+	run python3 -c '
+import importlib.util
+spec = importlib.util.spec_from_file_location("pdb", "'"$SCRIPT"'")
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+try:
+    m.config_value("1\nLD_PRELOAD=x")
+except ValueError:
+    print("blocked")
+'
+	[[ $status -eq 0 ]]
+	[[ "$output" == "blocked" ]]
+}
+
+@test "protondb atomic update merges existing game arguments" {
+	tmp="$(mktemp -d)"
+	printf 'GAME_EXTRA_ARGS="-windowed"\n' > "$tmp/42.env"
+	run python3 -c '
+import importlib.util, pathlib, sys
+spec = importlib.util.spec_from_file_location("pdb", "'"$SCRIPT"'")
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+m.apply_config_updates_atomic(sys.argv[1], {"GAME_EXTRA_ARGS": "-dx11 -windowed"}, "42")
+assert pathlib.Path(sys.argv[1]).read_text() == "GAME_EXTRA_ARGS=\"-windowed -dx11\"\n"
+print("ok")
+' "$tmp/42.env"
+	[[ $status -eq 0 ]]
+	[[ "$output" == "ok" ]]
 }
 
 @test "protondb parse_launch_options extracts wrappers env and args" {
@@ -46,7 +118,7 @@ PY
 	[[ "$output" == "3.0" ]]
 }
 
-@test "protondb is_allowed_config_key blocks LD_PRELOAD and allows PROTON_" {
+@test "protondb apply allowlist blocks unsafe and stale automatic overrides" {
 	run python3 -c '
 import importlib.util
 spec = importlib.util.spec_from_file_location("pdb", "'"$SCRIPT"'")
@@ -67,6 +139,9 @@ assert m.is_allowed_config_key("DISABLE_STEAM_DECK")
 assert m.is_allowed_config_key("FRAME_RATE")
 assert not m.is_allowed_config_key("LD_PRELOAD")
 assert not m.is_allowed_config_key("PATH")
+assert not m.is_allowed_config_key("DXVK_ASYNC")
+assert not m.is_allowed_config_key("PROTON_USE_NTSYNC")
+assert not m.is_allowed_config_key("PROTON_NO_ESYNC")
 print("ok")
 '
 	[[ $status -eq 0 ]]

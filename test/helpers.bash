@@ -145,8 +145,13 @@ bats_integration_setup() {
 	BATS_SAVED_HOME="${HOME:-}"
 	BATS_SAVED_XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-}"
 	BATS_SAVED_XDG_STATE_HOME="${XDG_STATE_HOME:-}"
+	BATS_SAVED_XDG_CACHE_HOME="${XDG_CACHE_HOME:-}"
+	BATS_SAVED_GAMES_DIR="${LAUNCHLAYER_GAMES_DIR:-}"
 	BATS_TEST_STATE_HOME="$(mktemp -d)"
 	export XDG_STATE_HOME="$BATS_TEST_STATE_HOME"
+	export XDG_CACHE_HOME="$BATS_TEST_STATE_HOME/cache"
+	export LAUNCHLAYER_GAMES_DIR="$BATS_TEST_STATE_HOME/games"
+	mkdir -p "$XDG_CACHE_HOME" "$LAUNCHLAYER_GAMES_DIR"
 	SCRIPT="$(launchlayer_script)"
 	REPO_ROOT="$(launchlayer_root)"
 	export SCRIPT REPO_ROOT
@@ -166,6 +171,16 @@ bats_integration_teardown() {
 		export XDG_STATE_HOME="$BATS_SAVED_XDG_STATE_HOME"
 	else
 		unset XDG_STATE_HOME
+	fi
+	if [[ -n "${BATS_SAVED_XDG_CACHE_HOME:-}" ]]; then
+		export XDG_CACHE_HOME="$BATS_SAVED_XDG_CACHE_HOME"
+	else
+		unset XDG_CACHE_HOME
+	fi
+	if [[ -n "${BATS_SAVED_GAMES_DIR:-}" ]]; then
+		export LAUNCHLAYER_GAMES_DIR="$BATS_SAVED_GAMES_DIR"
+	else
+		unset LAUNCHLAYER_GAMES_DIR
 	fi
 	unset LAUNCHLAYER_HUB_FINGERPRINT_LEVEL
 	stop_hub_mock_server

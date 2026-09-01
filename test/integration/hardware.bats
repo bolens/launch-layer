@@ -12,7 +12,7 @@ teardown() {
 
 @test "detect_desktop_session recognizes additional compositors" {
 	local root="$REPO_ROOT"
-	run env CONFIG_DIR="$root" bash -c '
+	run env CONFIG_DIR="$root" HYPRLAND_INSTANCE_SIGNATURE= NIRI_SOCKET= RIVER_STATUS= LABWC_PID= WAYFIRE_CONFIG= COSMIC_SESSION= COSMIC_COMPOSITOR= bash -c '
 		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
 		source_lib platform
 		XDG_CURRENT_DESKTOP=niri XDG_SESSION_DESKTOP= detect_desktop_session
@@ -20,7 +20,7 @@ teardown() {
 	[[ $status -eq 0 ]]
 	[[ "$output" == niri ]]
 
-	run env CONFIG_DIR="$root" bash -c '
+	run env CONFIG_DIR="$root" HYPRLAND_INSTANCE_SIGNATURE= NIRI_SOCKET= RIVER_STATUS= LABWC_PID= WAYFIRE_CONFIG= COSMIC_SESSION= COSMIC_COMPOSITOR= bash -c '
 		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
 		source_lib platform
 		XDG_CURRENT_DESKTOP=COSMIC XDG_SESSION_DESKTOP=KDE detect_desktop_session
@@ -28,7 +28,7 @@ teardown() {
 	[[ $status -eq 0 ]]
 	[[ "$output" == cosmic ]]
 
-	run env CONFIG_DIR="$root" bash -c '
+	run env CONFIG_DIR="$root" HYPRLAND_INSTANCE_SIGNATURE= NIRI_SOCKET= RIVER_STATUS= LABWC_PID= WAYFIRE_CONFIG= COSMIC_SESSION= COSMIC_COMPOSITOR= bash -c '
 		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
 		source_lib platform
 		XDG_CURRENT_DESKTOP= XDG_SESSION_DESKTOP=XFCE detect_desktop_session
@@ -36,7 +36,7 @@ teardown() {
 	[[ $status -eq 0 ]]
 	[[ "$output" == xfce ]]
 
-	run env CONFIG_DIR="$root" bash -c '
+	run env CONFIG_DIR="$root" HYPRLAND_INSTANCE_SIGNATURE= NIRI_SOCKET= RIVER_STATUS= LABWC_PID= WAYFIRE_CONFIG= COSMIC_SESSION= COSMIC_COMPOSITOR= bash -c '
 		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
 		source_lib platform
 		XDG_CURRENT_DESKTOP=Budgie XDG_SESSION_DESKTOP= detect_desktop_session
@@ -44,7 +44,7 @@ teardown() {
 	[[ $status -eq 0 ]]
 	[[ "$output" == budgie ]]
 
-	run env CONFIG_DIR="$root" bash -c '
+	run env CONFIG_DIR="$root" HYPRLAND_INSTANCE_SIGNATURE= NIRI_SOCKET= RIVER_STATUS= LABWC_PID= WAYFIRE_CONFIG= COSMIC_SESSION= COSMIC_COMPOSITOR= bash -c '
 		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
 		source_lib platform
 		XDG_CURRENT_DESKTOP= XDG_SESSION_DESKTOP=i3 detect_desktop_session

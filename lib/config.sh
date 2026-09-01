@@ -15,6 +15,9 @@
 [[ -n "${LAUNCHLAYER_CONFIG_LOADED:-}" ]] && return 0
 LAUNCHLAYER_CONFIG_LOADED=1
 
+# Batch validation may reuse canonical INCLUDE targets while its input tree is fixed.
+declare -gA CONFIG_RESOLVED_INCLUDE_BY_KEY=()
+
 # load_env_file — Parse KEY=VALUE lines from a file and export them.
 #
 # Skips comments, blank lines, and INCLUDE= directives (handled separately).
@@ -114,14 +117,18 @@ resolve_include_under_launchd() {
 load_config_file() {
 	local file=$1
 	local force=$2
-	local include_line include_path include_file
+	local include_line include_path include_file include_cache_key
 
 	[[ -f "$file" ]] || return 0
 	[[ -n "${config_loaded[$file]+x}" ]] && return 0
 	config_loaded["$file"]=1
 
 	# Process INCLUDE= before local keys so the preset layer sits underneath.
-	include_line="$(grep -E '^[[:space:]]*INCLUDE=' "$file" 2>/dev/null | head -1 || true)"
+	include_line=""
+	while IFS= read -r include_line || [[ -n "$include_line" ]]; do
+		[[ "$include_line" =~ ^[[:space:]]*INCLUDE= ]] && break
+		include_line=""
+	done < "$file"
 	if [[ -n "$include_line" ]]; then
 		include_line="${include_line#"${include_line%%[![:space:]]*}"}"
 		include_path="${include_line#INCLUDE=}"
@@ -129,9 +136,19 @@ load_config_file() {
 		include_path="${include_path%"${include_path##*[![:space:]]}"}"
 		include_path="${include_path#\"}"; include_path="${include_path%\"}"
 		include_path="${include_path#\'}"; include_path="${include_path%\'}"
-		if ! include_file="$(resolve_include_under_launchd "$include_path")"; then
-			echo "Refusing unsafe INCLUDE path: $include_path (from $file)" >&2
+		include_cache_key="${LAUNCHD_DIR}|${include_path}"
+		if [[ "${LAUNCHLAYER_CACHE_INCLUDE_RESOLUTION:-0}" == "1" \
+			&& -n "${CONFIG_RESOLVED_INCLUDE_BY_KEY[$include_cache_key]+x}" ]]; then
+			include_file="${CONFIG_RESOLVED_INCLUDE_BY_KEY[$include_cache_key]}"
+		elif include_file="$(resolve_include_under_launchd "$include_path")"; then
+			if [[ "${LAUNCHLAYER_CACHE_INCLUDE_RESOLUTION:-0}" == "1" ]]; then
+				CONFIG_RESOLVED_INCLUDE_BY_KEY["$include_cache_key"]="$include_file"
+			fi
 		else
+			echo "Refusing unsafe INCLUDE path: $include_path (from $file)" >&2
+			include_file=""
+		fi
+		if [[ -n "$include_file" ]]; then
 			load_config_file "$include_file" 0
 		fi
 	fi
@@ -269,7 +286,7 @@ load_launch_config() {
 	fi
 
 	local appid_env
-	appid_env="$(resolve_appid_env_path "$steam_app_id")"
+	appid_env="$GAMES_DIR/$steam_app_id.env"
 	if [[ -f "$appid_env" ]]; then
 		# Per-game file overrides preset selection entirely.
 		load_config_file "$appid_env" 1
@@ -488,6 +505,78 @@ config_file_abs_from_rel() {
 			printf '%s/%s\n' "$CONFIG_DIR" "$rel"
 			;;
 	esac
+}
+
+# appid_env_upsert — Atomically set or replace KEY=value in a per-game .env file.
+appid_env_upsert() {
+	local file=$1 key=$2 value=$3
+	local dir tmp found=0 line lock_fd=""
+	dir="$(dirname "$file")"
+	mkdir -p "$dir"
+	if command -v flock >/dev/null 2>&1; then
+		exec {lock_fd}>"${file}.lock" || return 1
+		flock "$lock_fd" || { exec {lock_fd}>&-; return 1; }
+	fi
+	tmp="$(mktemp "$dir/.launchlayer-env.XXXXXX")" || {
+		if [[ -n "$lock_fd" ]]; then
+			flock -u "$lock_fd" || true
+			exec {lock_fd}>&-
+		fi
+		return 1
+	}
+	if [[ -f "$file" ]]; then
+		while IFS= read -r line || [[ -n "$line" ]]; do
+			if [[ "$line" =~ ^[[:space:]]*${key}= ]]; then
+				printf '%s=%s\n' "$key" "$value"
+				found=1
+			else
+				printf '%s\n' "$line"
+			fi
+		done < "$file" > "$tmp"
+	fi
+	(( found )) || printf '%s=%s\n' "$key" "$value" >> "$tmp"
+	local status=0
+	mv -f "$tmp" "$file" || status=$?
+	if [[ -n "$lock_fd" ]]; then
+		flock -u "$lock_fd" || true
+		exec {lock_fd}>&-
+	fi
+	return "$status"
+}
+
+# appid_env_replace_from_file — Atomically replace a per-game .env, optionally backing it up.
+appid_env_replace_from_file() {
+	local source=$1 file=$2 backup=${3:-0}
+	local dir tmp backup_path="" lock_fd="" status=0
+	[[ -f "$source" ]] || return 1
+	dir="$(dirname "$file")"
+	mkdir -p "$dir"
+	if command -v flock >/dev/null 2>&1; then
+		exec {lock_fd}>"${file}.lock" || return 1
+		flock "$lock_fd" || { exec {lock_fd}>&-; return 1; }
+	fi
+	tmp="$(mktemp "$dir/.launchlayer-env.XXXXXX")" || status=$?
+	if (( status == 0 )); then
+		cp "$source" "$tmp" || status=$?
+	fi
+	if (( status == 0 )) && [[ "$backup" == 1 && -f "$file" ]]; then
+		backup_path="$(mktemp "${file}.bak.$(date +%s).XXXXXX")" || status=$?
+		if (( status == 0 )); then
+			cp "$file" "$backup_path" || status=$?
+		fi
+	fi
+	if (( status == 0 )); then
+		mv -f "$tmp" "$file" || status=$?
+	fi
+	if (( status != 0 )); then
+		[[ -n "$tmp" ]] && rm -f "$tmp"
+		[[ -n "$backup_path" ]] && rm -f "$backup_path"
+	fi
+	if [[ -n "$lock_fd" ]]; then
+		flock -u "$lock_fd" || true
+		exec {lock_fd}>&-
+	fi
+	return "$status"
 }
 
 # write_appid_env_scaffold — Create per-game config from a preset name.

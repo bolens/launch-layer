@@ -7,8 +7,15 @@ import re
 import os
 import shlex
 import time
-from datetime import datetime
+import tempfile
+from contextlib import contextmanager
+from datetime import datetime, timezone
 from collections import defaultdict
+
+try:
+    import fcntl
+except ImportError:
+    fcntl = None
 
 # ANSI Colors
 BOLD = "\033[1m"
@@ -101,7 +108,13 @@ def list_installed_proton_tools(steam_root=None):
             for d in os.listdir(common_dir):
                 if os.path.isfile(os.path.join(common_dir, d, "proton")):
                     installed.add(d)
-    return sorted(list(installed))
+    return sorted(installed, key=version_sort_key)
+
+
+def version_sort_key(value):
+    """Compare embedded version numbers numerically and text case-insensitively."""
+    return tuple(int(part) if part.isdigit() else part.lower()
+                 for part in re.split(r'(\d+)', value))
 
 def gpu_match_bonus(host_gpu, rep_gpu):
     """Score bump when report GPU matches host GPU vendor."""
@@ -150,10 +163,14 @@ _BLOCKED_APPLY_KEYS = {
     "LD_PRELOAD", "LD_LIBRARY_PATH", "PATH", "HOME", "USER", "SHELL", "PWD", "OLDPWD",
     "SSH_AUTH_SOCK", "DBUS_SESSION_BUS_ADDRESS", "XDG_RUNTIME_DIR",
 }
+_IGNORED_RECOMMENDATION_KEYS = {
+    # Do not automate obsolete, fork-only, or long-removed performance toggles.
+    "DXVK_ASYNC", "PROTON_USE_NTSYNC", "PROTON_NO_ESYNC",
+}
 
 
 def is_allowed_config_key(key: str) -> bool:
-    if not key or key in _BLOCKED_APPLY_KEYS:
+    if not key or key in _BLOCKED_APPLY_KEYS or key in _IGNORED_RECOMMENDATION_KEYS:
         return False
     if key in _KNOWN_CONFIG_KEYS:
         return True
@@ -231,6 +248,7 @@ def match_version(suggested, installed):
     if not suggested:
         return None
     s_lower = suggested.lower()
+    installed = sorted(installed, key=version_sort_key)
     
     # Check exact match
     for inst in installed:
@@ -274,25 +292,96 @@ def match_version(suggested, installed):
             
     return None
 
-def upsert_config_file(file_path, key, value):
-    lines = []
-    found = False
-    if os.path.isfile(file_path):
-        with open(file_path, "r") as f:
-            for line in f:
-                if re.match(r'^\s*' + re.escape(key) + r'=', line):
-                    lines.append(f"{key}={value}\n")
-                    found = True
-                else:
-                    lines.append(line)
-    if not found:
-        # If it's empty or doesn't end with a newline, add one
-        if lines and not lines[-1].endswith("\n"):
-            lines[-1] += "\n"
-        lines.append(f"{key}={value}\n")
-        
-    with open(file_path, "w") as f:
-        f.writelines(lines)
+def sort_scored_reports(scored_reports):
+    """Rank by match score, then newest report, independent of API order."""
+    return sorted(scored_reports,
+                  key=lambda item: (item[0], item[1].get("timestamp", 0)),
+                  reverse=True)
+
+
+def config_value(value):
+    """Serialize a value for LaunchLayer's non-evaluating env parser."""
+    value = str(value)
+    if any(char in value for char in ("\0", "\r", "\n", "#", "'", '"')):
+        raise ValueError("unsafe config value")
+    if re.fullmatch(r'[A-Za-z0-9_.,:+/@%=-]*', value):
+        return value
+    return f'"{value}"'
+
+
+@contextmanager
+def config_lock(file_path):
+    lock = open(f"{file_path}.lock", "a+", encoding="utf-8")
+    try:
+        if fcntl is not None:
+            fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        yield
+    finally:
+        if fcntl is not None:
+            fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
+        lock.close()
+
+
+def apply_config_updates_atomic(file_path, updates, app_id):
+    """Apply a recommendation batch under the shared per-file lock."""
+    directory = os.path.dirname(file_path)
+    os.makedirs(directory, mode=0o700, exist_ok=True)
+    with config_lock(file_path):
+        if os.path.isfile(file_path):
+            with open(file_path, encoding="utf-8") as source:
+                lines = source.readlines()
+        else:
+            lines = [f"# AppID {app_id} - ProtonDB recommendations\n",
+                     "INCLUDE=presets/standard.env\n", "\n"]
+
+        pending = dict(updates)
+        output = []
+        for line in lines:
+            match = re.match(r'^\s*([A-Za-z_][A-Za-z0-9_]*)=', line)
+            key = match.group(1) if match else None
+            if key in pending:
+                value = pending.pop(key)
+                if key == "GAME_EXTRA_ARGS":
+                    current = line.split("=", 1)[1].strip().strip("\"'")
+                    value = merge_argv(current, value)
+                output.append(f"{key}={config_value(value)}\n")
+            else:
+                output.append(line)
+        if output and not output[-1].endswith("\n"):
+            output[-1] += "\n"
+        for key in sorted(pending):
+            output.append(f"{key}={config_value(pending[key])}\n")
+
+        fd, temp_path = tempfile.mkstemp(prefix=".launchlayer-env.", dir=directory)
+        try:
+            os.fchmod(fd, 0o600)
+            with os.fdopen(fd, "w", encoding="utf-8") as target:
+                target.writelines(output)
+                target.flush()
+                os.fsync(target.fileno())
+            os.replace(temp_path, file_path)
+        except Exception:
+            try:
+                os.unlink(temp_path)
+            except FileNotFoundError:
+                pass
+            raise
+
+
+def merge_argv(existing, additions):
+    """Append arguments without changing the existing order or adding duplicates."""
+    try:
+        result = shlex.split(existing)
+    except ValueError:
+        result = existing.split()
+    try:
+        new_items = shlex.split(additions)
+    except ValueError:
+        new_items = additions.split()
+    for item in new_items:
+        if item not in result:
+            result.append(item)
+    return " ".join(result)
 
 def main():
     if len(sys.argv) < 5:
@@ -442,7 +531,7 @@ def main():
         scored_reports.append((rep_score, r))
         
     # Sort reports by score descending
-    scored_reports.sort(key=lambda x: x[0], reverse=True)
+    scored_reports = sort_scored_reports(scored_reports)
     
     # Filter reports with score > 0, fallback to top 20 recency if none
     valid_reports = [sr for sr in scored_reports if sr[0] > 0]
@@ -464,7 +553,8 @@ def main():
             proton_votes[ver_norm] += score_weight
             
     # Sort proton versions by score
-    sorted_proton = sorted(proton_votes.items(), key=lambda x: x[1], reverse=True)
+    sorted_proton = sorted(proton_votes.items(),
+                           key=lambda item: (-item[1], version_sort_key(item[0])))
     
     # 2. Aggregate launch options
     wrapper_votes = defaultdict(float)
@@ -484,19 +574,19 @@ def main():
             
     # Collect recommendations with >20% vote thresholds
     rec_wrappers = []
-    for w, w_score in wrapper_votes.items():
+    for w, w_score in sorted(wrapper_votes.items()):
         if w_score / total_score >= 0.20:
             rec_wrappers.append(w)
             
     rec_env_vars = {}
     for k, val_dict in env_votes.items():
         # find best value
-        best_val, val_score = max(val_dict.items(), key=lambda x: x[1])
+        best_val, val_score = sorted(val_dict.items(), key=lambda item: (-item[1], item[0]))[0]
         if val_score / total_score >= 0.15:
             rec_env_vars[k] = best_val
             
     rec_args = []
-    for arg, arg_score in arg_votes.items():
+    for arg, arg_score in sorted(arg_votes.items()):
         if arg_score / total_score >= 0.15:
             rec_args.append(arg)
             
@@ -587,7 +677,7 @@ def main():
         rep_gpu = inferred.get("gpu", "unknown GPU")
         rep_os = inferred.get("os", "Linux")
         rep_timestamp = r.get("timestamp", 0)
-        dt = datetime.fromtimestamp(rep_timestamp).strftime('%Y-%m-%d')
+        dt = datetime.fromtimestamp(rep_timestamp, timezone.utc).strftime('%Y-%m-%d')
         
         # Clean comment formatting
         clean_text = text.replace("\n", "\n      ")
@@ -604,65 +694,44 @@ def main():
         config_file = os.path.join(games_dir, f"{app_id}.env")
         print(f"{BOLD}Applying recommendations to config file:{RESET} {config_file}")
         
-        # Initialize if not present
-        if not os.path.isfile(config_file):
-            print(f"  Creating new game config scaffold...")
-            os.makedirs(games_dir, exist_ok=True)
-            with open(config_file, "w") as f:
-                f.write(f"# AppID {app_id} - Configured via ProtonDB Suggestions\n")
-                f.write("INCLUDE=presets/standard.env\n\n")
-                
-        # Write Proton version
+        updates = {}
+
         if matched_installed_proton:
             print(f"  Writing OVERRIDE_PROTON=\"{matched_installed_proton}\"")
-            upsert_config_file(config_file, "OVERRIDE_PROTON", f'"{matched_installed_proton}"')
+            updates["OVERRIDE_PROTON"] = matched_installed_proton
         elif suggested_proton:
-            # Write uninstalled warning but apply it anyway
-            print(f"  Writing OVERRIDE_PROTON=\"{suggested_proton}\" (Note: tool may not be installed yet)")
-            upsert_config_file(config_file, "OVERRIDE_PROTON", f'"{suggested_proton}"')
+            print(f"  Skipping OVERRIDE_PROTON: '{suggested_proton}' is not installed")
             
         # Write wrappers
         for w in ["GAMEMODE", "MANGOHUD", "GAMESCOPE"]:
             if w in rec_wrappers:
                 print(f"  Writing {w}=1")
-                upsert_config_file(config_file, w, "1")
+                updates[w] = "1"
                 
         # Write custom env vars (allowlisted only)
         for k, v in rec_env_vars.items():
             if not is_allowed_config_key(k):
                 print(f"  Skipping disallowed key from community report: {k}")
                 continue
-            print(f"  Writing {k}={v}")
-            upsert_config_file(config_file, k, f'"{v}"' if not v.isdigit() else v)
+            try:
+                config_value(v)
+            except ValueError:
+                print(f"  Skipping {k}: value contains unsupported characters")
+                continue
+            print(f"  Writing {k}={config_value(v)}")
+            updates[k] = v
             
         # Write args
         if rec_args:
             args_val = " ".join(rec_args)
-            # Fetch existing GAME_EXTRA_ARGS and append/merge
-            existing_args = ""
-            if os.path.isfile(config_file):
-                with open(config_file, "r", encoding="utf-8") as f:
-                    for line in f:
-                        m = re.match(r'^\s*GAME_EXTRA_ARGS=(.*)$', line)
-                        if m:
-                            existing_args = m.group(1).strip().strip('"\'')
-                            break
-            if existing_args:
-                # Merge lists
-                try:
-                    exist_list = shlex.split(existing_args)
-                except Exception:
-                    exist_list = existing_args.split()
-                for arg in rec_args:
-                    if arg not in exist_list:
-                        exist_list.append(arg)
-                final_args = " ".join(exist_list)
-            else:
-                final_args = args_val
-            print(f"  Writing GAME_EXTRA_ARGS=\"{final_args}\"")
-            upsert_config_file(config_file, "GAME_EXTRA_ARGS", f'"{final_args}"')
-            
-        print(f"\n{BOLD}{GREEN}Configuration saved successfully!{RESET} You can run with '{BOLD}launchlayer --dry-run %command%{RESET}' to inspect.")
+            print(f"  Merging GAME_EXTRA_ARGS=\"{args_val}\"")
+            updates["GAME_EXTRA_ARGS"] = args_val
+
+        if updates:
+            apply_config_updates_atomic(config_file, updates, app_id)
+            print(f"\n{BOLD}{GREEN}Saved recommendations.{RESET} Inspect them with '{BOLD}launchlayer --dry-run %command%{RESET}'.")
+        else:
+            print(f"\n{YELLOW}No safe, usable recommendations were written.{RESET}")
 
 if __name__ == "__main__":
     main()

@@ -121,6 +121,46 @@ EOF
 	rm -rf "$tmp"
 }
 
+@test "hub_curl_json rejects oversized POST responses" {
+	local tmp
+	tmp="$(mktemp -d)"
+	start_hub_mock_server test-secret 0
+	write_hub_conf "$tmp" "$HUB_MOCK_URL" "" minimal
+	run env \
+		XDG_CONFIG_HOME="$tmp" \
+		CONFIG_DIR="$CONFIG_DIR" \
+		HUB_MAX_RESPONSE_BYTES=4096 \
+		bash -c '
+			source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+			source_lib prefs hub
+			hub_curl_json POST /api/huge-post "{}" 0 2>&1
+		'
+	stop_hub_mock_server
+	[[ $status -eq 1 ]]
+	[[ "$output" == *"exceeded 4096 bytes"* ]]
+	rm -rf "$tmp"
+}
+
+@test "hub_http_limits rejects unsafe overrides" {
+	run env HUB_REQUEST_TIMEOUT_SEC=0 bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib hub
+		hub_http_limits 2>&1
+	'
+	[[ $status -eq 1 ]]
+	[[ "$output" == *"HUB_REQUEST_TIMEOUT_SEC"* ]]
+
+	run env HUB_MAX_RESPONSE_BYTES=999999999 bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib hub
+		hub_http_limits 2>&1
+	'
+	[[ $status -eq 1 ]]
+	[[ "$output" == *"HUB_MAX_RESPONSE_BYTES"* ]]
+}
+
 @test "hub_parse_publish_updated detects updated flag" {
 	run hub_parse_publish_updated '{"config_id":"cfgtest00001","updated":true}'
 	[[ $status -eq 0 ]]

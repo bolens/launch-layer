@@ -130,11 +130,12 @@ collect_app_cache_dirs() {
 	esac
 	_dirs_ref=()
 	[[ -n "$appid" ]] || return 0
-	for root in $(collect_steam_library_roots); do
+	while IFS= read -r root; do
+		[[ -n "$root" ]] || continue
 		if [[ -d "$root/steamapps/$subdir/$appid" ]]; then
 			_dirs_ref+=("$root/steamapps/$subdir/$appid")
 		fi
-	done
+	done < <(collect_steam_library_roots)
 }
 
 # collect_shader_cache_dirs — Find shadercache/<appid> dirs across all libraries.
@@ -266,14 +267,15 @@ check_gpu_power() {
 check_disk_space() {
 	local min_gb=${DISK_PREFLIGHT_MIN_GB:-0} root avail_gb
 	[[ "$min_gb" =~ ^[0-9]+$ && "$min_gb" -gt 0 ]] || return 0
-	for root in $(collect_steam_library_roots); do
+	while IFS= read -r root; do
+		[[ -n "$root" ]] || continue
 		[[ -d "$root" ]] || continue
 		avail_gb="$(df_avail_gb "$root" 2>/dev/null || true)"
 		[[ "$avail_gb" =~ ^[0-9]+$ ]] || continue
 		if (( avail_gb < min_gb )); then
 			warn "Low disk space on $root: ${avail_gb}GB free (< ${min_gb}GB)"
 		fi
-	done
+	done < <(collect_steam_library_roots)
 }
 
 # check_gpu_vram_processes — Warn when other processes hold significant GPU memory.

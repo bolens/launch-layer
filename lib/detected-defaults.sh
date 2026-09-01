@@ -131,11 +131,11 @@ compute_detected_defaults() {
 
 	if [[ "$deck" != 1 && "$wsl" != 1 ]]; then
 		if [[ "$audio" == pipewire ]] && command_available pw-metadata; then
-			detected_defaults_add PIPEWIRE_LOW_LATENCY 1 "PipeWire audio server"
+			detected_defaults_add PIPEWIRE_LOW_LATENCY 0 "Global PipeWire quantum tuning is opt-in"
 		fi
 		nic="$(detect_default_nic 2>/dev/null || true)"
 		if [[ -n "$nic" ]] && command_available ethtool; then
-			detected_defaults_add NETWORK_TUNE 1 "Default route NIC ($nic) + ethtool"
+			detected_defaults_add NETWORK_TUNE 0 "NIC tuning is hardware-specific and opt-in ($nic)"
 		fi
 		if is_multi_ccd_cpu; then
 			detected_defaults_add DISABLE_CPU_AFFINITY 0 "Multi-CCD / X3D CPU detected"
