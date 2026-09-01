@@ -431,6 +431,9 @@ LSFG_VK=0                   # lsfg-vk (owned Lossless Scaling required)
 OBS_VKCAPTURE=0             # obs-gamecapture / obs-vkcapture after Gamescope
 SPECIAL_K=0                 # Special K under Proton (WINEDLLOVERRIDES + optional inject)
 RESHADE=0                   # Wine ReShade local inject
+OPTISCALER=0                # tracked user-supplied upscaler inject; blocked for anti-cheat games
+OPENCOMPOSITE=0             # tracked per-game OpenVR replacement
+GPU_SELECT=auto             # hybrid-GPU hint: auto/discrete/nvidia/amd/intel
 GAMESCOPE_NESTED_FIX=1      # strip LD_PRELOAD for nested desktop Gamescope
 LATENCYFLEX=0               # 1=LFX=1 (LatencyFleX layer)
 DISABLE_STEAM_DECK=0        # 1=SteamDeck=0 (Bazzite sd0)

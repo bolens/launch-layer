@@ -32,6 +32,7 @@ Verify licenses upstream because they can change.
 | SKIF | [SpecialKO/SKIF](https://github.com/SpecialKO/SKIF) | per project | Optional `SKIF_PATH`, with `SKIF_LAUNCH=1` for one-shot launch |
 | ValvePlug | [SpecialKO/ValvePlug](https://github.com/SpecialKO/ValvePlug) | per project (archived) | Windows Steam client only. On Linux Steam, use Controller settings. |
 | ReShade | [crosire/reshade](https://github.com/crosire/reshade) | BSD-3-Clause | `RESHADE` local inject. Respect [shader redistribution rules](https://reshade.me/forum/general-discussion/771-distribution-regulations). |
+| OptiScaler | [optiscaler/OptiScaler](https://github.com/optiscaler/OptiScaler) | GPL-3.0 | User-supplied tracked inject only. LaunchLayer does not download or redistribute its dependencies. Never enable for online/anti-cheat games. |
 | Depth3D / shaders | various | per author | **Assist-only** `DEPTH3D` paths / optional `DEPTH3D_FETCH_URL`: do not wholesale revendor |
 | obs-vkcapture | [nowrep/obs-vkcapture](https://github.com/nowrep/obs-vkcapture) | GPL-2.0 | `OBS_VKCAPTURE` |
 | wine-discord-ipc-bridge | community | MIT (typical) | `DISCORD_IPC` |
@@ -40,6 +41,7 @@ Verify licenses upstream because they can change.
 | Conty | [Kron4ek/Conty](https://github.com/Kron4ek/Conty) | verify upstream | `CONTY` wrap |
 | FlawlessWidescreen | [flawlesswidescreen.org](https://www.flawlesswidescreen.org/) | Proprietary freeware (verify EULA) | User `FWS_PATH` only: never auto-download |
 | OpenVR-FSR | community forks | MIT/BSD (verify) | Tracked inject + restore |
+| OpenComposite | [znixian/OpenOVR](https://gitlab.com/znixian/OpenOVR) | GPL-3.0 | User-supplied tracked `openvr_api.dll` swap + restore |
 | Geo11 | community | verify | **Assist-only** path/env (`GEO11_SOURCE`): no DLL inject |
 | Flat2VR / SBS-VR | community | verify | **Assist-only** path/HMD markers: no auto player launch |
 | Boxtron / Luxtorpeda / Roberta | Steam compat tools | per project | `SPECIALTY_RUNTIME` → `OVERRIDE_PROTON` |
@@ -50,6 +52,10 @@ Verify licenses upstream because they can change.
 ## lsfg-vk and layer stacking
 
 `LSFG_VK` enables the lsfg-vk Vulkan layer. Combining it with MangoHud, vkBasalt, and nested Gamescope can leave layer order undefined or make multiple overlays contend for the swapchain. Enable one post-processing or frame-generation path first, then test each additional layer on that game. Install Lossless Scaling's proprietary DLL through Steam; LaunchLayer never downloads it (`inject_refuse_proprietary_redistrib`).
+
+## Injector ownership
+
+Windows proxy DLLs are exclusive slots. LaunchLayer validates Special K, ReShade, OptiScaler, OpenVR-FSR, and OpenComposite together and refuses ambiguous ownership. All managed copies are recorded under the per-AppID inject tracker, existing files receive `.ll-bak` backups, and cleanup restores them after launch. Injector paths and toggles are stripped from Hub configs as untrusted host mutations.
 
 ## Nested Gamescope (ScopeBuddy parity)
 
