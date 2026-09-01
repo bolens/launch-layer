@@ -8,6 +8,117 @@ setup() {
 	mkdir -p "$XDG_DATA_HOME"
 }
 
+@test "inject provider conflicts reject two owners of one proxy slot" {
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform runtime
+		SPECIAL_K=1 SPECIAL_K_DLL=dxgi
+		RESHADE=1 RESHADE_DLL=dxgi.dll
+		inject_provider_conflict_errors
+	'
+	[[ "$status" -eq 0 ]]
+	[[ "$output" == *"dxgi.dll"* ]]
+	[[ "$output" == *"Special K"* ]]
+	[[ "$output" == *"ReShade"* ]]
+}
+
+@test "inject provider conflicts allow distinct proxy slots" {
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform runtime
+		SPECIAL_K=1 SPECIAL_K_DLL=dxgi
+		RESHADE=1 RESHADE_DLL=d3d11
+		test -z "$(inject_provider_conflict_errors)"
+	'
+	[[ "$status" -eq 0 ]]
+}
+
+@test "inject provider conflicts reject OpenVR FSR with OpenComposite" {
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform runtime
+		OPENVR_FSR=1 OPENCOMPOSITE=1 inject_provider_conflict_errors
+	'
+	[[ "$status" -eq 0 ]]
+	[[ "$output" == *"openvr_api.dll"* ]]
+	[[ "$output" == *"OpenVR FSR"* ]]
+	[[ "$output" == *"OpenComposite"* ]]
+}
+
+@test "apply_optiscaler tracks selected proxy and refuses anticheat games" {
+	local source_dir game_dir
+	source_dir="$BATS_TEST_TMPDIR/optiscaler"
+	game_dir="$BATS_TEST_TMPDIR/game"
+	mkdir -p "$source_dir" "$game_dir"
+	printf MZ > "$source_dir/OptiScaler.dll"
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'" XDG_DATA_HOME="'"$XDG_DATA_HOME"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform runtime
+		inject_resolve_game_dir() { printf "%s\n" "'"$game_dir"'"; }
+		steam_app_id=42 OPTISCALER=1 OPTISCALER_SOURCE="'"$source_dir"'" OPTISCALER_PROXY=version
+		is_anticheat=0
+		apply_optiscaler
+		test -f "'"$game_dir"'/version.dll"
+		echo "$WINEDLLOVERRIDES"
+		inject_cleanup_tracked 42 optiscaler
+		test ! -e "'"$game_dir"'/version.dll"
+		is_anticheat=1
+		apply_optiscaler
+		test ! -e "'"$game_dir"'/version.dll"
+	'
+	[[ "$status" -eq 0 ]]
+	[[ "$output" == *"version=n,b"* ]]
+	[[ "$output" == *"anti-cheat"* ]]
+}
+
+@test "apply_opencomposite swaps and restores openvr_api.dll" {
+	local source_dir game_dir
+	source_dir="$BATS_TEST_TMPDIR/opencomposite"
+	game_dir="$BATS_TEST_TMPDIR/vr-game/bin"
+	mkdir -p "$source_dir" "$game_dir"
+	printf original > "$game_dir/openvr_api.dll"
+	printf replacement > "$source_dir/openvr_api.dll"
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'" XDG_DATA_HOME="'"$XDG_DATA_HOME"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform runtime
+		inject_resolve_game_dir() { printf "%s\n" "'"${game_dir%/bin}"'"; }
+		steam_app_id=77 OPENCOMPOSITE=1 OPENCOMPOSITE_SOURCE="'"$source_dir"'"
+		apply_opencomposite
+		test "$(cat "'"$game_dir"'/openvr_api.dll")" = replacement
+		inject_cleanup_tracked 77 opencomposite
+		test "$(cat "'"$game_dir"'/openvr_api.dll")" = original
+	'
+	[[ "$status" -eq 0 ]]
+}
+
+@test "apply_gpu_selection maps vendors without clobbering explicit loader filters" {
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform runtime
+		GPU_SELECT=nvidia apply_gpu_selection
+		echo "nv:$__NV_PRIME_RENDER_OFFLOAD:$__GLX_VENDOR_LIBRARY_NAME:$VK_LOADER_DRIVERS_SELECT"
+		unset __NV_PRIME_RENDER_OFFLOAD __GLX_VENDOR_LIBRARY_NAME VK_LOADER_DRIVERS_SELECT
+		VK_LOADER_DRIVERS_SELECT=custom
+		GPU_SELECT=amd
+		apply_gpu_selection
+		echo "amd:$VK_LOADER_DRIVERS_SELECT"
+		unset VK_LOADER_DRIVERS_SELECT
+		GPU_SELECT=nvidia GPU_SELECT_DRIVER="*custom-nvidia*"
+		apply_gpu_selection
+		echo "driver:$VK_LOADER_DRIVERS_SELECT"
+	'
+	[[ "$status" -eq 0 ]]
+	[[ "$output" == *"nv:1:nvidia:*nvidia*"* ]]
+	[[ "$output" == *"amd:custom"* ]]
+	[[ "$output" == *"driver:*custom-nvidia*"* ]]
+}
+
 @test "inject_store_notice writes NOTICE under cache" {
 	run bash -c '
 		export CONFIG_DIR="'"$CONFIG_DIR"'"
@@ -252,6 +363,28 @@ setup() {
 	[[ "$output" == *"-u"* ]]
 	[[ "$output" == *"LD_PRELOAD"* ]]
 	[[ "$output" == *"gamescope"* ]]
+}
+
+@test "gamescope appends native ReShade effect and technique flags" {
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform runtime
+		optional_tool_installed() { [[ "$1" == gamescope ]]; }
+		gamescope_session_active() { return 1; }
+		default_online_cpus() { echo 0-3; }
+		is_native=0
+		GAMEMODE=0 GAME_PERFORMANCE=0 DISABLE_CPU_AFFINITY=1 MANGOHUD=0
+		GAMESCOPE=1 GAMESCOPE_NESTED_FIX=0 GAMESCOPE_RESHADE_EFFECT=CAS.fx GAMESCOPE_RESHADE_TECHNIQUE=2
+		launch=()
+		build_launch_chain
+		printf "%s\n" "${launch[@]}"
+	'
+	[[ "$status" -eq 0 ]]
+	[[ "$output" == *"--reshade-effect"* ]]
+	[[ "$output" == *"CAS.fx"* ]]
+	[[ "$output" == *"--reshade-technique-idx"* ]]
+	[[ "$output" == *$'2\n--'* ]]
 }
 
 @test "gamescope skipped inside gamescope session" {

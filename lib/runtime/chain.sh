@@ -135,6 +135,12 @@ build_launch_chain() {
 		if [[ -n "${GAMESCOPE_FILTER:-}" ]]; then
 			launch+=(--filter "${GAMESCOPE_FILTER}")
 		fi
+		if [[ -n "${GAMESCOPE_RESHADE_EFFECT:-}" ]]; then
+			launch+=(--reshade-effect "${GAMESCOPE_RESHADE_EFFECT}")
+		fi
+		if [[ -n "${GAMESCOPE_RESHADE_TECHNIQUE:-}" ]]; then
+			launch+=(--reshade-technique-idx "${GAMESCOPE_RESHADE_TECHNIQUE}")
+		fi
 		if [[ -n "${GAMESCOPE_FOCUSED_FPS:-}" ]]; then
 			# Newer gamescope: --fps-limit; keep as focused when only one set.
 			launch+=(--fps-limit "${GAMESCOPE_FOCUSED_FPS}")
@@ -254,6 +260,12 @@ warn_launch_chain_issues() {
 		warn "launch chain: $line"
 		had_issue=1
 	done < <(launch_wrapper_config_conflict_errors)
+
+	while IFS= read -r line; do
+		[[ -n "$line" ]] || continue
+		warn "launch chain: $line"
+		had_issue=1
+	done < <(inject_provider_conflict_errors)
 
 	while IFS= read -r line; do
 		[[ -n "$line" ]] || continue

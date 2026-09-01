@@ -266,11 +266,59 @@ apply_reshade() {
 # apply_reshade_with_special_k — SK + ReShade cohabitation tip / overrides.
 apply_reshade_with_special_k() {
 	[[ "${SPECIAL_K:-0}" == "1" && "${RESHADE:-0}" == "1" ]] || return 0
-	# Prefer distinct DLL names when both enabled.
-	if [[ "${SPECIAL_K_DLL:-dxgi}" == "${RESHADE_DLL:-dxgi}" ]]; then
-		warn "SPECIAL_K and RESHADE share DLL name ${SPECIAL_K_DLL:-dxgi} — set SPECIAL_K_DLL/RESHADE_DLL to different proxies (e.g. dxgi + d3d11)"
-	fi
 	[[ -n "${RESHADE_SK_VERSION:-}" ]] && debug "RESHADE_SK_VERSION=$RESHADE_SK_VERSION (pin for SK cohab)"
+}
+
+# apply_optiscaler — Install a user-supplied OptiScaler DLL as one proxy provider.
+apply_optiscaler() {
+	[[ "${OPTISCALER:-0}" == "1" ]] || return 0
+	if [[ "${is_anticheat:-0}" == "1" || -n "${anticheat_type:-}" ]]; then
+		warn "OPTISCALER=1 blocked for anti-cheat/online safety"
+		return 0
+	fi
+	local proxy="${OPTISCALER_PROXY:-dxgi}" src="${OPTISCALER_SOURCE:-}"
+	local game_dir source_dll
+	proxy="${proxy,,}"
+	[[ "$proxy" == *.dll ]] && proxy="${proxy%.dll}"
+	case "${proxy,,}" in
+		dxgi|winmm|version|dbghelp|d3d12|wininet|winhttp|optiscaler|optiscaler.asi) ;;
+		*)
+			warn "OPTISCALER_PROXY=$proxy unsupported"
+			return 0
+			;;
+	esac
+	[[ -n "$src" ]] || {
+		warn "OPTISCALER=1 requires user-supplied OPTISCALER_SOURCE"
+		return 0
+	}
+	game_dir="$(inject_resolve_game_dir 2>/dev/null || true)"
+	[[ -n "$game_dir" ]] || {
+		warn "OPTISCALER=1: game dir not found"
+		return 0
+	}
+	if [[ -f "$src" ]]; then
+		source_dll="$src"
+	else
+		source_dll="$src/OptiScaler.dll"
+		[[ -f "$source_dll" ]] || source_dll="$src/OptiScaler.asi"
+	fi
+	[[ -f "$source_dll" ]] || {
+		warn "OPTISCALER_SOURCE missing OptiScaler.dll/OptiScaler.asi"
+		return 0
+	}
+	local dest_name="${proxy}.dll"
+	if [[ "$proxy" == optiscaler.asi ]]; then
+		dest_name=OptiScaler.asi
+	else
+		inject_merge_winedlloverrides "$proxy"
+	fi
+	inject_copy_renamed "$source_dll" "$game_dir" "$dest_name" "${steam_app_id:-}" optiscaler >/dev/null \
+		|| warn "OptiScaler inject failed"
+	if [[ -n "${OPTISCALER_CONFIG:-}" && -f "${OPTISCALER_CONFIG}" ]]; then
+		inject_copy_renamed "$OPTISCALER_CONFIG" "$game_dir" OptiScaler.ini "${steam_app_id:-}" optiscaler >/dev/null \
+			|| warn "OptiScaler config copy failed"
+	fi
+	debug "OptiScaler enabled proxy=$dest_name"
 }
 
 # apply_depth3d — Depth3D shader path (assist-only; optional user-supplied DEPTH3D_FETCH_URL).
@@ -475,40 +523,49 @@ apply_block_internet() {
 	fi
 }
 
-# apply_openvr_fsr — Tracked openvr_api.dll swap when enabled.
-apply_openvr_fsr() {
-	[[ "${OPENVR_FSR:-0}" == "1" ]] || return 0
-	local game_dir src api cfg_dir cfg
+# apply_openvr_api_provider — Tracked openvr_api.dll and optional config swap.
+apply_openvr_api_provider() {
+	local provider=$1 src=$2 config_name=${3:-}
+	local game_dir api
 	game_dir="$(inject_resolve_game_dir 2>/dev/null || true)"
-	src="${OPENVR_FSR_SOURCE:-$(inject_tool_cache_dir openvr_fsr)}"
 	[[ -n "$game_dir" ]] || {
-		warn "OPENVR_FSR=1: game dir not found"
+		warn "$provider: game dir not found"
 		return 0
 	}
 	api="$(find "$game_dir" -name 'openvr_api.dll' 2>/dev/null | head -1 || true)"
 	[[ -n "$api" ]] || {
-		warn "OPENVR_FSR=1: no openvr_api.dll under game dir"
+		warn "$provider: no openvr_api.dll under game dir"
 		return 0
 	}
 	if [[ -f "$src/openvr_api.dll" ]]; then
-		[[ -f "${api}.ll-bak" ]] || cp -f "$api" "${api}.ll-bak"
-		inject_track_file "${steam_app_id:-}" openvr_fsr "${api}.ll-bak"
-		cp -f "$src/openvr_api.dll" "$api"
-		inject_track_file "${steam_app_id:-}" openvr_fsr "$api"
-		if [[ -f "$src/openvr_mod.cfg" ]]; then
-			cfg_dir="$(dirname "$api")"
-			cfg="$cfg_dir/openvr_mod.cfg"
-			if [[ -f "$cfg" && ! -f "${cfg}.ll-bak" ]]; then
-				cp -f "$cfg" "${cfg}.ll-bak"
-				inject_track_file "${steam_app_id:-}" openvr_fsr "${cfg}.ll-bak"
-			fi
-			cp -f "$src/openvr_mod.cfg" "$cfg"
-			inject_track_file "${steam_app_id:-}" openvr_fsr "$cfg"
+		inject_copy_renamed "$src/openvr_api.dll" "$(dirname "$api")" openvr_api.dll \
+			"${steam_app_id:-}" "$provider" >/dev/null || warn "$provider DLL copy failed"
+		if [[ -n "$config_name" && -f "$src/$config_name" ]]; then
+			inject_copy_renamed "$src/$config_name" "$(dirname "$api")" "$config_name" \
+				"${steam_app_id:-}" "$provider" >/dev/null || warn "$provider config copy failed"
 		fi
-		debug "OPENVR_FSR installed over $api"
+		debug "$provider installed over $api"
 	else
-		warn "OPENVR_FSR=1: place openvr_api.dll under $src (see docs/third-party.md)"
+		warn "$provider: place openvr_api.dll under $src (see docs/third-party.md)"
 	fi
+}
+
+# apply_openvr_fsr — Tracked openvr_api.dll swap when enabled.
+apply_openvr_fsr() {
+	[[ "${OPENVR_FSR:-0}" == "1" ]] || return 0
+	apply_openvr_api_provider openvr_fsr \
+		"${OPENVR_FSR_SOURCE:-$(inject_tool_cache_dir openvr_fsr)}" openvr_mod.cfg
+}
+
+# apply_opencomposite — Replace a game's OpenVR client with OpenComposite.
+apply_opencomposite() {
+	[[ "${OPENCOMPOSITE:-0}" == "1" ]] || return 0
+	local source_dir="${OPENCOMPOSITE_SOURCE:-}"
+	[[ -n "$source_dir" ]] || {
+		warn "OPENCOMPOSITE=1 requires user-supplied OPENCOMPOSITE_SOURCE"
+		return 0
+	}
+	apply_openvr_api_provider opencomposite "$source_dir" opencomposite.ini
 }
 
 # apply_geo11 — Assist-only: Geo-11 stereo path/env marker (no DLL inject).
@@ -623,12 +680,20 @@ apply_launch_extras_pre() {
 
 # apply_launch_extras_inject — Game-dir mutating steps (after game dir resolvable).
 apply_launch_extras_inject() {
+	local conflict
+	conflict="$(inject_provider_conflict_errors)"
+	if [[ -n "$conflict" ]]; then
+		while IFS= read -r conflict; do warn "$conflict"; done <<< "$conflict"
+		return 1
+	fi
 	apply_special_k
 	apply_reshade
 	apply_reshade_with_special_k
+	apply_optiscaler
 	apply_valveplug
 	apply_flawless_widescreen
 	apply_openvr_fsr
+	apply_opencomposite
 	apply_geo11
 	apply_sbs_vr
 	apply_flat2vr
