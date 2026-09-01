@@ -587,7 +587,7 @@ Hub rate limiting also fails closed. Route the HTTP actions endpoint through an 
 
 **Hub CLI commands:** [docs/cli.md § Community hub](docs/cli.md#community-hub)
 
-The separate `--suggest-config APPID|NAME [--apply]` command does not require the Hub. It ranks ProtonDB reports for the current machine and can write approved settings to `games/<AppID>.env`. See [docs/cli.md § Games and config](docs/cli.md#games-and-config). In the TUI, use **Games → *Game* → [Edit] Suggest from ProtonDB**.
+The separate `--suggest-config APPID|NAME [--apply]` command does not require the Hub. It ranks recent ProtonDB reports for the current machine and can reconcile corroborated, policy-approved settings in `games/<AppID>.env` without overwriting unmarked user settings. See [docs/cli.md § Games and config](docs/cli.md#games-and-config). In the TUI, use **Games → *Game* → [Edit] Suggest from ProtonDB**.
 
 The TUI exposes hub flows under **Community hub** (main menu) and **[Hub] Community configs** (per-game actions), including viewing history and applying a historical version (also on **Apply config by ID**).
 
