@@ -3,16 +3,16 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.13.0"
   },
   "devEngines": {
     "runtime": {
       "name": "node",
-      "version": ">=22",
+      "version": ">=22.13.0",
       "onFail": "error"
     }
   },
-  "packageManager": "pnpm@10.16.1",
+  "packageManager": "pnpm@10.34.5",
   "scripts": {
     "dev": "convex dev",
     "convex:deploy": "convex deploy",
@@ -25,19 +25,19 @@
     "typecheck": "tsc -p convex/tsconfig.json --noEmit"
   },
   "dependencies": {
-    "convex": "1.44.0"
+    "convex": "1.45.0"
   },
   "devDependencies": {
-    "@convex-dev/eslint-plugin": "1.2.2",
+    "@convex-dev/eslint-plugin": "4.0.0",
     "@edge-runtime/vm": "5.0.0",
-    "@eslint/js": "9.39.5",
-    "@types/node": "26.2.0",
-    "@vitest/coverage-v8": "4.1.10",
-    "convex-test": "0.0.55",
-    "eslint": "9.39.5",
-    "tsx": "4.23.12",
-    "typescript": "5.9.3",
-    "typescript-eslint": "8.67.0",
-    "vitest": "4.1.10"
+    "@eslint/js": "10.0.1",
+    "@types/node": "26.4.0",
+    "@vitest/coverage-v8": "4.1.11",
+    "convex-test": "0.0.56",
+    "eslint": "10.9.1",
+    "tsx": "4.23.13",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.68.0",
+    "vitest": "4.1.11"
   }
 }
