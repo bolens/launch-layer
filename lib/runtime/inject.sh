@@ -243,9 +243,49 @@ inject_cleanup_launch_tracks() {
 	local appid=${1:-${steam_app_id:-}}
 	[[ -n "$appid" ]] || return 0
 	local tool
-	for tool in specialk reshade openvr_fsr valveplug; do
+	for tool in specialk reshade optiscaler openvr_fsr opencomposite valveplug; do
 		inject_cleanup_tracked "$appid" "$tool"
 	done
+}
+
+# inject_proxy_slot — Normalize a Windows proxy DLL name for conflict checks.
+inject_proxy_slot() {
+	local slot=${1,,}
+	slot="${slot%.dll}.dll"
+	printf '%s\n' "$slot"
+}
+
+# inject_provider_claims — Print enabled injector claims as slot<TAB>provider.
+inject_provider_claims() {
+	[[ "${SPECIAL_K:-0}" == "1" ]] \
+		&& printf '%s\t%s\n' "$(inject_proxy_slot "${SPECIAL_K_DLL:-dxgi}")" "Special K"
+	[[ "${RESHADE:-0}" == "1" ]] \
+		&& printf '%s\t%s\n' "$(inject_proxy_slot "${RESHADE_DLL:-dxgi}")" "ReShade"
+	if [[ "${OPTISCALER:-0}" == "1" ]]; then
+		if [[ "${OPTISCALER_PROXY:-dxgi}" == "OptiScaler.asi" || "${OPTISCALER_PROXY:-dxgi}" == "optiscaler.asi" ]]; then
+			printf 'optiscaler.asi\tOptiScaler\n'
+		else
+			printf '%s\t%s\n' "$(inject_proxy_slot "${OPTISCALER_PROXY:-dxgi}")" "OptiScaler"
+		fi
+	fi
+	[[ "${OPENVR_FSR:-0}" == "1" ]] && printf 'openvr_api.dll\tOpenVR FSR\n'
+	[[ "${OPENCOMPOSITE:-0}" == "1" ]] && printf 'openvr_api.dll\tOpenComposite\n'
+	return 0
+}
+
+# inject_provider_conflict_errors — Report proxy DLL slots with multiple owners.
+inject_provider_conflict_errors() {
+	local slot provider
+	local -A owners=()
+	while IFS=$'\t' read -r slot provider; do
+		[[ -n "$slot" ]] || continue
+		if [[ -n "${owners[$slot]:-}" ]]; then
+			printf 'injector conflict on %s: %s and %s are both enabled\n' \
+				"$slot" "${owners[$slot]}" "$provider"
+		else
+			owners[$slot]="$provider"
+		fi
+	done < <(inject_provider_claims)
 }
 
 # inject_copy_renamed — Copy src to dest_dir/dest_name; bak existing; track when appid set.

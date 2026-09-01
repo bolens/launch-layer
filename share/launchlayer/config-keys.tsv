@@ -10,6 +10,8 @@ NETWORK_TUNE	boolean	toggle	1	trusted
 DEBUG	boolean	toggle	0	trusted
 X3D_CPUS	value	advanced	1	trusted
 GAME_NIC	value	advanced	0	trusted
+GPU_SELECT	enum	advanced	1	trusted
+GPU_SELECT_DRIVER	value	advanced	0	trusted
 GAMESCOPE	boolean	toggle	1	trusted
 GAMESCOPE_W	value	advanced	1	trusted
 GAMESCOPE_H	value	advanced	1	trusted
@@ -22,6 +24,8 @@ GAMESCOPE_EXTRA_ARGS	value	advanced	0	trusted
 GAMESCOPE_PREFER_OUTPUT	value	advanced	0	trusted
 GAMESCOPE_FRAME_LIMIT	value	advanced	0	trusted
 GAMESCOPE_FILTER	value	advanced	0	trusted
+GAMESCOPE_RESHADE_EFFECT	value	advanced	1	trusted
+GAMESCOPE_RESHADE_TECHNIQUE	value	advanced	1	trusted
 GAMESCOPE_FOCUSED_FPS	value	advanced	0	trusted
 GAMESCOPE_UNFOCUSED_FPS	value	advanced	0	trusted
 GAMESCOPE_NESTED_FIX	boolean	toggle	0	trusted
@@ -111,6 +115,10 @@ RESHADE	boolean	toggle	1	untrusted
 RESHADE_DLL	value	advanced	0	untrusted
 RESHADE_SOURCE	value	advanced	0	untrusted
 RESHADE_SK_VERSION	value	advanced	0	untrusted
+OPTISCALER	boolean	toggle	1	untrusted
+OPTISCALER_SOURCE	value	advanced	0	untrusted
+OPTISCALER_PROXY	enum	advanced	1	untrusted
+OPTISCALER_CONFIG	value	advanced	0	untrusted
 DEPTH3D	boolean	toggle	1	untrusted
 DEPTH3D_SOURCE	value	advanced	0	untrusted
 DEPTH3D_FETCH_URL	value	advanced	0	untrusted
@@ -127,6 +135,8 @@ FWS_COLAUNCH	boolean	toggle	0	untrusted
 SPECIALTY_RUNTIME	value	advanced	1	untrusted
 OPENVR_FSR	boolean	toggle	1	untrusted
 OPENVR_FSR_SOURCE	value	advanced	0	untrusted
+OPENCOMPOSITE	boolean	toggle	1	untrusted
+OPENCOMPOSITE_SOURCE	value	advanced	0	untrusted
 GEO11	boolean	toggle	1	untrusted
 GEO11_SOURCE	value	advanced	0	untrusted
 GEO11_SBS_VR	boolean	toggle	0	untrusted

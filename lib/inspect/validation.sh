@@ -76,6 +76,12 @@ _validate_resolved_launch_wrappers_for_appid() {
 		((issues++)) || true
 	done < <(launch_wrapper_config_conflict_errors)
 
+	while IFS= read -r line; do
+		[[ -n "$line" ]] || continue
+		echo "$file: resolved: $line"
+		((issues++)) || true
+	done < <(inject_provider_conflict_errors)
+
 	saved_is_native=$is_native
 	optional_tool_installed() { return 0; }
 	command_available() { return 0; }
@@ -153,6 +159,34 @@ validate_single_config_file() {
 				value="${value#\"}"; value="${value%\"}"
 				if [[ -n "$value" && "$value" != "0" ]] && ! [[ "$value" =~ ^[1-9][0-9]*$ ]]; then
 					echo "$file:$line_num: FRAME_RATE must be a positive integer (got: $value)"
+					((issues++)) || true
+				fi
+				;;
+			GPU_SELECT)
+				value="${value#\"}"; value="${value%\"}"
+				case "${value,,}" in
+					""|auto|discrete|nvidia|amd|intel) ;;
+					*)
+						echo "$file:$line_num: GPU_SELECT must be auto, discrete, nvidia, amd, or intel (got: $value)"
+						((issues++)) || true
+						;;
+				esac
+				;;
+			OPTISCALER_PROXY)
+				value="${value#\"}"; value="${value%\"}"
+				[[ "${value,,}" == *.dll ]] && value="${value%.dll}"
+				case "${value,,}" in
+					dxgi|winmm|version|dbghelp|d3d12|wininet|winhttp|optiscaler|optiscaler.asi) ;;
+					*)
+						echo "$file:$line_num: unsupported OPTISCALER_PROXY: $value"
+						((issues++)) || true
+						;;
+				esac
+				;;
+			GAMESCOPE_RESHADE_TECHNIQUE)
+				value="${value#\"}"; value="${value%\"}"
+				if [[ -n "$value" && ! "$value" =~ ^[0-9]+$ ]]; then
+					echo "$file:$line_num: GAMESCOPE_RESHADE_TECHNIQUE must be a non-negative integer (got: $value)"
 					((issues++)) || true
 				fi
 				;;

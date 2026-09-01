@@ -431,12 +431,43 @@ apply_frame_rate() {
 
 # apply_launch_env_tuning — Env knobs for native and Proton (Arch / Bazzite gaming docs).
 apply_launch_env_tuning() {
+	apply_gpu_selection
 	apply_ld_bind_now
 	apply_vkbasalt
 	apply_latencyflex
 	apply_disable_vblank
 	apply_disable_steam_deck
 	apply_frame_rate
+}
+
+# apply_gpu_selection — Select a GPU vendor through standard loader/PRIME hints.
+apply_gpu_selection() {
+	local selection="${GPU_SELECT:-auto}"
+	local driver_filter="${VK_LOADER_DRIVERS_SELECT:-${GPU_SELECT_DRIVER:-}}"
+	[[ -n "$driver_filter" ]] && export VK_LOADER_DRIVERS_SELECT="$driver_filter"
+	case "${selection,,}" in
+		""|auto) ;;
+		discrete)
+			export DRI_PRIME="${DRI_PRIME:-1}"
+			;;
+		nvidia)
+			export __NV_PRIME_RENDER_OFFLOAD="${__NV_PRIME_RENDER_OFFLOAD:-1}"
+			export __GLX_VENDOR_LIBRARY_NAME="${__GLX_VENDOR_LIBRARY_NAME:-nvidia}"
+			export __VK_LAYER_NV_optimus="${__VK_LAYER_NV_optimus:-NVIDIA_only}"
+			export VK_LOADER_DRIVERS_SELECT="${VK_LOADER_DRIVERS_SELECT:-*nvidia*}"
+			;;
+		amd)
+			export VK_LOADER_DRIVERS_SELECT="${VK_LOADER_DRIVERS_SELECT:-*radeon*}"
+			;;
+		intel)
+			export VK_LOADER_DRIVERS_SELECT="${VK_LOADER_DRIVERS_SELECT:-*intel*}"
+			;;
+		*)
+			warn "GPU_SELECT=$selection unknown (auto|discrete|nvidia|amd|intel)"
+			return 0
+			;;
+	esac
+	debug "GPU_SELECT=$selection driver_filter=${VK_LOADER_DRIVERS_SELECT:-none}"
 }
 
 # apply_proton_env — Export Proton/DXVK/VKD3D/NVIDIA tuning variables.

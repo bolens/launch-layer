@@ -235,3 +235,43 @@ EOF
 	[[ "$output" == *"LAUNCH_WRAPPERS includes dlss-swapper while DLSS_SWAPPER=1"* ]]
 	rm -rf "$tmp"
 }
+
+@test "validate_single_config_file rejects invalid tool-layer values" {
+	local tmp
+	tmp="$(temp_config_dir)"
+	cat > "$tmp/launch.d/local.env" <<'EOF'
+GPU_SELECT=voodoo
+OPTISCALER_PROXY=kernel32
+GAMESCOPE_RESHADE_TECHNIQUE=first
+EOF
+	run env CONFIG_DIR="$tmp" VALIDATION_FILE="$tmp/launch.d/local.env" bash -c '
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform steam keys config runtime inspect
+		validate_single_config_file "$VALIDATION_FILE" 2>&1
+	'
+	[[ $status -eq 3 ]]
+	[[ "$output" == *"GPU_SELECT must be"* ]]
+	[[ "$output" == *"unsupported OPTISCALER_PROXY"* ]]
+	[[ "$output" == *"GAMESCOPE_RESHADE_TECHNIQUE must be"* ]]
+	rm -rf "$tmp"
+}
+
+@test "resolved validation rejects layered injector provider conflicts" {
+	local tmp
+	tmp="$(temp_config_dir)"
+	mkdir -p "$tmp/games"
+	cat > "$tmp/games/42424242.env" <<'EOF'
+SPECIAL_K=1
+SPECIAL_K_DLL=dxgi
+OPTISCALER=1
+OPTISCALER_PROXY=dxgi
+EOF
+	run env CONFIG_DIR="$tmp" LAUNCHLAYER_GAMES_DIR="$tmp/games" bash -c '
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform steam keys config runtime inspect
+		_validate_resolved_launch_wrappers_for_appid 42424242 "$GAMES_DIR/42424242.env" 2>&1
+	'
+	[[ $status -ne 0 ]]
+	[[ "$output" == *"injector conflict on dxgi.dll"* ]]
+	rm -rf "$tmp"
+}
