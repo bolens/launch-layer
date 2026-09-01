@@ -23,6 +23,15 @@ done
 
 node --check "$SITE/site.js"
 
+if grep -Eq '\.has-js[[:space:]]+\.reveal' "$SITE/styles.css"; then
+	echo "site/styles.css: primary content must not use JavaScript-only reveal concealment" >&2
+	exit 1
+fi
+if grep -q 'IntersectionObserver' "$SITE/site.js" && grep -Fq 'querySelectorAll(".reveal")' "$SITE/site.js"; then
+	echo "site/site.js: primary content must not use observer-driven reveal classes" >&2
+	exit 1
+fi
+
 python3 - "$ROOT" <<'PY'
 import hashlib
 import sys
