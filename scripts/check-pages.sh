@@ -32,7 +32,15 @@ import sys
 from pathlib import Path
 
 data = Path(sys.argv[1]).read_bytes()
-if len(data) < 24 or data[:8] != b"\x89PNG\r\n\x1a\n" or struct.unpack(">II", data[16:24]) != (1200, 630):
+if len(data) < 24 or data[:8] != b"\x89PNG\r\n\x1a\n":
+    raise SystemExit("site/social-card.png must be a 1200x630 PNG")
+
+try:
+    dimensions = struct.unpack(">II", data[16:24])
+except struct.error:
+    raise SystemExit("site/social-card.png must be a 1200x630 PNG")
+
+if dimensions != (1200, 630):
     raise SystemExit("site/social-card.png must be a 1200x630 PNG")
 PY
 for contract in 'rel="canonical"' 'og:site_name' 'og:image:width' 'twitter:image' 'rel="apple-touch-icon"' 'rel="manifest"'; do
