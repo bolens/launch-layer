@@ -2,12 +2,12 @@
 
 ```bash
 ./launchlayer --tui          # always opens the TUI (interactive terminal required)
-launchlayer                  # same when symlinked; also opens TUI with no args when fzf + TTY
+launchlayer                  # same when symlinked, and opens TUI with no args when fzf + TTY
 ```
 
-Requires an interactive terminal. With [fzf](https://github.com/junegunn/fzf) menus are fuzzy lists with a bordered header, contextual footer key hints, and reverse layout; without fzf, the same items appear as numbered prompts (`1) …`, `Choice:`).
+Requires an interactive terminal. With [fzf](https://github.com/junegunn/fzf), menus are fuzzy lists with a bordered header, contextual footer key hints, and reverse layout. Without fzf, the same items appear as numbered prompts (`1) …`, `Choice:`).
 
-Press **`?`** in any fzf menu to open a keyboard-shortcuts panel (Esc to close). Patterns follow common TUIs (lazygit, k9s, yazi): footer hints, live status on hubs, split preview panes, and section gaps in grouped menus.
+Press **`?`** in any fzf menu to open a keyboard-shortcuts panel (Esc to close). Every fzf menu shows a `Filter:` prompt. Patterns follow common TUIs (lazygit, k9s, yazi): footer hints, live status on hubs, split preview panes, and section gaps in grouped menus.
 
 [Docs index](README.md) · [README](../README.md) · [CLI](cli.md) · [TUI](tui.md) · [Architecture](architecture.md) · [Third-party](third-party.md) · [Release](release_runbook.md) · [Changelog](../CHANGELOG.md)
 
@@ -27,7 +27,7 @@ Status banner, then the top-level hub with a live status footer (`filter`, `doct
 
 ### Game picker
 
-Fuzzy search with live config preview and footer key hints. **Ctrl-E** opens the editor; **Ctrl-D** dry-runs the launch chain; **?** shows shortcuts. Multi-select omits the preview pane for speed.
+Fuzzy search includes a live config preview and footer key hints. **Ctrl-E** opens the editor. **Ctrl-D** dry-runs the launch chain. **?** shows shortcuts. Multi-select omits the preview pane for speed.
 
 <p align="center">
   <img src="assets/tui-game-picker.png" alt="LaunchLayer game picker with live preview" width="720">
@@ -39,9 +39,9 @@ Split view: action list on the left, live config preview on the right (same as t
 
 ### Quick toggles
 
-Per-game boolean overrides. Green/red labels mark values set in `GAMES_DIR/<AppID>.env`; dim text marks inherited layers. Footer: `enter flip toggle · ? help · esc back`.
+Per-game boolean overrides. Green and red labels mark values set in `GAMES_DIR/<AppID>.env`. Dim text marks inherited layers. Footer: `enter flip toggle · ? help · esc back`.
 
-Covers every 0/1 launch flag (GameMode / MangoHUD / Gamescope family, shader/compatdata checks, NVIDIA power, Proton/`PROTON_*_UPGRADE` / indicators / NVIDIA libs, Arch latency knobs, `DISABLE_STEAM_DECK`, `DLSS_SWAPPER` cycles `0`→`1`→`dll`→`0`, etc.). Assist-only toggles (`DEPTH3D`, `GEO11`, `SBS_VR`, `FLAT2VR`) show an `assist` suffix — path/env markers, not injectors. Prefer `FLAWLESS_WIDESCREEN` over the Advanced-only `FWS` alias. Use **Advanced config → Proton & tools** for specialty runtime pickers, or **Open in $EDITOR**.
+Covers every 0/1 launch flag (GameMode / MangoHUD / Gamescope family, shader/compatdata checks, NVIDIA power, Proton/`PROTON_*_UPGRADE` / indicators / NVIDIA libs, Arch latency knobs, `DISABLE_STEAM_DECK`, `DLSS_SWAPPER` cycles `0`→`1`→`dll`→`0`, etc.). Assist-only toggles (`DEPTH3D`, `GEO11`, `SBS_VR`, `FLAT2VR`) show an `assist` suffix: path/env markers, not injectors. Prefer `FLAWLESS_WIDESCREEN` over the Advanced-only `FWS` alias. Use **Advanced config → Proton & tools** for specialty runtime pickers, or **Open in $EDITOR**.
 
 <p align="center">
   <img src="assets/tui-quick-toggles.png" alt="LaunchLayer per-game quick toggles" width="720">
@@ -67,13 +67,13 @@ Game picker preview shows a **hot** toggle subset plus any per-game overrides (n
 
 Third-party licenses and purchase gates: [third-party.md](third-party.md). Matching CLI keys: [cli.md](cli.md) (Wine inject · Gamescope nest · capture).
 
-Prompts keep the current value on empty Enter; type `-` to clear. Validation runs after each edit.
+Press Enter on an empty prompt to keep the current value. Type `-` to clear it. Validation runs after each edit.
 
 ---
 
 ## On launch
 
-With fzf, **command output** from menu actions appears in the **right preview pane** on hub menus (no section headers — just the output). Highlight **Status** on the main menu (or open the Status hub) to see a grouped status dashboard in that pane. The footer still shows a one-line summary.
+With fzf, **command output** from menu actions appears in the **right preview pane** on hub menus (no section headers: just the output). Highlight **Status** on the main menu (or open the Status hub) to see a grouped status dashboard in that pane. The footer still shows a one-line summary.
 
 Without fzf, the two-line status banner prints above the numbered menu as before:
 
@@ -82,7 +82,9 @@ Without fzf, the two-line status banner prints above the numbered menu as before
 ── backup: ● │ maint: ◑ │ keep newest 7 after backup │ ○ fp:minimal
 ```
 
-**Glyphs:** ● active · ○ inactive · ◑ installed (timer not enabled) · ⚠ caution · ✕ error · — n/a. Game list CFG/NAT use ●/○; anticheat `-` becomes —.
+**Glyphs:** ● active · ○ inactive · ◑ installed (timer not enabled) · ⚠ caution · ✕ error · — unavailable. Game-list CFG/NAT values use ●/○. An anticheat `-` also appears as —.
+
+For terminals, fonts, or assistive technology that do not handle those symbols well, enable **Settings → Interface → UI behavior → Text status labels** or run `launchlayer --tui-prefs set text_status 1`. Statuses then use words such as `on`, `off`, `yes`, `no`, `warn`, and `n/a`; fzf also uses an ASCII `>` pointer. Disable motion with **Animated progress** in the same menu or `launchlayer --tui-prefs set spinner 0`. `NO_COLOR=1` remains available independently.
 
 ---
 
@@ -111,9 +113,9 @@ With **auto-resume** enabled (`Settings → Interface → [UI]`), the saved hub 
 
 Single entry point for all preference files:
 
-- **Interface** — `tui.conf` (games filter, UI behavior, cache threshold, fzf layout)
-- **Backup** — `backup.conf` + systemd timer (same as **Backup & restore → Settings**)
-- **Community hub** — `hub.conf` (same as **Community hub → Hub settings**)
+- **Interface**: `tui.conf` (games filter, UI behavior, cache threshold, fzf layout)
+- **Backup**: `backup.conf` + systemd timer (same as **Backup & restore → Settings**)
+- **Community hub**: `hub.conf` (same as **Community hub → Hub settings**)
 
 ### Status › At-a-glance system health
 
@@ -129,7 +131,7 @@ Exact labels from the TUI.
 
 - Browse & configure game
 - Recent games
-- Bulk change INCLUDE preset — scopes: current filter · all configured · **name substring (grep)** · multi-select; then **Preview (dry-run)** or **Apply**
+- Bulk change INCLUDE preset: choose current filter · all configured · **name substring (grep)** · multi-select, then **Preview (dry-run)** or **Apply**
 - Init unconfigured games
 - Prune uninstalled configs
 
@@ -166,7 +168,7 @@ Header: `Select a game (filter=…)` · Footer: `↑↓ filter · enter select �
 
 **Restore from backup** offers replace and merge (skip existing) for latest archive, picked archive, and per-game restore from latest (same as `--restore-backup --merge` / `--replace`).
 
-**Settings** (also under **Settings → Backup**) — five compact rows, each opens a detail submenu when needed:
+**Settings** (also under **Settings → Backup**): five compact rows, each opens a detail submenu when needed:
 
 | Row | Opens / shows |
 |-----|----------------|
@@ -194,8 +196,8 @@ Footer: `[·] Show all` · Reset · Save. Saving auto-refreshes installed system
 
 Four compact rows + footer:
 
-- `[Games]` filter · preset — opens filter/preset picker
-- `[UI]` json · resume · pause — JSON/resume toggles + press-enter threshold
+- `[Games]` filter · preset: opens filter/preset picker
+- `[UI]` json · resume · pause: JSON/resume toggles + press-enter threshold
 - `[Cache]` min N GB
 - `[fzf]` height · preview layout
 - `[·] Show all` · Reset · Save and return · Back without saving
@@ -214,7 +216,7 @@ Publish/delete require a matching Convex `HUB_PUBLISH_TOKEN` (fail closed). Toke
 | Context | Keys / footer |
 |---------|----------------|
 | All fzf menus | Type to filter · ↑↓ navigate · Enter select · Esc back · **?** help |
-| Main menu | Live status footer; **Ctrl-D** doctor when issues are reported |
+| Main menu | Live status footer. **Ctrl-D** runs doctor when issues are reported. |
 | Games hub | Footer adds `filter:… · N games` |
 | Game actions | Preview pane · **Ctrl-D** dry-run · grouped rows (View / Edit / Manage / Hub) |
 | Game picker | **Ctrl-E** editor · **Ctrl-D** dry-run · preview pane |
@@ -222,7 +224,7 @@ Publish/delete require a matching Convex `HUB_PUBLISH_TOKEN` (fail closed). Toke
 | Multi-select | Tab toggle · no preview pane |
 | Backup / hub hubs | Footer shows prune policy or hub status |
 
-Without fzf, numbered menus still work; preview, multi-select, footer hints, and **?** help require fzf.
+Without fzf, numbered menus still work. Preview, multi-select, footer hints, and **?** help require fzf.
 
 ---
 
@@ -231,7 +233,7 @@ Without fzf, numbered menus still work; preview, multi-select, footer hints, and
 - Breadcrumb headers use ` › ` (e.g. `Games › Overwatch 2 › Quick toggles`)
 - Quick toggles show inherited vs per-game override coloring when the terminal supports it
 - JSON view mode (`Settings → Interface → [UI]`) makes view commands emit `--json` output, pretty-printed when `jq`/`python3` is available
-- Long output only pauses at “Press Enter to continue…” when it spans `press_enter_lines` (default 8)
+- Long output only pauses at "Press Enter to continue…" when it spans `press_enter_lines` (default 8)
 
 ---
 
@@ -251,8 +253,8 @@ Reset via `--tui-prefs reset`, `--backup-prefs reset`, `--hub-prefs reset`, or *
 
 ## See also
 
-- [Docs index](README.md) — topic → canonical page map
-- [cli.md](cli.md) — full command tables (same underlying handlers)
-- [third-party.md](third-party.md) — licenses / inject policy
-- [architecture.md](architecture.md) — CLI/TUI parity and `lib/tui/`
+- [Docs index](README.md): topic → canonical page map
+- [cli.md](cli.md): full command tables (same underlying handlers)
+- [third-party.md](third-party.md): licenses / inject policy
+- [architecture.md](architecture.md): CLI/TUI parity and `lib/tui/`
 - [README § Interactive TUI](../README.md#interactive-tui)

@@ -6,7 +6,7 @@
 
 **Layered launch orchestration for Steam games on Linux**
 
-*One Steam launch string. Per-game configs. GameMode, Gamescope, MangoHUD, and more — assembled automatically.*
+*One Steam launch string. Per-game configs. GameMode, Gamescope, MangoHUD, and more: assembled automatically.*
 
 [![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](LICENSE)
 [![CI](https://github.com/bolens/launch-layer/actions/workflows/ci.yml/badge.svg)](https://github.com/bolens/launch-layer/actions/workflows/ci.yml)
@@ -15,9 +15,9 @@
 
 </div>
 
-**For Linux gamers** who tune every launch — GameMode, CPU affinity, MangoHUD, Gamescope, VRAM hogs, network latency — but do not want a different Steam launch string per title.
+**For Linux gamers** who tune every launch with GameMode, CPU affinity, MangoHUD, Gamescope, VRAM controls, or network settings, but do not want a different Steam launch string per title.
 
-LaunchLayer sits in Steam’s **Launch Options** ahead of `%command%`. It loads layered config, runs preflight checks, and builds the wrapper chain before your game starts.
+LaunchLayer sits in Steam's **Launch Options** ahead of `%command%`. It loads layered config, runs preflight checks, and builds the wrapper chain before your game starts.
 
 | Without LaunchLayer | With LaunchLayer |
 |---------------------|------------------|
@@ -27,7 +27,7 @@ LaunchLayer sits in Steam’s **Launch Options** ahead of `%command%`. It loads 
 
 Built for a tuned workstation (7900X3D, RTX 3080 Ti, Wayland / Plasma 6), with auto-detection and profiles for Steam Deck, Flatpak Steam, BSD, and WSL2.
 
-**Requirements:** bash 4.2+, Steam (or any launcher that passes `%command%`). Optional tools (`fzf`, `gamescope`, …) enhance the stack but are not required for basic launches.
+**Requirements:** Bash 4.3+, Steam (or any launcher that passes `%command%`). Optional tools (`fzf`, `gamescope`, …) extend the stack but are not required for basic launches.
 
 ### See it work
 
@@ -53,7 +53,7 @@ Launch chain:
 <p align="center">
   <img src="docs/assets/tui-game-picker.png" alt="LaunchLayer TUI game picker" width="640">
   <br>
-  <em><a href="docs/tui.md#screenshots">Interactive TUI</a> — browse games, preview configs, flip toggles</em>
+  <em><a href="docs/tui.md#screenshots">Interactive TUI</a>: browse games, preview configs, flip toggles</em>
 </p>
 
 ### Quick paths
@@ -61,7 +61,7 @@ Launch chain:
 | I want to… | Go to |
 |------------|-------|
 | Get running in five minutes | [Quick start](#quick-start) |
-| Paste into Steam’s Launch Options | [Steam integration](#integrating-with-steam-launch-options) |
+| Paste into Steam's Launch Options | [Steam integration](#integrating-with-steam-launch-options) |
 | Browse and edit games interactively | [Interactive TUI](#interactive-tui) · [screenshots](docs/tui.md#screenshots) |
 | Share configs with similar machines | [Community hub](#community-hub) |
 | Understand the launch pipeline | [How a launch works](#how-a-launch-works) |
@@ -106,7 +106,7 @@ git clone https://github.com/bolens/launch-layer.git ~/launchlayer
 cd ~/launchlayer
 ```
 
-2. **Run onboarding** — completions, symlink, launch string, and machine defaults:
+2. **Run onboarding**: completions, symlink, launch string, and machine defaults:
 
 ```bash
 ./launchlayer --setup --completions --symlink --print-launch-option --write-local-config
@@ -114,7 +114,7 @@ cd ~/launchlayer
 
 This installs shell completions, adds `~/.local/bin/launchlayer`, prints your Steam launch string, and writes `launch.d/local.env`. Add `--systemd` for the maintenance timer or `--backup-timer` for scheduled config backups.
 
-3. **Paste into Steam** — copy the printed string into each game’s **Launch Options** (same string for every title):
+3. **Paste into Steam**: copy the printed string into each game's **Launch Options** (same string for every title):
 
 ```
 "$HOME/launchlayer/launchlayer" %command%
@@ -136,15 +136,15 @@ See [Integrating with Steam launch options](#integrating-with-steam-launch-optio
 ./launchlayer --doctor
 ```
 
-If Proton titles misbehave, fix `vm.max_map_count` once — see [System tuning](#system-tuning).
+If Proton titles misbehave, fix `vm.max_map_count` once. See [System tuning](#system-tuning).
 
 ---
 
 ## Integrating with Steam launch options
 
-LaunchLayer hooks into Steam by **prefixing** the normal game command. Steam replaces `%command%` with Proton wrappers, the game binary, and any args Steam already knows about; LaunchLayer loads config, runs preflight, builds wrapper chains, then execs that command.
+LaunchLayer hooks into Steam by **prefixing** the normal game command. Steam replaces `%command%` with Proton wrappers, the game binary, and any args Steam already knows about. LaunchLayer loads config, runs preflight, builds wrapper chains, then execs that command.
 
-Use the **same launch string on every game** you want managed. Per-game tuning lives in `GAMES_DIR/<AppID>.env`—you do not need different launch options per title.
+Use the **same launch string on every game** you want managed. Per-game tuning lives in `GAMES_DIR/<AppID>.env`. You do not need different launch options per title.
 
 ### 1. Get your launch string
 
@@ -166,19 +166,19 @@ Example output:
 
 | Approach | Launch string | Notes |
 |----------|---------------|-------|
-| **Absolute path** (recommended) | `"$HOME/launchlayer/launchlayer" %command%` | Most reliable—Steam’s environment often has a minimal `PATH`; `--print-launch-option` prints your real path |
-| **Symlink** (after `--setup --symlink`) | `"$HOME/.local/bin/launchlayer" %command%` | Use the full path to the symlink (`realpath ~/.local/bin/launchlayer`); bare `launchlayer` usually fails in Steam |
+| **Absolute path** (recommended) | `"$HOME/launchlayer/launchlayer" %command%` | Most reliable. Steam's environment often has a minimal `PATH`. `--print-launch-option` prints your real path. |
+| **Symlink** (after `--setup --symlink`) | `"$HOME/.local/bin/launchlayer" %command%` | Use the full path to the symlink (`realpath ~/.local/bin/launchlayer`). Bare `launchlayer` usually fails in Steam. |
 
 Rules:
 
 - **Keep `%command%`** at the end. Without it Steam never runs the game binary.
 - **Quote the script path** when it contains spaces.
-- **Do not** substitute the game `.exe` or Proton command for `%command%`—LaunchLayer receives the full Steam-built argv automatically.
-- **Replace** other wrapper prefixes (`gamemoderun %command%`, `mangohud %command%`, `sd0 %command%`, etc.) with LaunchLayer; enable those features in config instead (`GAMEMODE=1`, `MANGOHUD=1`, `DISABLE_STEAM_DECK=1`, …).
+- **Do not** substitute the game `.exe` or Proton command for `%command%`. LaunchLayer receives the full Steam-built argv automatically.
+- **Replace** other wrapper prefixes (`gamemoderun %command%`, `mangohud %command%`, `sd0 %command%`, etc.) with LaunchLayer. Enable those features in config instead (`GAMEMODE=1`, `MANGOHUD=1`, `DISABLE_STEAM_DECK=1`, …).
 
 ### 2. Paste into Steam
 
-**Per game** (typical workflow—repeat for each title, or copy/paste the same string):
+**Per game** (typical workflow, repeat for each title, or copy/paste the same string):
 
 1. Open **Steam** → **Library**
 2. Right-click the game → **Properties**
@@ -215,7 +215,7 @@ The `flatpak-steam` profile layers automatically when Flatpak Steam is detected.
 
 ### 4. Per-game settings (no launch-option edits)
 
-After the launch string is set once per game, adjust behavior with per-game configs—not by changing Steam’s field again:
+After the launch string is set once per game, adjust behavior with per-game configs, not by changing Steam's field again:
 
 ```bash
 ./launchlayer --init-appid 2357570 competitive   # scaffold GAMES_DIR/2357570.env
@@ -227,7 +227,7 @@ Steam sets `SteamAppId` / `STEAM_APPID` when launching; LaunchLayer uses that to
 
 ### 5. Verify before or after first launch
 
-**Preview the resolved chain** (terminal—no game start):
+**Preview the resolved chain** (terminal, no game start):
 
 ```bash
 SteamAppId=2357570 ./launchlayer --dry-run %command%
@@ -252,12 +252,12 @@ tail ~/.local/state/launchlayer/launch.log
 
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
-| Game starts but LaunchLayer never runs | Launch string missing or wrong game | Confirm **Launch Options** on that title; path must point to the `launchlayer` script |
-| Game never starts / instant exit | `%command%` omitted | Use `"/path/to/launchlayer" %command%`—not the script alone |
-| `Permission denied` or `No such file` | Bad path or Flatpak sandbox | Use absolute path; for Flatpak Steam see [Flatpak Steam](#3-flatpak-steam) |
+| Game starts but LaunchLayer never runs | Launch string missing or wrong game | Confirm **Launch Options** on that title. The path must point to the `launchlayer` script. |
+| Game never starts / instant exit | `%command%` omitted | Use `"/path/to/launchlayer" %command%`, not the script alone |
+| `Permission denied` or `No such file` | Bad path or Flatpak sandbox | Use an absolute path. For Flatpak Steam, see [Flatpak Steam](#3-flatpak-steam). |
 | Wrong preset / no per-game config | No `GAMES_DIR` file yet | `./launchlayer --init-appid APPID preset` or `--tui` |
-| Double wrappers / odd behavior | Old launch option left in place | Remove `gamemoderun`, `mangohud`, `dlss-swapper`, `sd0`, etc. from Steam; configure via LaunchLayer (`GAMEMODE`, `MANGOHUD`, `DLSS_SWAPPER`, `DISABLE_STEAM_DECK`) |
-| Proton crashes / map errors | Low `vm.max_map_count` | `./launchlayer --sysctl install` — see [System tuning](#system-tuning) |
+| Double wrappers / odd behavior | Old launch option left in place | Remove `gamemoderun`, `mangohud`, `dlss-swapper`, `sd0`, etc. from Steam. Configure them through LaunchLayer with `GAMEMODE`, `MANGOHUD`, `DLSS_SWAPPER`, and `DISABLE_STEAM_DECK`. |
+| Proton crashes / map errors | Low `vm.max_map_count` | Run `./launchlayer --sysctl install`. See [System tuning](#system-tuning). |
 
 ---
 
@@ -269,7 +269,7 @@ tail ~/.local/state/launchlayer/launch.log
 | ◦ | **Auto-detection** | Distro, GPU, compositor, display resolution/VRR, X3D V-Cache CPU mask, native vs Proton |
 | ⊛ | **Preflight** | Checks `vm.max_map_count`, shader/compat cache size (optional trim), VRAM, GPU power/processes, disk space, concurrent launches |
 | ⚡ | **Runtime tuning** | Network (`ethtool`), PipeWire latency, NVIDIA power mode, Proton/DXVK/VKD3D env, shader-cache boost, DLSS/FSR4/XeSS upgrade knobs |
-| ◆ | **VRAM management** | Pause configured systemd units (Sunshine, etc.) during play; resume on exit |
+| ◆ | **VRAM management** | Pause configured systemd units such as Sunshine during play, then resume them on exit |
 | → | **Launch chain** | `LAUNCH_WRAPPERS_BEFORE` → GameMode → CPU affinity → `game-performance` → DLSS swapper → `LAUNCH_WRAPPERS` → Gamescope (`--mangoapp` when both Gamescope and MangoHUD) → MangoHUD → game |
 | ▤ | **CLI + TUI** | Manage configs, backup/restore, doctor checks, optional [Community hub](#community-hub) |
 
@@ -308,18 +308,18 @@ flowchart LR
 <details>
 <summary>Step-by-step (text)</summary>
 
-1. **Recover stale state** — Resume VRAM-heavy services left paused after a crash (`lib/vram.sh`)
-2. **Resolve AppID** — From `SteamAppId`, `STEAM_APPID`, or launch argv (`lib/config.sh`)
-3. **Load layered config** — Profiles → `default.env` → `local.env` → preset or per-game file; then `apply_defaults` and `apply_detected_defaults`
-4. **Detect game flags** — Native vs Proton, EAC/BattlEye, engine hints (`lib/steam/detect.sh`)
-5. **Auto hardware defaults** — X3D CPU mask, display resolution/refresh for Gamescope (`lib/hardware/`)
-6. **Parse extra args** — Split `GAME_EXTRA_ARGS` into argv appended after `%command%`
-7. **Preflight checks** — Skipped when `BENCHMARK=1` (`lib/preflight.sh`): sysctl, shader/compat caches, VRAM, GPU power/processes, disk, concurrent launch guard
-8. **Tool warnings & anticheat guardrails** — Missing optional tools; warn on risky settings for EAC/BattlEye titles
-9. **VRAM hogs** — Optionally pause configured systemd user units with refcount + exit trap (before runtime tuning)
-10. **Runtime tuning** — Network (`ethtool`), PipeWire latency, CPU perf profile, NVIDIA power mode, Proton/DXVK/VKD3D env
-11. **Build launch chain** — Assemble wrappers per `build_launch_chain` in `lib/runtime/chain.sh`
-12. **Exec** — `PRE_LAUNCH_CMD` → run chain + `%command%` + extras → `POST_LAUNCH_CMD`; log to `~/.local/state/launchlayer/launch.log`
+1. **Recover stale state**: Resume VRAM-heavy services left paused after a crash (`lib/vram.sh`)
+2. **Resolve AppID**: From `SteamAppId`, `STEAM_APPID`, or launch argv (`lib/config.sh`)
+3. **Load layered config**: Profiles → `default.env` → `local.env` → preset or per-game file; then `apply_defaults` and `apply_detected_defaults`
+4. **Detect game flags**: Native vs Proton, EAC/BattlEye, engine hints (`lib/steam/detect.sh`)
+5. **Auto hardware defaults**: X3D CPU mask, display resolution/refresh for Gamescope (`lib/hardware/`)
+6. **Parse extra args**: Split `GAME_EXTRA_ARGS` into argv appended after `%command%`
+7. **Preflight checks**: Skipped when `BENCHMARK=1` (`lib/preflight.sh`): sysctl, shader/compat caches, VRAM, GPU power/processes, disk, concurrent launch guard
+8. **Tool warnings & anticheat guardrails**: Report missing optional tools and warn on risky settings for EAC/BattlEye titles
+9. **VRAM hogs**: Optionally pause configured systemd user units with refcount + exit trap (before runtime tuning)
+10. **Runtime tuning**: Network (`ethtool`), PipeWire latency, CPU perf profile, NVIDIA power mode, Proton/DXVK/VKD3D env
+11. **Build launch chain**: Assemble wrappers per `build_launch_chain` in `lib/runtime/chain.sh`
+12. **Exec**: `PRE_LAUNCH_CMD` → run chain + `%command%` + extras → `POST_LAUNCH_CMD`; log to `~/.local/state/launchlayer/launch.log`
 
 </details>
 
@@ -339,7 +339,7 @@ flowchart BT
   D["1 · default.env<br/><i>global</i>"]
   L["2 · local.env<br/><i>this machine</i>"]
   R["3 · presets/*.env<br/><i>gameplay</i>"]
-  G["4 · games/AppID.env<br/><i>per-game — wins</i>"]
+  G["4 · games/AppID.env<br/><i>per-game: wins</i>"]
 
   P --> D --> L --> R --> G
 
@@ -354,13 +354,13 @@ flowchart BT
 |------:|------|---------|
 | 0 | `launch.d/profiles/*.env` | Machine profiles (auto-detected or via `LAUNCHLAYER_PROFILES`) |
 | 1 | `launch.d/default.env` | Global infrastructure defaults |
-| 2 | `launch.d/local.env` | Machine-local overrides (gitignored; from `--write-local-config`; **force-overwrites** profile/default keys) |
+| 2 | `launch.d/local.env` | Machine-local, gitignored overrides from `--write-local-config`. **Force-overwrites** profile/default keys. |
 | 3 | `launch.d/presets/*.env` | Gameplay preset via per-game `INCLUDE=` **or** auto `standard`/`native` when no per-game file |
 | 4 | `games/<AppID>.env` | Per-game overrides in `GAMES_DIR` (wins over everything above) |
 
 **Preset loading:** If `GAMES_DIR/<AppID>.env` exists, only that file is loaded (plus its `INCLUDE=` chain). Auto `standard.env` / `native.env` applies only when no per-game file exists. Per-game files usually start with `INCLUDE=presets/competitive.env` (or another preset) and then override individual keys.
 
-After files load, **runtime detection** fills any still-unset keys: PipeWire latency, network tuning, NVIDIA checks, VRAM hog filtering, disk thresholds, and platform guardrails (Steam Deck, WSL2, containers).
+After files load, **runtime detection** fills any still-unset keys: NVIDIA checks, VRAM hog filtering, disk thresholds, and platform guardrails (Steam Deck, WSL2, containers). NIC profiles are available for explicit selection but are not auto-selected. NIC and global PipeWire tuning remain off unless you enable them because safe values depend on the hardware and audio graph.
 
 ### Where data lives
 
@@ -371,7 +371,7 @@ After files load, **runtime detection** fills any still-unset keys: PipeWire lat
 | `~/.config/launchlayer/` | user prefs | `tui.conf`, `backup.conf`, `hub.conf` |
 | `~/.local/state/launchlayer/` | runtime | Launch logs, PID/stamp files (see [Runtime state](#runtime-state)) |
 
-Per-game configs are **not** stored under `launch.d/` in git—only in `GAMES_DIR`. Example: [examples/games/2357570.env](examples/games/2357570.env) (Overwatch 2).
+Per-game configs are **not** stored under `launch.d/` in git, only in `GAMES_DIR`. Example: [examples/games/2357570.env](examples/games/2357570.env) (Overwatch 2).
 
 ### Auto preset selection
 
@@ -386,10 +386,10 @@ When no per-game `.env` exists:
 
 | Preset | Use case |
 |--------|----------|
-| `standard` | Default Proton titles — GameMode on |
-| `competitive` | Online / latency-sensitive — extends `standard` with MangoHUD, Gamescope, VRR, VRAM hogs, network tune |
-| `lightweight` | 2D / indie — minimal overhead |
-| `native` | Native Linux — skips Proton env and cache checks |
+| `standard` | Default Proton titles: GameMode on |
+| `competitive` | Online / latency-sensitive: extends `standard` with MangoHUD, Gamescope, VRR, VRAM hogs, network tune |
+| `lightweight` | 2D / indie: minimal overhead |
+| `native` | Native Linux: skips Proton env and cache checks |
 
 Init with: `./launchlayer --init-appid APPID competitive`
 
@@ -434,12 +434,12 @@ GAMESCOPE_NESTED_FIX=1      # strip LD_PRELOAD for nested desktop Gamescope
 LATENCYFLEX=0               # 1=LFX=1 (LatencyFleX layer)
 DISABLE_STEAM_DECK=0        # 1=SteamDeck=0 (Bazzite sd0)
 FRAME_RATE=                 # e.g. 60 → DXVK_FRAME_RATE + VKD3D_FRAME_RATE
-LAUNCH_WRAPPERS=""          # custom PATH wrappers after DLSS; do not list dlss-swapper when DLSS_SWAPPER is set
+LAUNCH_WRAPPERS=""          # custom PATH wrappers after DLSS, without dlss-swapper when DLSS_SWAPPER is set
 LAUNCH_WRAPPERS_BEFORE=""
 GAME_EXTRA_ARGS="-skipintro -nolog"
 UNSET_VARS="DXVK_ASYNC VKD3D_CONFIG"
 
-# Hooks (local only — hub publish rejects non-empty values; hub apply strips them)
+# Hooks are local only. Hub publish rejects non-empty values, and hub apply strips them.
 PRE_LAUNCH_CMD=""
 POST_LAUNCH_CMD=""
 
@@ -482,9 +482,9 @@ See also CachyOS: [Forcing the Latest DLSS Preset](https://wiki.cachyos.org/conf
 | `DLSS_SWAPPER=1` | CachyOS `dlss-swapper`: NGX updater + latest SR/RR/FG presets at launch |
 | `DLSS_SWAPPER=dll` | Manual DLL replace + `dlss-swapper-dll` (presets only, no NGX) |
 | `PROTON_DLSS_UPGRADE=1` | Proton-CachyOS / GE download latest DLSS into the prefix (needs those forks) |
-| `PROTON_FSR4_UPGRADE=1` | Same forks for FSR4; RDNA3 GPUs auto-use `PROTON_FSR4_RDNA3_UPGRADE` |
+| `PROTON_FSR4_UPGRADE=1` | Same forks for FSR4. RDNA3 GPUs automatically use `PROTON_FSR4_RDNA3_UPGRADE`. |
 | `PROTON_XESS_UPGRADE=1` | Same forks for XeSS |
-| **dlss-updater** | GUI app to replace game-folder DLLs offline — **no CLI**; LaunchLayer detects it and tips only |
+| **dlss-updater** | GUI app to replace game-folder DLLs offline. **No CLI.** LaunchLayer only detects it and prints tips. |
 
 Prefer one DLSS path per game (`DLSS_SWAPPER` *or* `PROTON_DLSS_UPGRADE`) to avoid double upgrades. Do not also list `dlss-swapper` in `LAUNCH_WRAPPERS` when `DLSS_SWAPPER` is set.
 
@@ -493,16 +493,16 @@ Prefer one DLSS path per game (`DLSS_SWAPPER` *or* `PROTON_DLSS_UPGRADE`) to avo
 | Key | Effect |
 |-----|--------|
 | `LD_BIND_NOW=1` | Eager symbol bind (first-call latency) |
-| `DISABLE_VBLANK=1` | Mesa `vblank_mode=0` / immediate present; NVIDIA `__GL_SYNC_TO_VBLANK=0` |
+| `DISABLE_VBLANK=1` | Mesa `vblank_mode=0` / immediate present. NVIDIA uses `__GL_SYNC_TO_VBLANK=0`. |
 | `VKBASALT=1` | `ENABLE_VKBASALT=1` (vkBasalt Vulkan layer) |
-| `LATENCYFLEX=1` | `LFX=1` (LatencyFleX); pair with `DISABLE_VBLANK=1` when possible |
+| `LATENCYFLEX=1` | Set `LFX=1` for LatencyFleX. Pair it with `DISABLE_VBLANK=1` when possible. |
 
 ### Bazzite / Deck identity & FPS caps
 
 | Key | Effect |
 |-----|--------|
-| `DISABLE_STEAM_DECK=1` | `SteamDeck=0` (Bazzite `sd0`) — full graphics menus when Deck mode locks settings |
-| `FRAME_RATE=N` | `DXVK_FRAME_RATE` + `VKD3D_FRAME_RATE` (restart to change; best latency of the FPS-cap methods) |
+| `DISABLE_STEAM_DECK=1` | `SteamDeck=0` (Bazzite `sd0`): full graphics menus when Deck mode locks settings |
+| `FRAME_RATE=N` | Sets `DXVK_FRAME_RATE` and `VKD3D_FRAME_RATE`. Requires a restart to change and has the lowest latency of the FPS-cap methods. |
 
 See [Bazzite launch options](https://docs.bazzite.gg/Gaming/launch-options-env-variables/). Prefer LaunchLayer keys over pasting `sd0` / `dlss-swapper` into Steam when using `"…/launchlayer" %command%`.
 
@@ -518,10 +518,10 @@ Inspect detection: `./launchlayer --detect-environment` (see [docs/cli.md](docs/
 
 ```bash
 ./launchlayer --tui          # always opens the TUI (interactive terminal required)
-launchlayer                  # same when symlinked; also opens TUI with no args when fzf + TTY
+launchlayer                  # same when symlinked, and opens TUI with no args when fzf + TTY
 ```
 
-Requires [fzf](https://github.com/junegunn/fzf) for fuzzy menus with live previews; without it, numbered prompts are used instead.
+Requires [fzf](https://github.com/junegunn/fzf) for fuzzy menus with live previews. Without it, LaunchLayer uses numbered prompts.
 
 <p align="center">
   <img src="docs/assets/tui-main-menu.png" alt="LaunchLayer main menu" width="720">
@@ -532,13 +532,13 @@ Requires [fzf](https://github.com/junegunn/fzf) for fuzzy menus with live previe
 <p align="center">
   <img src="docs/assets/tui-game-picker.png" alt="LaunchLayer game picker with live preview" width="720">
   <br>
-  <em>Game picker — fuzzy search, live config preview, Ctrl-E/Ctrl-D shortcuts</em>
+  <em>Game picker: fuzzy search, live config preview, Ctrl-E/Ctrl-D shortcuts</em>
 </p>
 
 <p align="center">
   <img src="docs/assets/tui-quick-toggles.png" alt="LaunchLayer per-game quick toggles" width="720">
   <br>
-  <em>Quick toggles — inherited vs per-game overrides (green/red)</em>
+  <em>Quick toggles: inherited vs per-game overrides (green/red)</em>
 </p>
 
 **Full menu tree, shortcuts, and preferences:** [docs/tui.md](docs/tui.md) (includes [screenshots](docs/tui.md#screenshots))
@@ -547,11 +547,30 @@ Regenerate screenshots after UI changes: `make tui-screenshots` (requires [VHS](
 
 ---
 
+## MCP server
+
+LaunchLayer includes a local, read-only MCP server for coding agents and desktop assistants:
+
+```json
+{
+  "mcpServers": {
+    "launchlayer": {
+      "command": "/absolute/path/to/launchlayer",
+      "args": ["--mcp"]
+    }
+  }
+}
+```
+
+It exposes game discovery, resolved configuration, paths, cache usage, launch statistics, status, detected defaults, environment checks, diagnostics, and config validation. It cannot launch games or change local or Hub configuration. Python 3 is required. Add `--privacy redacted` to the argument list to suppress local paths and exact hardware identifiers. See [the CLI reference](docs/cli.md#mcp-server) for the full data-sharing boundary.
+
+---
+
 ## Community hub
 
-Share per-game configs and discover settings from **similar machines** (GPU, OS, display tier, profiles, Deck/Flatpak/WSL flags). Optional — local launches do not need the hub. Client: `lib/hub/`; backend: Convex app in `hub/`.
+Share per-game configs and discover settings from **similar machines** (GPU, OS, display tier, profiles, Deck/Flatpak/WSL flags). Optional: local launches do not need the hub. Client: `lib/hub/`; backend: Convex app in `hub/`.
 
-**Setup** — copy the template and set your deployment URL **and** publish token:
+**Setup**: copy the template and set your deployment URL **and** publish token:
 
 ```bash
 mkdir -p ~/.config/launchlayer
@@ -561,7 +580,7 @@ cp share/launchlayer/templates/hub.conf.example ~/.config/launchlayer/hub.conf
 # Optional: machine_label, fingerprint_level (minimal | standard | detailed)
 ```
 
-Hub publish/delete is **fail-closed**: set `HUB_PUBLISH_TOKEN` on the Convex deployment and matching `publish_token` in `hub.conf`. For local open hubs only, set `HUB_ALLOW_OPEN_PUBLISH=1` on the deployment (never in production). Published configs cannot include remote-exec keys (`PRE_LAUNCH_CMD`, wrappers, `OVERRIDE_PROTON`, VRAM-hog controls); hub apply strips those if present. `INCLUDE=` paths must stay under `launch.d/`.
+Hub publish/delete is **fail-closed**. Set `HUB_PUBLISH_TOKEN` on the Convex deployment and the matching `publish_token` in `hub.conf`. For local open hubs only, set `HUB_ALLOW_OPEN_PUBLISH=1` on the deployment. Never set it in production. Published configs cannot include remote-exec keys (`PRE_LAUNCH_CMD`, wrappers, `OVERRIDE_PROTON`, VRAM-hog controls). Hub apply strips those keys if present. `INCLUDE=` paths must stay under `launch.d/`.
 
 Hub rate limiting also fails closed. Route the HTTP actions endpoint through an ingress that overwrites a client-identity header, then set `HUB_TRUSTED_CLIENT_IP_HEADER` to that header name and `HUB_IDENTIFIER_HASH_KEY` to at least 32 random characters. Direct clients must not be able to supply the trusted header.
 
@@ -571,13 +590,13 @@ Also useful without the hub: `--suggest-config APPID|NAME [--apply]` ranks Proto
 
 The TUI exposes hub flows under **Community hub** (main menu) and **[Hub] Community configs** (per-game actions), including viewing history and applying a historical version (also on **Apply config by ID**).
 
-Deploy or develop the backend from `hub/` (Node **22+**, pnpm pinned via `hub/package.json` `packageManager`). The repo root `package.json` is a scripts-only shim (no lockfile) — always install inside `hub/`. Prefer [Vite+](https://viteplus.dev/) (`vp`) when available — it resolves the pinned pnpm. Otherwise enable [Corepack](https://nodejs.org/api/corepack.html) and call pnpm directly. From the repo root you can also use `bash scripts/hub-pm.sh …` / `make test-hub` / `make lint-hub`.
+Deploy or develop the backend from `hub/` (Node **22.13+**, pnpm pinned via `hub/package.json` `packageManager`). The repo root `package.json` is a scripts-only shim (no lockfile): always install inside `hub/`. Prefer [Vite+](https://viteplus.dev/) (`vp`) when available: it resolves the pinned pnpm. Otherwise enable [Corepack](https://nodejs.org/api/corepack.html) and call pnpm directly. From the repo root you can also use `bash scripts/hub-pm.sh …` / `make test-hub` / `make lint-hub`.
 
 ```bash
 cd hub
 # With Vite+ (preferred):
 vp install
-vp run dev              # development — runs convex dev
+vp run dev              # development: runs convex dev
 vp run lint             # ESLint + tsc
 vp run convex:deploy    # production only
 
@@ -589,9 +608,9 @@ pnpm run lint
 pnpm run convex:deploy
 ```
 
-Point `hub_url` in `hub.conf` at your deployment’s HTTP actions URL (e.g. `https://your-deployment.convex.site`).
+Point `hub_url` in `hub.conf` at your deployment's HTTP actions URL (e.g. `https://your-deployment.convex.site`).
 
-See [docs/architecture.md](docs/architecture.md) for similarity weights, fingerprint levels, and HTTP routes. **Do not commit** `hub/.env.local`, `hub/.convex/`, or `hub/node_modules/` — they are gitignored; `make check` runs `check-hub-git` to catch accidental staging.
+See [docs/architecture.md](docs/architecture.md) for similarity weights, fingerprint levels, and HTTP routes. **Do not commit** `hub/.env.local`, `hub/.convex/`, or `hub/node_modules/`. They are gitignored. `make check` runs `check-hub-git` to catch accidental staging.
 
 ---
 
@@ -599,7 +618,7 @@ See [docs/architecture.md](docs/architecture.md) for similarity weights, fingerp
 
 ### vm.max_map_count (Proton)
 
-Elasticsearch’s package sysctl can reset `vm.max_map_count` to `262144`, which breaks some Proton games:
+Elasticsearch's package sysctl can reset `vm.max_map_count` to `262144`, which breaks some Proton games:
 
 ```bash
 ./launchlayer --sysctl install
@@ -609,7 +628,7 @@ sudo sysctl --system
 sysctl -n vm.max_map_count   # expect 2147483642
 ```
 
-> ⓘ Remove `/etc/sysctl.d/99-proton-vm.conf` if present—it is superseded by `elasticsearch.conf`.
+> ⓘ Remove `/etc/sysctl.d/99-proton-vm.conf` if present. `elasticsearch.conf` supersedes it.
 
 Set `VM_MAX_MAP_COUNT_FIX=1` in config to raise the value at launch when passwordless `sudo` is available.
 
@@ -626,9 +645,9 @@ Certain settings (`NETWORK_TUNE=1`, `VM_MAX_MAP_COUNT_FIX=1`, `DISK_TUNE=1`, and
    username ALL=(ALL) NOPASSWD: /usr/sbin/ip, /usr/bin/ethtool, /usr/bin/sysctl, /usr/bin/iw, /usr/sbin/iwconfig, /usr/bin/tee
    ```
 
-   - `ip` / `ethtool` / `sysctl` — bring NIC up, ring buffers, EEE, TCP low-latency, `vm.max_map_count`
-   - `iw` / `iwconfig` — disable Wi‑Fi power save when `DISABLE_WIFI_POWER_SAVE=1`
-   - `tee` — write I/O scheduler under `/sys/block/<dev>/queue/scheduler` when `DISK_TUNE=1` (LaunchLayer validates the path before calling `tee`)
+   - `ip` / `ethtool` / `sysctl`: bring the NIC up, tune ring buffers and EEE, and set `vm.max_map_count`
+   - `iw` / `iwconfig`: disable Wi‑Fi power save when `DISABLE_WIFI_POWER_SAVE=1`
+   - `tee`: write I/O scheduler under `/sys/block/<dev>/queue/scheduler` when `DISK_TUNE=1` (LaunchLayer validates the path before calling `tee`)
 
    Prefer the narrowest paths that exist on your distro (`/usr/sbin/ip` vs `/bin/ip`, etc.).
 
@@ -642,14 +661,14 @@ Installs **irqbalance**, enables **btrfs autodefrag** when applicable, and insta
 
 ### systemd timers
 
-**Maintenance** — stale launch cleanup + cache report (`launchlayer-maintenance.timer`):
+**Maintenance**: stale launch cleanup + cache report (`launchlayer-maintenance.timer`):
 
 ```bash
 ./launchlayer --install-systemd
 # or: ./launchlayer --setup --systemd
 ```
 
-**Backup** — scheduled config export + prune (`launchlayer-backup.timer`; configure `backup.conf` first):
+**Backup**: scheduled config export + prune (`launchlayer-backup.timer`; configure `backup.conf` first):
 
 ```bash
 ./launchlayer --backup-timer install
@@ -663,7 +682,7 @@ Both write user units under `~/.config/systemd/user/` with the resolved script p
 ## Project layout
 
 ```
-launchlayer              # ▶ entry point (bash 4.2+)
+launchlayer              # ▶ entry point (Bash 4.3+)
 launch.d/                # ≡ shipped layers: default.env, profiles/, presets/, *.txt lists
   anticheat-appids.txt   # known EAC/BattlEye AppIDs
   native-appids.txt      # known native Linux AppIDs
@@ -677,7 +696,7 @@ scripts/
   check-staged-hub-secrets.sh
   setup-workstation-tuning.sh
 test/                    # ✓ bats integration + unit tests
-docs/                    # [docs/README.md](docs/README.md) — topic → page map
+docs/                    # [docs/README.md](docs/README.md): topic → page map
   README.md              # docs index + drift checklist
   architecture.md        # module load order, paths, hub API
   cli.md                 # full CLI command reference
@@ -697,7 +716,7 @@ Under `$XDG_STATE_HOME/launchlayer` (default `~/.local/state/launchlayer/`):
 
 | File | Purpose |
 |------|---------|
-| `launch.log` | Structured launch history (rotated; default max 5000 lines) |
+| `launch.log` | Structured launch history. Rotation keeps 5000 lines by default and locks concurrent exit writes when `flock` is available. |
 | `paused-vram-units` | systemd units stopped for VRAM |
 | `paused-vram-pids` | PIDs tracked for VRAM hog pause |
 | `vram-hog-refcount` | Nested launch refcount |
@@ -721,16 +740,16 @@ The script degrades gracefully when tools are missing. Run `--doctor` or `--dete
 | `gamescope` | Compositor upscaling, VRR |
 | `mangohud` | Overlay |
 | `vkbasalt` | Vulkan post-process layer via `VKBASALT=1` |
-| `lsfg-vk` | Frame gen layer via `LSFG_VK=1` (needs owned Lossless Scaling — [third-party](docs/third-party.md)) |
+| `lsfg-vk` | Frame gen layer via `LSFG_VK=1` (needs owned Lossless Scaling: [third-party](docs/third-party.md)) |
 | `obs-vkcapture` / `obs-gamecapture` | Capture wrap via `OBS_VKCAPTURE=1` |
 | `latencyflex` | LatencyFleX layer via `LATENCYFLEX=1` |
 | `conty` | 32-bit container wrap via `CONTY=1` |
 | `protontricks` / `winetricks` | Prefix verbs / winecfg / registry |
 | `replay-sorcery` | Chain-wrapped replay via `REPLAY_CAPTURE=1` |
-| `gpu-screen-recorder` | Preferred external recorder (`REPLAY_TOOL`) — not chain-wrapped |
+| `gpu-screen-recorder` | Preferred external recorder (`REPLAY_TOOL`): not chain-wrapped |
 | `wine-discord-ipc-bridge` | Discord IPC via `DISCORD_IPC=1` |
-| `dlss-swapper` | NGX + latest DLSS presets via `DLSS_SWAPPER=1` ([CachyOS wiki](https://wiki.cachyos.org/configuration/gaming/#forcing-the-latest-dlss-preset); package `cachyos-settings`) |
-| `dlss-updater` | Optional GUI for offline DLL replace (detected/tipped only — no launch CLI) |
+| `dlss-swapper` | NGX + latest DLSS presets through `DLSS_SWAPPER=1`. See the [CachyOS wiki](https://wiki.cachyos.org/configuration/gaming/#forcing-the-latest-dlss-preset). Package: `cachyos-settings`. |
+| `dlss-updater` | Optional GUI for offline DLL replace (detected/tipped only: no launch CLI) |
 | `taskset` | Pin to X3D V-Cache CCD |
 | `nvidia-smi`, `nvidia-settings` | VRAM/power checks |
 | `ethtool` | `NETWORK_TUNE` (ring buffers, EEE) |
@@ -743,8 +762,8 @@ The script degrades gracefully when tools are missing. Run `--doctor` or `--dete
 
 ### Anticheat and native detection
 
-- **`launch.d/anticheat-appids.txt`** — Known EAC/BattlEye AppIDs; guardrails warn on risky settings (`DEBUG=1`, `DXVK_ASYNC`)
-- **`launch.d/native-appids.txt`** — Known native Linux builds; skips Proton env unless `FORCE_PROTON=1`
+- **`launch.d/anticheat-appids.txt`**: Known EAC/BattlEye AppIDs; guardrails warn on risky explicit settings such as `DEBUG=1` and `DXVK_ASYNC=1`
+- **`launch.d/native-appids.txt`**: Known native Linux builds; skips Proton env unless `FORCE_PROTON=1`
 - Heuristics in `lib/steam/detect.sh` also inspect install manifests; `--scan-anticheat` and `--scan-detections` help keep lists accurate
 
 ---
@@ -788,13 +807,13 @@ Hub dependency audits run weekly via `.github/workflows/hub-audit.yml` (or `work
 **Do I need a different launch string per game?**
 No. Use the same `"/path/to/launchlayer" %command%` on every title. Per-game tuning lives in `GAMES_DIR/<AppID>.env`.
 
-**Can I keep `gamemoderun` or `mangohud` in Steam’s launch options?**
-Remove external wrappers from Steam and enable `GAMEMODE=1`, `MANGOHUD=1`, `GAMESCOPE=1`, etc. in config instead — otherwise you get double-wrapped launches.
+**Can I keep `gamemoderun` or `mangohud` in Steam's launch options?**
+Remove external wrappers from Steam and enable `GAMEMODE=1`, `MANGOHUD=1`, `GAMESCOPE=1`, etc. in config instead: otherwise you get double-wrapped launches.
 
 **Steam Overlay / Steam Input broken under nested Gamescope?**
 LaunchLayer clears `LD_PRELOAD` around nested desktop Gamescope by default (`GAMESCOPE_NESTED_FIX`). See [docs/third-party.md § Nested Gamescope](docs/third-party.md#nested-gamescope-scopebuddy-parity) and [docs/cli.md § Gamescope nest](docs/cli.md#gamescope-nest--extras).
 
-**Special K, ReShade, lsfg-vk, Conty — where are licenses and keys?**
+**Special K, ReShade, lsfg-vk, Conty: where are licenses and keys?**
 [docs/third-party.md](docs/third-party.md) (licenses / purchase gates) · [docs/cli.md](docs/cli.md) (keys) · [docs/tui.md § Advanced config](docs/tui.md#advanced-config) (Inject & Wine).
 
 **Does this work with Flatpak Steam?**
@@ -804,7 +823,7 @@ Yes. Installs under `$HOME` usually work as-is; paths outside `$HOME` need a Fla
 No. Local launches, the TUI, backup/restore, and doctor all work without it. The hub is optional for sharing configs with similar machines. Hub strip rules: [docs/architecture.md](docs/architecture.md) · [docs/cli.md § Community hub](docs/cli.md#community-hub).
 
 **Where do per-game configs live?**
-In `~/.local/share/launchlayer/games/<AppID>.env` by default — not in the git repo. See [Configuration](#configuration).
+In `~/.local/share/launchlayer/games/<AppID>.env` by default: not in the git repo. See [Configuration](#configuration).
 
 **Commercial use?**
 This project is [CC BY-NC-SA 4.0](LICENSE). Commercial use requires separate permission from bolens. Third-party tool licenses: [docs/third-party.md](docs/third-party.md).
@@ -827,7 +846,7 @@ make test       # bats only
 - Third-party / inject policy: [docs/third-party.md](docs/third-party.md)
 - Releases: [docs/release_runbook.md](docs/release_runbook.md) · [CHANGELOG.md](CHANGELOG.md)
 - Example per-game config: [examples/games/2357570.env](examples/games/2357570.env)
-- Do not commit `hub/.env.local`, `hub/.convex/`, or publish tokens — `make check-hub-git` catches accidental staging
+- Do not commit `hub/.env.local`, `hub/.convex/`, or publish tokens: `make check-hub-git` catches accidental staging
 
 ---
 
@@ -845,7 +864,7 @@ make test       # bats only
 
 ## License
 
-[CC BY-NC-SA 4.0](LICENSE) — non-commercial use with attribution; derivatives must use the same license.
+[CC BY-NC-SA 4.0](LICENSE): non-commercial use with attribution. Derivatives must use the same license.
 
 Third-party tools keep their own licenses. See [docs/third-party.md](docs/third-party.md) for upstream links, SPDX notes, purchase gates (e.g. Lossless Scaling for lsfg-vk), and redistrib rules. LaunchLayer never vendors proprietary/GPL binaries into this repository.
 
