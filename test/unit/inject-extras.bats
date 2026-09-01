@@ -330,6 +330,7 @@ setup() {
 	run bash -c '
 		export CONFIG_DIR="'"$CONFIG_DIR"'"
 		source "'"$CONFIG_DIR"'/lib/common.sh"
+		source "'"$CONFIG_DIR"'/lib/keys.sh"
 		source "'"$CONFIG_DIR"'/lib/commands/hub/context.sh"
 		hub_is_untrusted_env_key SPECIAL_K_SOURCE && echo sk
 		hub_is_untrusted_env_key SPECIALTY_RUNTIME && echo specialty

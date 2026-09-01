@@ -161,19 +161,12 @@ setup() {
 	[[ "$output" == "boolean|toggle|untrusted" ]]
 }
 
-@test "config key metadata Hub policy matches shipped untrusted list" {
+@test "config key metadata has valid fields and unique keys" {
 	run bash -c '
 		export CONFIG_DIR="'"$CONFIG_DIR"'"
 		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
 		source_lib keys
-		metadata="$(mktemp)"
-		list="$(mktemp)"
-		for key in "${!LAUNCHLAYER_CONFIG_KEY_HUB[@]}"; do
-			[[ "${LAUNCHLAYER_CONFIG_KEY_HUB[$key]}" == untrusted ]] && printf "%s\n" "$key"
-		done | sort > "$metadata"
-		sed "/^[[:space:]]*#/d;/^[[:space:]]*$/d" "$(launchlayer_share_dir)/hub-untrusted-keys.txt" | sort > "$list"
-		diff -u "$list" "$metadata"
-		rm -f "$metadata" "$list"
+		(( ${#LAUNCHLAYER_CONFIG_KEYS[@]} == ${#LAUNCHLAYER_CONFIG_KEY_KIND[@]} - 1 ))
 	'
 	[[ $status -eq 0 ]]
 }

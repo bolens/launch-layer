@@ -22,9 +22,9 @@ import {
 import { sampleFingerprint } from "./fixtures";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "../../..");
-const UNTRUSTED_KEYS_FILE = join(
+const CONFIG_KEYS_FILE = join(
   REPO_ROOT,
-  "share/launchlayer/hub-untrusted-keys.txt",
+  "share/launchlayer/config-keys.tsv",
 );
 
 const VALID_HASH = "a".repeat(64);
@@ -127,18 +127,20 @@ describe("validatePublishSubmission", () => {
     );
   });
 
-  it("matches share/launchlayer/hub-untrusted-keys.txt", () => {
-    const raw = readFileSync(UNTRUSTED_KEYS_FILE, "utf8");
+  it("matches untrusted policies in config-keys.tsv", () => {
+    const raw = readFileSync(CONFIG_KEYS_FILE, "utf8");
     const fromFile = new Set(
       raw
         .split("\n")
-        .map((line) => line.replace(/#.*$/, "").trim())
+        .map((line) => line.replace(/#.*$/, "").trim().split("\t"))
+        .filter((columns) => columns.length === 5 && columns[4] === "untrusted")
+        .map((columns) => columns[0])
         .filter(Boolean),
     );
     assert.deepEqual(
       [...HUB_UNTRUSTED_ENV_KEYS].sort(),
       [...fromFile].sort(),
-      "Convex HUB_UNTRUSTED_ENV_KEYS drifted from hub-untrusted-keys.txt",
+      "Convex HUB_UNTRUSTED_ENV_KEYS drifted from config-keys.tsv",
     );
   });
 

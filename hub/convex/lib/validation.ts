@@ -186,7 +186,8 @@ function assertFiniteNumber(
 /**
  * Keys that must not appear with a non-empty value in published hub configs.
  * Remote clients eval or execute these on apply/launch (RCE / local damage).
- * Keep in sync with share/launchlayer/hub-untrusted-keys.txt (asserted in tests).
+ * Keep in sync with the hub column in share/launchlayer/config-keys.tsv.
+ * This is asserted in tests because Convex cannot read repository files at runtime.
  */
 export const HUB_UNTRUSTED_ENV_KEYS = new Set([
   "PRE_LAUNCH_CMD",
