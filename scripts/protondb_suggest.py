@@ -288,9 +288,7 @@ def parse_launch_options(options_str):
                 # Ignore generic paths or binaries like LD_PRELOAD=/usr/lib/libtcmalloc.so (though let's keep others)
                 if not (key == "LD_PRELOAD" and "tcmalloc" in val):
                     env_vars[key] = val
-        elif command_index == len(tokens) and (token.startswith('-') or token.startswith('+')):
-            extra_args.append(token)
-            
+
     return wrappers, env_vars, extra_args
 
 def match_version(suggested, installed):
@@ -340,6 +338,14 @@ def match_version(suggested, installed):
             return matching_inst[-1]
             
     return None
+
+
+def proton_matches(suggested, installed, report_count, vote_score, total_score):
+    installed_match = match_version(suggested, installed)
+    accepted_match = installed_match
+    if report_count < 2 or total_score <= 0 or vote_score / total_score < 0.35:
+        accepted_match = None
+    return installed_match, accepted_match
 
 def sort_scored_reports(scored_reports):
     """Rank by match score, then newest report, independent of API order."""
@@ -658,13 +664,14 @@ def main():
     installed_proton_tools = list_installed_proton_tools(steam_root)
     
     suggested_proton = None
+    installed_proton_match = None
     matched_installed_proton = None
     if sorted_proton:
         suggested_proton = sorted_proton[0][0]
-        matched_installed_proton = match_version(suggested_proton, installed_proton_tools)
-        if (proton_report_counts[suggested_proton] < 2
-                or proton_votes[suggested_proton] / total_score < 0.35):
-            matched_installed_proton = None
+        installed_proton_match, matched_installed_proton = proton_matches(
+            suggested_proton, installed_proton_tools,
+            proton_report_counts[suggested_proton],
+            proton_votes[suggested_proton], total_score)
         
     # Render Output
     print(f"\n{BOLD}{CYAN}=== ProtonDB Tuning Engine ==={RESET}")
@@ -680,6 +687,8 @@ def main():
         print(f"  --> {BOLD}{suggested_proton}{RESET} ({pct}% match weight)")
         if matched_installed_proton:
             print(f"      {GREEN}Installed and matched: '{matched_installed_proton}'{RESET}")
+        elif installed_proton_match:
+            print(f"      {YELLOW}Installed as '{installed_proton_match}', but lacks enough fresh matching reports{RESET}")
         else:
             # check if any GE tool matches
             if "ge" in suggested_proton.lower():

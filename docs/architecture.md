@@ -190,7 +190,7 @@ ProtonDB suggestions (client-side, no hub required):
 
 | `--suggest-config APPID\|NAME [--apply]` | Rank ProtonDB reports for this machine and optionally write allowlisted knobs |
 
-Report ranking uses a deterministic score, recency tie-break, and numeric Proton version ordering. Automatic changes use reports from the last year, require corroboration, validate keys and values against a strict policy, keep complete post-`%command%` argument groups, and skip Proton overrides for native games. Older reports remain available as read-only context.
+Report ranking uses a deterministic score, recency tie-break, and numeric Proton version ordering. Automatic changes use reports from the last year, require corroboration, validate keys and values against a strict policy, keep complete post-`%command%` argument groups, and skip Proton overrides for native games unless the effective config sets `FORCE_PROTON=1`. Reports without `%command%` cannot supply game arguments. Older reports remain available as read-only context.
 
 Applied entries are marked as ProtonDB-managed. Future runs reconcile only those marked entries under the same per-game lock used by CLI and TUI config edits; unmarked settings remain user-owned.
 
