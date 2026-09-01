@@ -9,6 +9,32 @@ permissions:
   contents: read
 
 jobs:
+  bash-minimum:
+    name: Bash 4.3 minimum
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build pinned Bash 4.3.30
+        env:
+          BASH_ARCHIVE_SHA256: 317881019bbf2262fb814b7dd8e40632d13c3608d2f237800a8828fbb8a640dd
+        run: |
+          curl --fail --location --silent --show-error --output /tmp/bash-4.3.30.tar.gz https://ftp.gnu.org/gnu/bash/bash-4.3.30.tar.gz
+          echo "$BASH_ARCHIVE_SHA256  /tmp/bash-4.3.30.tar.gz" | sha256sum --check
+          tar -C /tmp -xzf /tmp/bash-4.3.30.tar.gz
+          cd /tmp/bash-4.3.30
+          CC=gcc CFLAGS=-std=gnu89 ./configure --prefix=/tmp/bash-4.3-install --without-bash-malloc
+          make -j2
+          make install
+
+      - name: Syntax and entrypoint smoke tests
+        run: |
+          find launchlayer lib scripts -type f \( -name '*.sh' -o -name 'launchlayer' \) -print0 | xargs -0 -n1 /tmp/bash-4.3-install/bin/bash -n
+          /tmp/bash-4.3-install/bin/bash ./launchlayer --version
+          /tmp/bash-4.3-install/bin/bash ./launchlayer --help >/dev/null
+          printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{}}}' | /tmp/bash-4.3-install/bin/bash ./launchlayer --mcp | grep -q '"name":"launchlayer"'
+
   shellcheck:
     runs-on: ubuntu-latest
     timeout-minutes: 10
