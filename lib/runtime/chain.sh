@@ -4,6 +4,14 @@
 [[ -n "${LAUNCHLAYER_RUNTIME_CHAIN_LOADED:-}" ]] && return 0
 LAUNCHLAYER_RUNTIME_CHAIN_LOADED=1
 
+gamescope_supports_option() {
+	local option=$1
+	if [[ -z "${LAUNCHLAYER_GAMESCOPE_HELP_CACHE+x}" ]]; then
+		LAUNCHLAYER_GAMESCOPE_HELP_CACHE="$(gamescope --help 2>&1 || true)"
+	fi
+	grep -Fq -- "$option" <<< "$LAUNCHLAYER_GAMESCOPE_HELP_CACHE"
+}
+
 # append_launch_wrappers_from — Append installed binaries from a wrapper list to launch[].
 append_launch_wrappers_from() {
 	local wrappers=$1 wrapper
@@ -136,10 +144,18 @@ build_launch_chain() {
 			launch+=(--filter "${GAMESCOPE_FILTER}")
 		fi
 		if [[ -n "${GAMESCOPE_RESHADE_EFFECT:-}" ]]; then
-			launch+=(--reshade-effect "${GAMESCOPE_RESHADE_EFFECT}")
+			if gamescope_supports_option --reshade-effect; then
+				launch+=(--reshade-effect "${GAMESCOPE_RESHADE_EFFECT}")
+			else
+				warn "installed gamescope does not support --reshade-effect; setting skipped"
+			fi
 		fi
 		if [[ -n "${GAMESCOPE_RESHADE_TECHNIQUE:-}" ]]; then
-			launch+=(--reshade-technique-idx "${GAMESCOPE_RESHADE_TECHNIQUE}")
+			if gamescope_supports_option --reshade-technique-idx; then
+				launch+=(--reshade-technique-idx "${GAMESCOPE_RESHADE_TECHNIQUE}")
+			else
+				warn "installed gamescope does not support --reshade-technique-idx; setting skipped"
+			fi
 		fi
 		if [[ -n "${GAMESCOPE_FOCUSED_FPS:-}" ]]; then
 			# Newer gamescope: --fps-limit; keep as focused when only one set.

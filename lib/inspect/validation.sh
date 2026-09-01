@@ -143,6 +143,13 @@ validate_single_config_file() {
 			echo "$file:$line_num: unknown key: $key"
 			((issues++)) || true
 		fi
+		if [[ "$(config_key_kind "$key")" == enum ]]; then
+			value="${value#\"}"; value="${value%\"}"
+			if [[ -n "$value" ]] && ! config_key_enum_value_known "$key" "$value"; then
+				echo "$file:$line_num: $key must be one of: $(config_key_enum_values "$key") (got: $value)"
+				((issues++)) || true
+			fi
+		fi
 		case "$key" in
 			LAUNCH_WRAPPERS|LAUNCH_WRAPPERS_BEFORE)
 				local wrapper
@@ -162,26 +169,19 @@ validate_single_config_file() {
 					((issues++)) || true
 				fi
 				;;
-			GPU_SELECT)
+			GAMESCOPE_W|GAMESCOPE_H|GAMESCOPE_R|GAMESCOPE_FRAME_LIMIT|GAMESCOPE_FOCUSED_FPS|GAMESCOPE_UNFOCUSED_FPS)
 				value="${value#\"}"; value="${value%\"}"
-				case "${value,,}" in
-					""|auto|discrete|nvidia|amd|intel) ;;
-					*)
-						echo "$file:$line_num: GPU_SELECT must be auto, discrete, nvidia, amd, or intel (got: $value)"
-						((issues++)) || true
-						;;
-				esac
+				if [[ -n "$value" && ! "$value" =~ ^[1-9][0-9]*$ ]]; then
+					echo "$file:$line_num: $key must be a positive integer (got: $value)"
+					((issues++)) || true
+				fi
 				;;
-			OPTISCALER_PROXY)
+			GAMESCOPE_FSR_SHARPNESS)
 				value="${value#\"}"; value="${value%\"}"
-				[[ "${value,,}" == *.dll ]] && value="${value%.dll}"
-				case "${value,,}" in
-					dxgi|winmm|version|dbghelp|d3d12|wininet|winhttp|optiscaler|optiscaler.asi) ;;
-					*)
-						echo "$file:$line_num: unsupported OPTISCALER_PROXY: $value"
-						((issues++)) || true
-						;;
-				esac
+				if [[ ! "$value" =~ ^[0-9]+$ || "$value" -gt 20 ]]; then
+					echo "$file:$line_num: GAMESCOPE_FSR_SHARPNESS must be an integer from 0 to 20 (got: $value)"
+					((issues++)) || true
+				fi
 				;;
 			SPECIAL_K_DLL|RESHADE_DLL)
 				value="${value#\"}"; value="${value%\"}"

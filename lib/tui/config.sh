@@ -237,8 +237,7 @@ tui_advanced_key_prompt() {
 # tui_edit_advanced_key — Prompt (or picker) and validate one advanced key for an appid.
 tui_edit_advanced_key() {
 	local appid=$1 key=$2 picked file
-	case "$key" in
-		SPECIALTY_RUNTIME|REPLAY_TOOL|GAMESCOPE_FILTER|GAMESCOPE_ADAPTIVE_SYNC|DLSS_SWAPPER|GPU_SELECT|OPTISCALER_PROXY)
+	if [[ "$(config_key_kind "$key")" == enum ]]; then
 			picked="$(tui_pick_enum_key "$key")" || return 0
 			tui_ensure_appid_env "$appid"
 			file="$(tui_appid_env_path "$appid")"
@@ -246,7 +245,8 @@ tui_edit_advanced_key() {
 			tui_panel_note "Set $key=${picked:-<empty>}" "Config"
 			tui_validate_game_config_brief "$appid"
 			return 0
-			;;
+	fi
+	case "$key" in
 		FWS)
 			# Keep alias in sync with the preferred long name when editing from Advanced.
 			tui_prompt_env_key "$appid" "$key" "$(tui_advanced_key_prompt "$key")"

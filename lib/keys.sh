@@ -13,6 +13,7 @@ LAUNCHLAYER_SUMMARY_KEYS=()
 declare -gA LAUNCHLAYER_CONFIG_KEY_KIND=()
 declare -gA LAUNCHLAYER_CONFIG_KEY_TUI=()
 declare -gA LAUNCHLAYER_CONFIG_KEY_HUB=()
+declare -gA LAUNCHLAYER_CONFIG_KEY_ENUM_VALUES=()
 
 launchlayer_load_config_key_metadata() {
 	local file candidate key kind tui summary hub
@@ -64,6 +65,40 @@ launchlayer_load_config_key_metadata() {
 
 launchlayer_load_config_key_metadata || return 1
 
+launchlayer_load_config_enum_metadata() {
+	local file candidate key values
+	file=""
+	for candidate in \
+		"$(launchlayer_share_dir)/config-enums.tsv" \
+		"${LIB_DIR:+$LIB_DIR/../share/launchlayer/config-enums.tsv}" \
+		"${SCRIPT_DIR:+$SCRIPT_DIR/share/launchlayer/config-enums.tsv}"; do
+		if [[ -r "$candidate" ]]; then
+			file=$candidate
+			break
+		fi
+	done
+	[[ -r "$file" ]] || {
+		echo "launchlayer: missing config enum metadata" >&2
+		return 1
+	}
+	while IFS=$'\t' read -r key values; do
+		[[ -n "$key" && "$key" != \#* ]] || continue
+		[[ "${LAUNCHLAYER_CONFIG_KEY_KIND[$key]:-}" == enum && -n "$values" ]] || {
+			echo "launchlayer: invalid enum metadata entry: $key" >&2
+			return 1
+		}
+		LAUNCHLAYER_CONFIG_KEY_ENUM_VALUES["$key"]=$values
+	done < "$file"
+	for key in "${LAUNCHLAYER_CONFIG_KEYS[@]}"; do
+		[[ "${LAUNCHLAYER_CONFIG_KEY_KIND[$key]}" != enum || -n "${LAUNCHLAYER_CONFIG_KEY_ENUM_VALUES[$key]:-}" ]] || {
+			echo "launchlayer: missing enum values for config key: $key" >&2
+			return 1
+		}
+	done
+}
+
+launchlayer_load_config_enum_metadata || return 1
+
 config_key_kind() {
 	printf '%s' "${LAUNCHLAYER_CONFIG_KEY_KIND[$1]:-unknown}"
 }
@@ -74,6 +109,20 @@ config_key_tui_surface() {
 
 config_key_hub_policy() {
 	printf '%s' "${LAUNCHLAYER_CONFIG_KEY_HUB[$1]:-trusted}"
+}
+
+config_key_enum_values() {
+	printf '%s' "${LAUNCHLAYER_CONFIG_KEY_ENUM_VALUES[$1]:-}"
+}
+
+config_key_enum_value_known() {
+	local key=$1 sought=${2,,} value
+	local -a values=()
+	IFS='|' read -ra values <<< "${LAUNCHLAYER_CONFIG_KEY_ENUM_VALUES[$key]:-}"
+	for value in "${values[@]}"; do
+		[[ "${value,,}" == "$sought" ]] && return 0
+	done
+	return 1
 }
 
 # known_config_key — Return 0 if key is a recognized launch.d setting.
