@@ -9,6 +9,8 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-09-01
+
 ### Added
 
 - Add managed OptiScaler and OpenComposite layers, hybrid-GPU selection, and native Gamescope ReShade controls.
