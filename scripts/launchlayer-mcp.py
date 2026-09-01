@@ -2,7 +2,9 @@
 """Dependency-free, read-only MCP stdio server for LaunchLayer."""
 
 import json
+import math
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -15,6 +17,7 @@ MODERN_PROTOCOL_VERSION = "2026-07-28"
 LEGACY_PROTOCOL_VERSIONS = ("2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05")
 PROTOCOL_VERSION_META = "io.modelcontextprotocol/protocolVersion"
 CLIENT_CAPABILITIES_META = "io.modelcontextprotocol/clientCapabilities"
+CLIENT_INFO_META = "io.modelcontextprotocol/clientInfo"
 SERVER_INFO_META = "io.modelcontextprotocol/serverInfo"
 MAX_REQUEST_BYTES = 1024 * 1024
 MAX_RESULT_BYTES = 4 * 1024 * 1024
@@ -22,7 +25,8 @@ ROOT = Path(__file__).resolve().parent.parent
 LAUNCHLAYER = ROOT / "launchlayer"
 OUTPUT_LOCK = threading.Lock()
 RUNNING_LOCK = threading.Lock()
-RUNNING: Dict[Any, subprocess.Popen] = {}
+RUNNING: Dict[Any, Any] = {}
+PENDING = set()
 CANCELLED = set()
 WORKERS: List[threading.Thread] = []
 
@@ -154,6 +158,14 @@ def valid_text(value: Any, name: str, default: Optional[str] = None) -> Optional
 	return value
 
 
+def truncate_utf8(value: str, maximum_bytes: int) -> str:
+	"""Bound text by encoded size without returning a partial UTF-8 sequence."""
+	encoded = value.encode("utf-8")
+	if len(encoded) <= maximum_bytes:
+		return value
+	return encoded[:maximum_bytes].decode("utf-8", errors="ignore")
+
+
 def command_for(name: str, arguments: Dict[str, Any]) -> List[str]:
 	if not isinstance(arguments, dict):
 		raise ValueError("arguments must be an object")
@@ -240,7 +252,10 @@ def call_tool(name: str, arguments: Dict[str, Any], request_id: Any = None) -> D
 		RUNNING[request_id] = process
 		cancelled = request_id in CANCELLED
 	if cancelled:
-		process.terminate()
+		try:
+			process.terminate()
+		except OSError:
+			pass
 	try:
 		stdout_raw, stderr_raw = process.communicate(timeout=45)
 	except subprocess.TimeoutExpired:
@@ -263,7 +278,7 @@ def call_tool(name: str, arguments: Dict[str, Any], request_id: Any = None) -> D
 		return {"content": [{"type": "text", "text": "LaunchLayer result exceeded 4 MiB"}], "isError": True}
 	if process.returncode != 0:
 		message = stderr or stdout or "LaunchLayer command failed with exit %d" % process.returncode
-		return {"content": [{"type": "text", "text": message[:MAX_RESULT_BYTES]}], "isError": True}
+		return {"content": [{"type": "text", "text": truncate_utf8(message, MAX_RESULT_BYTES)}], "isError": True}
 	try:
 		data = json.loads(stdout)
 	except json.JSONDecodeError:
@@ -290,34 +305,81 @@ def redact_data(value: Any, key: str = "") -> Any:
 		return {child_key: redact_data(child_value, child_key) for child_key, child_value in value.items()}
 	if isinstance(value, list):
 		return [redact_data(item, key) for item in value]
-	if isinstance(value, str) and (value.startswith("/") or value.startswith("~/")):
+	if isinstance(value, str) and (
+		value.startswith(("/", "~/", "file://", "\\\\"))
+		or re.match(r"^[A-Za-z]:[\\/]", value)
+	):
 		return "[redacted]"
 	return value
 
 
-def modern_request(request: Dict[str, Any]) -> bool:
+def request_metadata(request: Dict[str, Any]) -> Dict[str, Any]:
 	params = request.get("params", {})
 	if not isinstance(params, dict):
-		return False
+		return {}
 	metadata = params.get("_meta", {})
-	return isinstance(metadata, dict) and metadata.get(PROTOCOL_VERSION_META) == MODERN_PROTOCOL_VERSION
+	return metadata if isinstance(metadata, dict) else {}
+
+
+def valid_request_id(value: Any) -> bool:
+	"""Accept only JSON-RPC scalar IDs that are safe as map keys."""
+	if value is None or isinstance(value, str):
+		return True
+	if isinstance(value, bool) or not isinstance(value, (int, float)):
+		return False
+	return not isinstance(value, float) or math.isfinite(value)
+
+
+def validate_modern_envelope(request: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+	metadata = request_metadata(request)
+	version = metadata.get(PROTOCOL_VERSION_META)
+	if version != MODERN_PROTOCOL_VERSION:
+		return {
+			"code": -32022,
+			"message": "Unsupported protocol version",
+			"data": {"supportedVersions": [MODERN_PROTOCOL_VERSION]},
+		}
+	if not isinstance(metadata.get(CLIENT_CAPABILITIES_META), dict):
+		return {
+			"code": -32021,
+			"message": "Missing required client capability metadata",
+			"data": {"required": [CLIENT_CAPABILITIES_META]},
+		}
+	return None
 
 
 def handle(request: Dict[str, Any], initialized: bool) -> bool:
 	method = request.get("method")
 	request_id = request.get("id")
-	modern = method == "server/discover" or modern_request(request)
+	metadata = request_metadata(request)
+	modern = method == "server/discover" or any(
+		key in metadata for key in (
+			PROTOCOL_VERSION_META, CLIENT_CAPABILITIES_META, CLIENT_INFO_META,
+		)
+	)
 	if method == "notifications/cancelled":
 		params = request.get("params", {})
 		cancel_id = params.get("requestId") if isinstance(params, dict) else None
+		if not valid_request_id(cancel_id):
+			return initialized
 		with RUNNING_LOCK:
+			if cancel_id not in PENDING and cancel_id not in RUNNING:
+				return initialized
 			CANCELLED.add(cancel_id)
 			process = RUNNING.get(cancel_id)
 		if process is not None:
-			process.terminate()
+			try:
+				process.terminate()
+			except OSError:
+				pass
 		return initialized
 	if "id" not in request:
 		return initialized
+	if modern:
+		envelope_error = validate_modern_envelope(request)
+		if envelope_error is not None:
+			response(request_id, **envelope_error)
+			return initialized
 	if method == "server/discover":
 		privacy = os.environ.get("LAUNCHLAYER_MCP_PRIVACY_MODE", "standard")
 		response(request_id, {
@@ -348,22 +410,45 @@ def handle(request: Dict[str, Any], initialized: bool) -> bool:
 	elif method == "ping":
 		response(request_id, {}, modern=modern)
 	elif method == "tools/list":
-		response(request_id, {"tools": TOOLS}, modern=modern)
+		result: Dict[str, Any] = {"tools": TOOLS}
+		if modern:
+			result.update({"ttlMs": 3600000, "cacheScope": "public"})
+		response(request_id, result, modern=modern)
 	elif method == "tools/call":
 		params = request.get("params", {})
 		if not isinstance(params, dict) or not isinstance(params.get("name"), str):
 			response(request_id, code=-32602, message="Invalid tools/call parameters")
 			return initialized
+		with RUNNING_LOCK:
+			if request_id in PENDING or request_id in RUNNING:
+				response(request_id, code=-32600, message="Duplicate in-flight request ID")
+				return initialized
+			PENDING.add(request_id)
 		def run_tool_request() -> None:
 			try:
-				result = call_tool(params["name"], params.get("arguments", {}), request_id)
-			except KeyError:
-				response(request_id, code=-32602, message="Unknown tool: %s" % params["name"])
-				return
-			response(request_id, result, modern=modern)
+				try:
+					result = call_tool(params["name"], params.get("arguments", {}), request_id)
+				except KeyError:
+					response(request_id, code=-32602, message="Unknown tool: %s" % params["name"])
+					return
+				except OSError:
+					response(request_id, code=-32603, message="LaunchLayer tool process could not start")
+					return
+				response(request_id, result, modern=modern)
+			finally:
+				with RUNNING_LOCK:
+					PENDING.discard(request_id)
+					CANCELLED.discard(request_id)
 		worker = threading.Thread(target=run_tool_request, name="mcp-tool-%s" % request_id)
-		WORKERS.append(worker)
-		worker.start()
+		try:
+			worker.start()
+		except RuntimeError:
+			with RUNNING_LOCK:
+				PENDING.discard(request_id)
+				CANCELLED.discard(request_id)
+			response(request_id, code=-32603, message="LaunchLayer tool worker could not start")
+		else:
+			WORKERS.append(worker)
 	else:
 		response(request_id, code=-32601, message="Method not found: %s" % method)
 	return initialized
@@ -378,10 +463,15 @@ def main() -> int:
 			continue
 		try:
 			request = json.loads(raw_line)
-			if not isinstance(request, dict) or request.get("jsonrpc") != "2.0":
-				raise ValueError
-		except (json.JSONDecodeError, UnicodeDecodeError, ValueError):
+		except (json.JSONDecodeError, UnicodeDecodeError):
 			response(None, code=-32700, message="Parse error")
+			continue
+		request_id = request.get("id") if isinstance(request, dict) else None
+		if not isinstance(request, dict) or request.get("jsonrpc") != "2.0" \
+				or not isinstance(request.get("method"), str) \
+				or ("id" in request and not valid_request_id(request_id)):
+			response(request_id if valid_request_id(request_id) else None,
+				code=-32600, message="Invalid Request")
 			continue
 		initialized = handle(request, initialized)
 	for worker in WORKERS:

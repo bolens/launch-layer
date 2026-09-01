@@ -16,5 +16,9 @@ sed \
 	"$SCRIPT_DIR/mcp-inspector.json.in" > "$config"
 
 npx --yes "@modelcontextprotocol/inspector@$INSPECTOR_VERSION" --cli \
-	--config "$config" --server launchlayer --method tools/list \
+	--config "$config" --server launchlayer-legacy --method tools/list \
+	--strict --format json >/dev/null
+
+npx --yes "@modelcontextprotocol/inspector@$INSPECTOR_VERSION" --cli \
+	--config "$config" --server launchlayer-modern --method tools/list \
 	--strict --format json >/dev/null
