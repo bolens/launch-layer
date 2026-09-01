@@ -24,7 +24,16 @@ hub_recommend_configs() {
 		echo "Usage: launchlayer --hub-recommend APPID|NAME [--limit N] [--json]" >&2
 		return 1
 	}
-	[[ "$appid" =~ ^[0-9]+$ ]] || appid="$(resolve_appid_arg "$appid")" || return $?
+	if [[ "$appid" =~ ^[0-9]+$ ]]; then
+		if declare -f find_app_manifest >/dev/null 2>&1 \
+			&& find_app_manifest "$appid" >/dev/null 2>&1 \
+			&& ! is_installed_game_appid "$appid"; then
+			echo "AppID $appid is an installed Steam tool, not a game." >&2
+			return 1
+		fi
+	else
+		appid="$(resolve_appid_arg "$appid")" || return $?
+	fi
 
 	command_required_or_fail curl "Hub recommend" || return 1
 	hub_require_url || return 1
