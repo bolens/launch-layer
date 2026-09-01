@@ -56,9 +56,9 @@ String and numeric keys, grouped:
 | Change INCLUDE preset | `INCLUDE=presets/…` |
 | Proton & tools | `OVERRIDE_PROTON`, `DLSS_SWAPPER` (picker), `FRAME_RATE`, `ENABLE_HDR`, `MALLOC_ALLOCATOR`, `SPECIALTY_RUNTIME` (picker) |
 | Gamescope | `GAMESCOPE_W/H/R`, FSR sharpness, `GAMESCOPE_ADAPTIVE_SYNC` (picker: empty/`auto`/`0`/`1`), extra args, output/frame limits, filter, native ReShade effect/technique, focused/unfocused FPS |
-| Inject & Wine | vkBasalt/lsfg paths, winetricks verbs, Special K / ReShade / OptiScaler / Depth3D / FWS / Conty / OpenVR sources, ValvePlug paths, fetch URL/version |
+| Inject & Wine | vkBasalt/lsfg paths, winetricks verbs, Special K / ReShade / OptiScaler proxy picker / Depth3D / FWS / Conty / OpenVR sources, ValvePlug paths, fetch URL/version |
 | Shader & storage | `SHADER_CACHE_MAX_GB`, `SHADER_CACHE_BOOST_GB`, `SHADER_CACHE_CHECK_INTERVAL_HOURS`, `COMPATDATA_MAX_GB`, `VM_MAX_MAP_COUNT_MIN` |
-| Affinity & network | `X3D_CPUS`, `CPU_AFFINITY_RANGE`, `GAME_NIC`, `GPU_SELECT`, `GPU_SELECT_DRIVER` |
+| Affinity & network | `X3D_CPUS`, `CPU_AFFINITY_RANGE`, `GAME_NIC`, `GPU_SELECT` picker, `GPU_SELECT_DRIVER` |
 | VRAM & preflight | `VRAM_HOG_UNITS`, `VRAM_HOG_PIDS`, `VRAM_PREFLIGHT_MIN_MB`, `DISK_PREFLIGHT_MIN_GB`, `GPU_VRAM_PROCESS_MIN_MB` |
 | HUD & hooks | MangoHUD config paths, `PRE_LAUNCH_CMD` / `POST_LAUNCH_CMD`, `REPLAY_TOOL` (picker), crash-guess timeout (`CRASH_GUESS=1` defaults to 5s) |
 | Wrappers & args | `GAME_EXTRA_ARGS`, `LAUNCH_WRAPPERS`, `LAUNCH_WRAPPERS_BEFORE`, `UNSET_VARS` |

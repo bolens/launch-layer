@@ -9,6 +9,19 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Add managed OptiScaler and OpenComposite layers, hybrid-GPU selection, and native Gamescope ReShade controls.
+
+### Security
+
+- Reject unsafe injector destinations, tracking identifiers, and archive traversal or link entries before modifying game files.
+
+### Fixed
+
+- Restore tracked injections after signals, early launch failures, and watchdog recovery from force-quit sessions.
+- Clean global ValvePlug tracking and expose typed GPU and OptiScaler choices in the TUI.
+
 ## [0.13.2] - 2026-09-01
 
 ### Changed
