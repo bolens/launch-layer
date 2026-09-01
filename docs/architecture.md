@@ -1,6 +1,6 @@
 # LaunchLayer architecture
 
-LaunchLayer is a bash orchestration layer for Steam game launches. The repo separates **shipped config**, **user data**, and **runtime state**.
+LaunchLayer is a Bash orchestrator for Steam game launches. The repository keeps shipped configuration, user data, and runtime state separate.
 
 [Docs index](README.md) · [README](../README.md) · [CLI](cli.md) · [TUI](tui.md) · [Architecture](architecture.md) · [Third-party](third-party.md) · [Release](release_runbook.md) · [Changelog](../CHANGELOG.md)
 
@@ -55,11 +55,11 @@ Matches `load_launch_config` in `lib/config.sh`:
 | 3 | `launch.d/presets/*.env` | Per-game `INCLUDE=` **or** auto `standard`/`native` when no `GAMES_DIR/<AppID>.env` |
 | 4 | `games/<AppID>.env` | Per-game overrides in `GAMES_DIR` |
 
-If a per-game file exists, auto `standard`/`native` is **not** loaded, only that file (+ optional `INCLUDE=` chain).
+If a per-game file exists, LaunchLayer does not load the automatic `standard` or `native` preset. It loads the per-game file and its optional `INCLUDE=` chain.
 
 After file layers, `apply_defaults` and `apply_detected_defaults` fill unset keys.
 
-Per-game `INCLUDE=` loads the preset **under** that file's keys (preset first, then per-game overrides). `INCLUDE=` paths must be relative under `launch.d/`: absolute paths and `..` segments are rejected (validation + loader).
+Per-game `INCLUDE=` loads the preset before the file's own keys, so the per-game values win. Paths must remain under `launch.d/`; validation and loading reject absolute paths and `..` segments.
 
 ## CLI and TUI parity
 
@@ -232,7 +232,7 @@ publish_token=<your-token>
 # cd hub && npx convex env set HUB_ALLOW_OPEN_PUBLISH 1
 ```
 
-Recommend, similar-machines, and config download stay public (no token required). Published `env_content` / settings may not set remote-exec or game-mutating keys listed in [`share/launchlayer/hub-untrusted-keys.txt`](../share/launchlayer/hub-untrusted-keys.txt) (wrappers, `OVERRIDE_PROTON`, VRAM-hog controls, Conty, specialty runtimes, winetricks/registry, Special K / ReShade / inject paths, VR inject toggles, Block Internet, …). Convex `HUB_UNTRUSTED_ENV_KEYS` must match that file. `--hub-apply` strips those keys and unsafe `INCLUDE=` lines before writing a local file. Config import rejects tarballs whose members use absolute or `..` paths.
+Recommend, similar-machines, and config download stay public (no token required). Published `env_content` / settings may not set remote-exec or game-mutating keys marked `untrusted` in [`share/launchlayer/config-keys.tsv`](../share/launchlayer/config-keys.tsv) (wrappers, `OVERRIDE_PROTON`, VRAM-hog controls, Conty, specialty runtimes, winetricks/registry, Special K / ReShade / inject paths, VR inject toggles, Block Internet, …). The Bash client reads that policy directly; a Hub test keeps Convex `HUB_UNTRUSTED_ENV_KEYS` in sync. `--hub-apply` strips those keys and unsafe `INCLUDE=` lines before writing a local file. Config import rejects tarballs whose members use absolute or `..` paths.
 
 Rate limits and download deduplication use HMAC-SHA-256 over one ingress-controlled client identity header. Set `HUB_TRUSTED_CLIENT_IP_HEADER` to a header that your proxy overwrites. Set `HUB_IDENTIFIER_HASH_KEY` to at least 32 random characters. The hub fails closed when either setting or the trusted header is missing. Client-supplied forwarding fallbacks are ignored and raw addresses are not stored. Rotating the HMAC key resets deduplication identities. Rate-limit buckets expire after 24 hours and download-dedup records after 30 days via a daily bounded cleanup job.
 

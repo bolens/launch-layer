@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Install, configure, and troubleshoot LaunchLayer, a Steam game launch manager for Linux.">
+  <meta name="theme-color" content="#0b1525">
+  <title>LaunchLayer guide</title>
+  <link rel="icon" href="assets/launchlayer.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <script src="site.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to the guide</a>
+  <header class="site-header">
+    <a class="brand" href="#top" aria-label="LaunchLayer guide home">
+      <img src="assets/launchlayer.svg" alt="" width="172" height="46">
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href="#start">Start</a>
+      <a href="#configure">Configure</a>
+      <a href="#fix">Fix a problem</a>
+      <a href="architecture.html">Diagram</a>
+    </nav>
+    <button class="theme-toggle" type="button" aria-label="Use light theme" aria-pressed="false">
+      <span aria-hidden="true">◐</span><span class="theme-label">Light</span>
+    </button>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="top" aria-labelledby="hero-title">
+      <div class="hero-copy reveal">
+        <p class="eyebrow">Steam launch settings, kept in one place</p>
+        <h1 id="hero-title">Tune each game.<br><span>Keep one launch command.</span></h1>
+        <p class="lede">LaunchLayer reads plain settings files, checks your Linux system, and assembles GameMode, Gamescope, MangoHUD, CPU affinity, and other tools before the game starts.</p>
+        <div class="actions">
+          <a class="button primary" href="#start">Install LaunchLayer</a>
+          <a class="button secondary" href="https://github.com/bolens/launch-layer">View the repository</a>
+        </div>
+        <div class="release-strip" aria-live="polite">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span id="release-label">Checking the current release…</span>
+          <a id="release-link" href="https://github.com/bolens/launch-layer/releases">Release notes</a>
+          <img src="https://github.com/bolens/launch-layer/actions/workflows/ci.yml/badge.svg" alt="Current build status">
+        </div>
+      </div>
+
+      <div class="trace-card reveal" aria-label="The LaunchLayer game start path">
+        <div class="trace-heading"><span>Launch trace</span><span>local machine</span></div>
+        <ol class="trace-list">
+          <li><span class="trace-node">Steam</span><small>passes <code>%command%</code></small></li>
+          <li><span class="trace-node">Settings</span><small>profiles + game file</small></li>
+          <li><span class="trace-node">Checks</span><small>system + optional tools</small></li>
+          <li><span class="trace-node">Wrappers</span><small>ordered, without duplicates</small></li>
+          <li><span class="trace-node">Game</span><small>native or Proton</small></li>
+        </ol>
+        <p>Nothing is uploaded during a normal launch.</p>
+      </div>
+    </section>
+
+    <section class="proof-band" aria-label="Project facts">
+      <p><strong>Plain files</strong><span>Review every setting</span></p>
+      <p><strong>Dry-run first</strong><span>Preview without launching</span></p>
+      <p><strong>Hub optional</strong><span>Local use needs no account</span></p>
+      <p><strong>Bash 4.3+</strong><span>No resident service</span></p>
+    </section>
+
+    <section class="section start" id="start" aria-labelledby="start-title">
+      <div class="section-intro reveal">
+        <p class="eyebrow">First launch</p>
+        <h2 id="start-title">Set it up in three steps</h2>
+        <p>Keep the repository in a stable location. Steam stores its path in each game's Launch Options.</p>
+      </div>
+      <ol class="steps">
+        <li class="reveal">
+          <div class="step-number" aria-hidden="true">1</div>
+          <div><h3>Download</h3><p>Clone the repository into your home directory.</p><pre><code>git clone https://github.com/bolens/launch-layer.git ~/launchlayer
+cd ~/launchlayer</code></pre></div>
+        </li>
+        <li class="reveal">
+          <div class="step-number" aria-hidden="true">2</div>
+          <div><h3>Run setup</h3><p>Install completions, create the command link, and detect this machine.</p><pre><code>./launchlayer --setup --completions --symlink \
+  --print-launch-option --write-local-config</code></pre></div>
+        </li>
+        <li class="reveal">
+          <div class="step-number" aria-hidden="true">3</div>
+          <div><h3>Connect Steam</h3><p>Paste the printed command into a game's Properties → General → Launch Options.</p><pre><code>"$HOME/launchlayer/launchlayer" %command%</code></pre><p class="warning"><strong>Keep <code>%command%</code>.</strong> Steam replaces it with the actual game command.</p></div>
+        </li>
+      </ol>
+      <div class="next-check reveal"><div><h3>Check before playing</h3><p>Doctor reports missing tools, invalid settings, and system changes that may help Proton.</p></div><pre><code>./launchlayer --doctor</code></pre></div>
+      <div class="platform-notes reveal">
+        <p><strong>Steam Deck:</strong> use the same command under Library → gear icon → Properties → General → Launch Options.</p>
+        <p><strong>Flatpak Steam:</strong> installations under your home directory usually work without another permission. For an installation elsewhere, grant Steam access with <code>flatpak override --user com.valvesoftware.Steam --filesystem=/path/to/launchlayer</code>.</p>
+      </div>
+    </section>
+
+    <section class="section configure" id="configure" aria-labelledby="configure-title">
+      <div class="section-intro reveal">
+        <p class="eyebrow">Per-game control</p>
+        <h2 id="configure-title">Change settings without rebuilding the Steam command</h2>
+        <p>LaunchLayer combines machine profiles, shared defaults, a preset, and the selected game's file. Later values override earlier ones.</p>
+      </div>
+      <div class="layer-stack reveal" aria-label="Configuration order, from lowest to highest priority">
+        <div><span>Machine</span><strong>profiles/*.env</strong><small>Detected platform and GPU</small></div>
+        <div><span>Shared</span><strong>default.env</strong><small>Defaults for every game</small></div>
+        <div><span>Local</span><strong>local.env</strong><small>This computer only</small></div>
+        <div><span>Preset</span><strong>competitive.env</strong><small>A reusable play style</small></div>
+        <div><span>Game</span><strong>2357570.env</strong><small>Highest priority</small></div>
+      </div>
+      <div class="choice-grid">
+        <article class="choice reveal"><p class="choice-tag">Visual</p><h3>Use the TUI</h3><p>Browse installed games, see the resolved settings, and change common options without editing a file.</p><pre><code>./launchlayer --tui</code></pre><a href="https://github.com/bolens/launch-layer/blob/main/docs/tui.md">TUI guide</a></article>
+        <article class="choice reveal"><p class="choice-tag">Terminal</p><h3>Create a game file</h3><p>Start from a preset, then change only the values this game needs.</p><pre><code>./launchlayer --init-appid 2357570 competitive
+./launchlayer --edit-appid 2357570</code></pre><a href="https://github.com/bolens/launch-layer/blob/main/docs/cli.md">CLI reference</a></article>
+        <article class="choice reveal"><p class="choice-tag">Read-only</p><h3>Preview the result</h3><p>See the loaded files, final values, and wrapper order without starting the game.</p><pre><code>./launchlayer --show-config 2357570</code></pre><a href="https://github.com/bolens/launch-layer/blob/main/README.md#configuration">Configuration details</a></article>
+      </div>
+    </section>
+
+    <section class="section know" aria-labelledby="know-title">
+      <div class="section-intro reveal"><p class="eyebrow">Before enabling a tool</p><h2 id="know-title">Each switch expects its own program</h2><p>LaunchLayer coordinates optional tools; it does not bundle them. Doctor identifies missing programs and prints installation hints for your distribution.</p></div>
+      <div class="tool-table-wrap reveal" tabindex="0" role="region" aria-label="Optional tool examples">
+        <table><thead><tr><th>Setting</th><th>What it controls</th><th>Program needed</th></tr></thead><tbody>
+          <tr><td><code>GAMEMODE=1</code></td><td>CPU and system performance profile</td><td>GameMode</td></tr>
+          <tr><td><code>GAMESCOPE=1</code></td><td>Resolution, scaling, HDR, and frame limits</td><td>Gamescope</td></tr>
+          <tr><td><code>MANGOHUD=1</code></td><td>Performance overlay and logging</td><td>MangoHud</td></tr>
+          <tr><td><code>VKBASALT=1</code></td><td>Vulkan post-processing</td><td>vkBasalt</td></tr>
+          <tr><td><code>DLSS_SWAPPER=1</code></td><td>DLSS libraries and presets</td><td>dlss-swapper</td></tr>
+        </tbody></table>
+      </div>
+      <p class="section-link reveal"><a href="https://github.com/bolens/launch-layer/blob/main/docs/third-party.md">Licenses, purchase requirements, and the full tool list</a></p>
+    </section>
+
+    <section class="section control" aria-labelledby="control-title">
+      <div class="section-intro reveal"><p class="eyebrow">Your files and data</p><h2 id="control-title">Keep changes reviewable and recoverable</h2><p>Normal launches stay on your machine. The Community Hub is optional, and restore commands preview their work before replacing files.</p></div>
+      <div class="choice-grid">
+        <article class="choice reveal"><p class="choice-tag">Backup</p><h3>Save your settings</h3><p>Export profiles, game files, and selected preferences into a timestamped archive.</p><pre><code>./launchlayer --backup-config
+./launchlayer --restore-backup --list</code></pre></article>
+        <article class="choice reveal"><p class="choice-tag">Community</p><h3>Choose whether to connect</h3><p>Hub commands share or retrieve game settings. LaunchLayer rejects remote command hooks and other settings that could modify the host.</p><pre><code>./launchlayer --hub-prefs show
+./launchlayer --hub-recommend APPID</code></pre></article>
+        <article class="choice reveal"><p class="choice-tag">Inspection</p><h3>Use read-only access</h3><p>The optional MCP server exposes diagnostics and resolved settings, but it cannot launch games or change configuration. Redacted mode removes exact paths and hardware identifiers.</p><pre><code>./launchlayer --mcp --privacy redacted</code></pre></article>
+      </div>
+    </section>
+
+    <section class="section fix" id="fix" aria-labelledby="fix-title">
+      <div class="section-intro reveal"><p class="eyebrow">Troubleshooting</p><h2 id="fix-title">Start with the symptom</h2><p>Open a row for the first checks and the command that confirms the result.</p></div>
+      <div class="troubleshoot reveal">
+        <details><summary>The game does not start</summary><div><p>Confirm that Launch Options contains an absolute, quoted path followed by <code>%command%</code>. Remove old <code>gamemoderun</code>, <code>mangohud</code>, or Gamescope prefixes.</p><pre><code>./launchlayer --doctor
+./launchlayer --show-config APPID</code></pre></div></details>
+        <details><summary>Steam cannot find LaunchLayer</summary><div><p>Steam often has a smaller <code>PATH</code> than your terminal. Use the full path printed by setup. Flatpak Steam also needs permission to read installations outside your home directory.</p><pre><code>./launchlayer --setup --print-launch-option
+./launchlayer --detect-environment</code></pre></div></details>
+        <details><summary>The game is wrapped twice</summary><div><p>Keep wrappers in LaunchLayer config, not in both places. Replace <code>gamemoderun %command%</code> with the single LaunchLayer command and set <code>GAMEMODE=1</code>.</p></div></details>
+        <details><summary>A Proton game reports map or memory errors</summary><div><p>Check <code>vm.max_map_count</code>. The install action requires root and writes the supplied sysctl configuration.</p><pre><code>./launchlayer --sysctl status
+./launchlayer --sysctl install</code></pre></div></details>
+        <details><summary>I need to undo a config change</summary><div><p>Use the backup and restore commands or the TUI's Backup &amp; restore menu. Import and restore preview their changes until you pass <code>--yes</code>.</p><pre><code>./launchlayer --restore-backup --list
+./launchlayer --restore-backup --dry-run</code></pre></div></details>
+      </div>
+    </section>
+
+    <section class="section architecture-callout reveal" aria-labelledby="architecture-title">
+      <div><p class="eyebrow">Explore the system</p><h2 id="architecture-title">Follow a launch from Steam to the game process</h2><p>The interactive diagram separates local settings and runtime state from the optional Community Hub trust boundary.</p></div>
+      <a class="button primary" href="architecture.html">Open the architecture diagram</a>
+    </section>
+
+    <section class="section docs" aria-labelledby="docs-title">
+      <div class="section-intro reveal"><p class="eyebrow">Technical reference</p><h2 id="docs-title">Detailed docs stay with the code</h2><p>The repository documents every command, key, module boundary, third-party condition, and release step at the revision where it applies.</p></div>
+      <div class="docs-grid">
+        <a class="doc-card reveal" href="https://github.com/bolens/launch-layer/blob/main/docs/cli.md"><span>Commands</span><strong>CLI reference</strong><small>Flags, keys, MCP, Hub</small></a>
+        <a class="doc-card reveal" href="https://github.com/bolens/launch-layer/blob/main/docs/tui.md"><span>Interactive</span><strong>TUI guide</strong><small>Menus, keys, screenshots</small></a>
+        <a class="doc-card reveal" href="https://github.com/bolens/launch-layer/blob/main/docs/architecture.md"><span>Internals</span><strong>Architecture</strong><small>Modules, state, trust boundaries</small></a>
+        <a class="doc-card reveal" href="https://github.com/bolens/launch-layer/blob/main/CHANGELOG.md"><span>History</span><strong>Changelog</strong><small>Features, changes, fixes</small></a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p><strong>LaunchLayer</strong> is maintained by <a href="https://github.com/bolens">bolens</a> and released under <a href="https://github.com/bolens/launch-layer/blob/main/LICENSE">CC BY-NC-SA 4.0</a>.</p>
+    <p><a href="#top">Back to top</a></p>
+  </footer>
+</body>
+</html>

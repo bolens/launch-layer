@@ -1,4 +1,4 @@
-.PHONY: test test-unit test-integration test-hub test-all lint lint-hub shellcheck check-hub-git check-dependency-pins check-mcp-inspector check check-hub check-all check-version bump-version tui-screenshots
+.PHONY: test test-unit test-integration test-hub test-all lint lint-hub shellcheck check-hub-git check-dependency-pins check-mcp-inspector check-pages check check-hub check-all check-version bump-version tui-screenshots
 
 SHELL := /bin/bash
 BATS ?= bats
@@ -39,6 +39,9 @@ check-mcp-inspector:
 
 check-version:
 	bash scripts/check-version.sh
+
+check-pages:
+	bash scripts/check-pages.sh
 
 # Example: make bump-version VERSION=0.10.0
 bump-version:

@@ -97,3 +97,4 @@ __pycache__/
 
 # Packaging / install scratch
 dist/
+site/architecture.visual-check.*

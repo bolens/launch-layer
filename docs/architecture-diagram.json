@@ -1,0 +1,188 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "How LaunchLayer starts a game",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "repository": {
+      "url": "https://github.com/bolens/launch-layer",
+      "revision": "a941499f0bc115deab47f2d8d31c2cc0b26b50ee"
+    },
+    "views": [
+      {
+        "id": "launch-path",
+        "label": "Game launch path",
+        "focus": ["steam", "entrypoints", "orchestrator", "configuration", "discovery", "runtime", "game"],
+        "note": "Follow one launch from Steam through configuration, checks, wrappers, and the game process."
+      },
+      {
+        "id": "shared-controls",
+        "label": "Shared controls",
+        "focus": ["entrypoints", "orchestrator", "configuration", "state"],
+        "note": "CLI, TUI, and MCP reuse the same commands and resolved settings."
+      },
+      {
+        "id": "community",
+        "label": "Optional community hub",
+        "focus": ["configuration", "hubClient", "hubService"],
+        "note": "Community settings remain optional and pass through local trust checks before use."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "steam",
+      "type": "external",
+      "label": "Steam",
+      "sublabel": "Launch Options + %command%",
+      "pos": [20, 300],
+      "size": [150, 68],
+      "sources": [{"path": "README.md", "line": 20, "label": "Steam integration"}]
+    },
+    {
+      "id": "entrypoints",
+      "type": "frontend",
+      "label": "CLI · TUI · MCP",
+      "sublabel": "Three ways to inspect and control",
+      "pos": [200, 300],
+      "size": [170, 68],
+      "sources": [
+        {"path": "lib/commands/dispatch.sh", "line": 1, "label": "CLI dispatch"},
+        {"path": "lib/tui/main.sh", "line": 1, "label": "TUI"},
+        {"path": "scripts/launchlayer-mcp.py", "line": 1, "label": "MCP adapter"}
+      ]
+    },
+    {
+      "id": "orchestrator",
+      "type": "backend",
+      "label": "Launch orchestrator",
+      "sublabel": "Shared command and launch logic",
+      "pos": [400, 300],
+      "size": [180, 68],
+      "tag": "Bash 4.3+",
+      "sources": [
+        {"path": "launchlayer", "line": 1, "label": "Entrypoint"},
+        {"path": "lib/load-modules.sh", "line": 1, "label": "Module order"}
+      ]
+    },
+    {
+      "id": "configuration",
+      "type": "database",
+      "label": "Layered settings",
+      "sublabel": "Profiles → defaults → game",
+      "pos": [620, 170],
+      "size": [170, 68],
+      "sources": [
+        {"path": "lib/config.sh", "line": 1, "label": "Config loader"},
+        {"path": "share/launchlayer/config-keys.tsv", "line": 1, "label": "Key metadata"}
+      ]
+    },
+    {
+      "id": "discovery",
+      "type": "backend",
+      "label": "Game discovery",
+      "sublabel": "Libraries, manifests, hardware",
+      "pos": [610, 300],
+      "size": [170, 68],
+      "sources": [
+        {"path": "lib/steam/library.sh", "line": 1, "label": "Steam libraries"},
+        {"path": "lib/steam/detect.sh", "line": 1, "label": "Game detection"}
+      ]
+    },
+    {
+      "id": "runtime",
+      "type": "backend",
+      "label": "Launch pipeline",
+      "sublabel": "Preflight, tuning, wrappers",
+      "pos": [810, 300],
+      "size": [180, 68],
+      "sources": [
+        {"path": "lib/launch.sh", "line": 1, "label": "Launch flow"},
+        {"path": "lib/runtime/chain.sh", "line": 1, "label": "Wrapper chain"}
+      ]
+    },
+    {
+      "id": "game",
+      "type": "external",
+      "label": "Game process",
+      "sublabel": "Native or Proton",
+      "pos": [1020, 300],
+      "size": [150, 68],
+      "sources": [{"path": "lib/launch.sh", "line": 1, "label": "Process execution"}]
+    },
+    {
+      "id": "state",
+      "type": "database",
+      "label": "Local state",
+      "sublabel": "Logs, caches, backups",
+      "pos": [810, 470],
+      "size": [180, 68],
+      "sources": [
+        {"path": "lib/runtime/logging.sh", "line": 1, "label": "Launch log"},
+        {"path": "lib/inspect/backup/common.sh", "line": 1, "label": "Backups"}
+      ]
+    },
+    {
+      "id": "hubClient",
+      "type": "security",
+      "label": "Hub trust boundary",
+      "sublabel": "Validate, strip, bound requests",
+      "pos": [400, 168],
+      "size": [190, 72],
+      "sources": [
+        {"path": "lib/commands/hub/context.sh", "line": 30, "label": "Trust policy"},
+        {"path": "lib/hub/client.sh", "line": 1, "label": "HTTP client"}
+      ]
+    },
+    {
+      "id": "hubService",
+      "type": "cloud",
+      "label": "Community Hub",
+      "sublabel": "Optional Convex service",
+      "pos": [190, 168],
+      "size": [180, 72],
+      "sources": [
+        {"path": "hub/convex/http.ts", "line": 1, "label": "HTTP routes"},
+        {"path": "hub/convex/lib/validation.ts", "line": 1, "label": "Input validation"}
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Player's machine",
+      "wraps": ["entrypoints", "orchestrator", "configuration", "discovery", "runtime", "state", "hubClient"]
+    }
+  ],
+  "connections": [
+    {"id": "steamEntry", "from": "steam", "to": "entrypoints", "label": "%command%", "variant": "emphasis", "labelAt": [185, 382]},
+    {"id": "entryCore", "from": "entrypoints", "to": "orchestrator", "label": "shared commands", "variant": "emphasis", "labelAt": [385, 382]},
+    {"id": "coreConfig", "from": "orchestrator", "to": "configuration", "label": "resolve layers"},
+    {"id": "coreDiscovery", "from": "orchestrator", "to": "discovery", "label": "inspect game + host", "labelAt": [595, 382]},
+    {"id": "configRuntime", "from": "configuration", "to": "runtime", "label": "effective settings"},
+    {"id": "discoveryRuntime", "from": "discovery", "to": "runtime", "label": "paths + capabilities", "labelAt": [795, 382]},
+    {"id": "runtimeGame", "from": "runtime", "to": "game", "label": "argv + environment", "variant": "emphasis", "labelAt": [1005, 382]},
+    {"id": "runtimeState", "from": "runtime", "to": "state", "label": "record + recover", "variant": "dashed", "labelAt": [900, 410]},
+    {"id": "configHub", "from": "configuration", "to": "hubClient", "label": "publish / apply", "variant": "security", "labelAt": [600, 140]},
+    {"id": "hubBoundary", "from": "hubClient", "to": "hubService", "label": "bounded HTTPS", "variant": "security", "labelAt": [390, 140]}
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "One source of behavior",
+      "items": ["CLI, TUI, and MCP call shared domain functions", "Dry-run resolves the same settings and wrapper chain"]
+    },
+    {
+      "dot": "emerald",
+      "title": "Local by default",
+      "items": ["Launches do not require the Community Hub", "User settings and runtime state stay on the player's machine"]
+    },
+    {
+      "dot": "rose",
+      "title": "Explicit trust boundary",
+      "items": ["Remote configs cannot set launch commands or mutating tools", "Hub requests have time and response-size limits"]
+    }
+  ]
+}

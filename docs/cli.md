@@ -1,8 +1,8 @@
 # CLI reference
 
-Run from a terminal: no `%command%` needed. Most game commands accept **AppID or name fragment** (case-insensitive).
+Run these commands in a terminal without `%command%`. Most game commands accept an AppID or a case-insensitive name fragment.
 
-`./launchlayer --help` is the live source of truth; this page mirrors the grouped reference.
+`./launchlayer --help` is the source of truth. This page adds context and groups the same commands by task.
 
 [Docs index](README.md) · [README](../README.md) · [CLI](cli.md) · [TUI](tui.md) · [Architecture](architecture.md) · [Third-party](third-party.md) · [Release](release_runbook.md) · [Changelog](../CHANGELOG.md)
 
@@ -93,7 +93,7 @@ Place before subcommands:
 
 ## MCP server
 
-`launchlayer --mcp [--privacy standard|redacted]` runs a dependency-free stdio MCP server using Python 3. It exposes read-only tools for installed games, resolved game configuration, game paths, cache usage, launch statistics, runtime status, environment detection, recommended defaults, diagnostics, and config validation.
+`launchlayer --mcp [--privacy standard|redacted]` runs a dependency-free stdio MCP server using Python 3.9+. It exposes read-only tools for installed games, resolved game configuration, game paths, cache usage, launch statistics, runtime status, environment detection, recommended defaults, diagnostics, and config validation.
 
 Point an MCP client at the same LaunchLayer executable used by Steam:
 
@@ -112,7 +112,7 @@ The server uses stdio only. It does not launch games, edit configuration, call t
 
 Standard results can contain local hardware details, game names, configuration values, and filesystem paths. Pass `--privacy redacted` to remove local paths and exact hardware identifiers before results leave the process. Game names and configuration values remain visible in both modes, so review the MCP host's data-sharing policy before enabling it with a remote model.
 
-Maintainers can run `make check-mcp-inspector` for a network-backed conformance and tool-schema check with the pinned official MCP Inspector.
+Maintainers can run `make check-mcp-inspector` for network-backed legacy and MCP 2026 conformance and tool-schema checks with the pinned official MCP Inspector.
 
 ---
 
@@ -187,7 +187,7 @@ Layer stacking with MangoHud / vkBasalt / Gamescope can conflict: see [third-par
 
 ## Wine inject (local mutate: hub-stripped)
 
-See [docs/third-party.md](third-party.md) for licenses. Prefer user-supplied DLL directories; optional fetch only with explicit URLs / NOTICE cache. Mutate keys are listed in [`share/launchlayer/hub-untrusted-keys.txt`](../share/launchlayer/hub-untrusted-keys.txt).
+See [docs/third-party.md](third-party.md) for licenses. Prefer user-supplied DLL directories; optional fetch only with explicit URLs / NOTICE cache. The `hub` column in [`share/launchlayer/config-keys.tsv`](../share/launchlayer/config-keys.tsv) marks keys that remote configs may not set.
 
 | Key | Effect |
 |-----|--------|

@@ -9,6 +9,35 @@ permissions:
   contents: read
 
 jobs:
+  pages:
+    name: Pages / static checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Validate Pages site
+        run: make check-pages
+
+  mcp-python-minimum:
+    name: MCP / Python 3.9 minimum
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+        with:
+          python-version: "3.9"
+
+      - uses: awalsh128/cache-apt-pkgs-action@553a35bb8ebd9fcabcb1c9451aa4c98e1b4ca8a9 # v1.6.3
+        with:
+          packages: bats
+          version: 1.0
+
+      - name: MCP tests
+        run: bats test/unit/mcp.bats
+
   bash-minimum:
     name: Bash 4.3 minimum
     runs-on: ubuntu-latest
