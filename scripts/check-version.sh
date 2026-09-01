@@ -25,10 +25,11 @@ check_contains() {
 	fi
 }
 
-check_contains test/integration/cli.bats "version reports ${version}"
-check_contains test/integration/cli.bats "*\"${version}\"*"
-check_contains docs/tui.md "LaunchLayer ${version}"
+check_contains test/integration/cli.bats "version reports the release version"
+check_contains test/integration/cli.bats '"$expected_version"'
+check_contains docs/tui.md 'LaunchLayer <version>'
 check_contains CHANGELOG.md "## [${version}]"
+check_contains lib/commands/dispatch-mcp.sh 'LAUNCHLAYER_MCP_SERVER_VERSION="$LAUNCHLAYER_VERSION"'
 
 if (( fail )); then
 	exit 1
