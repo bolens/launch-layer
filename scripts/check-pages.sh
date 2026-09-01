@@ -11,12 +11,33 @@ required=(
 	styles.css
 	site.js
 	assets/launchlayer.svg
+	apple-touch-icon.png
+	icon-192.png
+	icon-512.png
+	social-card.png
+	site.webmanifest
 	.nojekyll
 )
 
 for file in "${required[@]}"; do
 	[[ -f "$SITE/$file" ]] || {
 		echo "missing Pages artifact: site/$file" >&2
+		exit 1
+	}
+done
+
+python3 - "$SITE/social-card.png" <<'PY'
+import struct
+import sys
+from pathlib import Path
+
+data = Path(sys.argv[1]).read_bytes()
+if data[:8] != b"\x89PNG\r\n\x1a\n" or struct.unpack(">II", data[16:24]) != (1200, 630):
+    raise SystemExit("site/social-card.png must be a 1200x630 PNG")
+PY
+for contract in 'rel="canonical"' 'og:site_name' 'og:image:width' 'twitter:image' 'rel="apple-touch-icon"' 'rel="manifest"'; do
+	grep -q "$contract" "$SITE/index.html" || {
+		echo "site/index.html missing discovery contract: $contract" >&2
 		exit 1
 	}
 done
