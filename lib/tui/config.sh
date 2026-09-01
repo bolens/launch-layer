@@ -165,6 +165,8 @@ tui_advanced_key_prompt() {
 		GAMESCOPE_PREFER_OUTPUT) printf '%s' "Gamescope -O / prefer-output" ;;
 		GAMESCOPE_FRAME_LIMIT) printf '%s' "Gamescope --framerate-limit" ;;
 		GAMESCOPE_FILTER) printf '%s' "Gamescope --filter — picker (fsr|nis|linear|…)" ;;
+		GAMESCOPE_RESHADE_EFFECT) printf '%s' "Gamescope ReShade effect filename" ;;
+		GAMESCOPE_RESHADE_TECHNIQUE) printf '%s' "Gamescope ReShade technique index" ;;
 		GAMESCOPE_FOCUSED_FPS) printf '%s' "Gamescope focused FPS limit" ;;
 		GAMESCOPE_UNFOCUSED_FPS) printf '%s' "Gamescope unfocused FPS limit" ;;
 		VKBASALT_CONFIG_FILE) printf '%s' "vkBasalt config file path" ;;
@@ -184,6 +186,9 @@ tui_advanced_key_prompt() {
 		RESHADE_DLL) printf '%s' "ReShade proxy DLL name" ;;
 		RESHADE_SOURCE) printf '%s' "Dir with ReShade DLL" ;;
 		RESHADE_SK_VERSION) printf '%s' "ReShade version pin for SK cohab" ;;
+		OPTISCALER_SOURCE) printf '%s' "Dir or file containing OptiScaler.dll/OptiScaler.asi" ;;
+		OPTISCALER_PROXY) printf '%s' "OptiScaler proxy filename — picker" ;;
+		OPTISCALER_CONFIG) printf '%s' "OptiScaler.ini source path" ;;
 		DEPTH3D_SOURCE) printf '%s' "Depth3D shader directory (assist-only)" ;;
 		DEPTH3D_FETCH_URL) printf '%s' "Optional Depth3D archive URL (user-supplied)" ;;
 		SKIF_PATH) printf '%s' "Path to SKIF.exe" ;;
@@ -194,6 +199,7 @@ tui_advanced_key_prompt() {
 		CONTY_PATH) printf '%s' "Conty binary path" ;;
 		SPECIALTY_RUNTIME) printf '%s' "boxtron|luxtorpeda|roberta|(clear) — picker" ;;
 		OPENVR_FSR_SOURCE) printf '%s' "OpenVR-FSR files directory" ;;
+		OPENCOMPOSITE_SOURCE) printf '%s' "OpenComposite files directory" ;;
 		GEO11_SOURCE) printf '%s' "Geo11 directory (assist-only)" ;;
 		SBS_VR_PLAYER) printf '%s' "SBS VR player hint (assist-only)" ;;
 		FLAT2VR_SOURCE) printf '%s' "Flat2VR directory (assist-only)" ;;
@@ -208,6 +214,8 @@ tui_advanced_key_prompt() {
 		X3D_CPUS) printf '%s' "X3D CCD CPU list (e.g. 0-7)" ;;
 		CPU_AFFINITY_RANGE) printf '%s' "taskset CPU range" ;;
 		GAME_NIC) printf '%s' "Network interface for NETWORK_TUNE" ;;
+		GPU_SELECT) printf '%s' "GPU selection: auto|discrete|nvidia|amd|intel — picker" ;;
+		GPU_SELECT_DRIVER) printf '%s' "Vulkan loader driver-name filter" ;;
 		VRAM_HOG_UNITS) printf '%s' "VRAM-hog systemd user units (space-separated)" ;;
 		VRAM_HOG_PIDS) printf '%s' "VRAM-hog PIDs (space-separated)" ;;
 		VRAM_PREFLIGHT_MIN_MB) printf '%s' "VRAM preflight minimum MB" ;;
@@ -230,7 +238,7 @@ tui_advanced_key_prompt() {
 tui_edit_advanced_key() {
 	local appid=$1 key=$2 picked file
 	case "$key" in
-		SPECIALTY_RUNTIME|REPLAY_TOOL|GAMESCOPE_FILTER|GAMESCOPE_ADAPTIVE_SYNC|DLSS_SWAPPER)
+		SPECIALTY_RUNTIME|REPLAY_TOOL|GAMESCOPE_FILTER|GAMESCOPE_ADAPTIVE_SYNC|DLSS_SWAPPER|GPU_SELECT|OPTISCALER_PROXY)
 			picked="$(tui_pick_enum_key "$key")" || return 0
 			tui_ensure_appid_env "$appid"
 			file="$(tui_appid_env_path "$appid")"

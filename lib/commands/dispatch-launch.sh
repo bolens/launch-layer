@@ -25,7 +25,7 @@ dispatch_launch_subcommand() {
 			;;
 		--resume-vram-hogs)
 			resume_vram_hogs_force
-			rm -f "$ACTIVE_LAUNCH_PID_FILE"
+			rm -f "$ACTIVE_LAUNCH_PID_FILE" "$ACTIVE_LAUNCH_APPID_FILE"
 			stop_launch_watchdog
 			echo "Resumed paused VRAM-heavy services."
 			;;

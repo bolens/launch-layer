@@ -1028,6 +1028,22 @@ orphan line'"'"'
 	[[ "$output" == *"dll"* ]]
 }
 
+@test "tui_pick_enum_key maps GPU and OptiScaler choices" {
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib load-modules
+		launchlayer_source_tui
+		tui_menu() { printf "%s\n" nvidia; }
+		printf "gpu:%s\n" "$(tui_pick_enum_key GPU_SELECT)"
+		tui_menu() { printf "%s\n" OptiScaler.asi; }
+		printf "proxy:%s\n" "$(tui_pick_enum_key OPTISCALER_PROXY)"
+	'
+	[[ $status -eq 0 ]]
+	[[ "$output" == *"gpu:nvidia"* ]]
+	[[ "$output" == *"proxy:OptiScaler.asi"* ]]
+}
+
 @test "tui_assist_only_key_p marks Depth3D and Geo11" {
 	run bash -c '
 		export CONFIG_DIR="'"$CONFIG_DIR"'"

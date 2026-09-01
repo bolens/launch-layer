@@ -150,6 +150,10 @@ apply_special_k() {
 	local dll="${SPECIAL_K_DLL:-dxgi}"
 	local src="${SPECIAL_K_SOURCE:-}"
 	local game_dir dest_name arch_dll
+	inject_proxy_name_is_safe "$dll" || {
+		warn "SPECIAL_K_DLL=$dll: unsafe proxy DLL name"
+		return 0
+	}
 
 	inject_merge_winedlloverrides "$dll"
 	dll="${dll%.dll}"
@@ -246,6 +250,10 @@ apply_reshade() {
 	local dll="${RESHADE_DLL:-dxgi}"
 	local src="${RESHADE_SOURCE:-}"
 	local game_dir
+	inject_proxy_name_is_safe "$dll" || {
+		warn "RESHADE_DLL=$dll: unsafe proxy DLL name"
+		return 0
+	}
 	inject_merge_winedlloverrides "$dll"
 	dll="${dll%.dll}"
 	if [[ -n "$src" ]]; then

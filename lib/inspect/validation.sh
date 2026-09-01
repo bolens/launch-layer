@@ -183,6 +183,13 @@ validate_single_config_file() {
 						;;
 				esac
 				;;
+			SPECIAL_K_DLL|RESHADE_DLL)
+				value="${value#\"}"; value="${value%\"}"
+				if ! inject_proxy_name_is_safe "$value"; then
+					echo "$file:$line_num: $key must be a proxy DLL leaf name (got: $value)"
+					((issues++)) || true
+				fi
+				;;
 			GAMESCOPE_RESHADE_TECHNIQUE)
 				value="${value#\"}"; value="${value%\"}"
 				if [[ -n "$value" && ! "$value" =~ ^[0-9]+$ ]]; then
