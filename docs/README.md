@@ -1,6 +1,6 @@
 # LaunchLayer documentation
 
-User and contributor docs live here. Prefer updating the linked page for a topic rather than duplicating long explanations elsewhere.
+The [GitHub Pages guide](https://bolens.github.io/launch-layer/) is the main documentation for players. This repository index covers exact commands, configuration keys, internal design, third-party terms, and maintenance. Update the canonical page for a topic first and keep cross-references brief.
 
 | Doc | Audience | Covers |
 |-----|----------|--------|
@@ -12,11 +12,11 @@ User and contributor docs live here. Prefer updating the linked page for a topic
 | [release_runbook.md](release_runbook.md) | Maintainers | Version bump, tag, GitHub release |
 | [Changelog](../CHANGELOG.md) | Everyone | Release notes ([Keep a Changelog](https://keepachangelog.com/)) |
 
-**Nav (paste this line into new docs pages):**
+**Navigation line for new documentation pages:**
 
 `[Docs index](README.md) · [README](../README.md) · [CLI](cli.md) · [TUI](tui.md) · [Architecture](architecture.md) · [Third-party](third-party.md) · [Release](release_runbook.md) · [Changelog](../CHANGELOG.md)`
 
-### Topic → canonical page
+### Canonical pages by topic
 
 | Topic | Canonical | Also mention |
 |-------|-----------|--------------|
@@ -27,7 +27,7 @@ User and contributor docs live here. Prefer updating the linked page for a topic
 | lsfg-vk stacking | [third-party.md § lsfg-vk](third-party.md#lsfg-vk-and-layer-stacking) | [cli.md](cli.md) |
 | Special K / ReShade / inject | [third-party.md](third-party.md) + [cli.md § Wine inject](cli.md#wine-inject-local-mutate--hub-stripped) | [tui.md § Advanced](tui.md#advanced-config) · [architecture.md](architecture.md) `lib/runtime/` |
 | Assist-only VR (Geo11/Flat2VR/SBS) | [third-party.md](third-party.md) | Keys exist, with no DLL injection. |
-| Hub untrusted keys | [`share/launchlayer/hub-untrusted-keys.txt`](../share/launchlayer/hub-untrusted-keys.txt) | [architecture.md](architecture.md) · bash + Convex must match |
+| Config key and Hub trust metadata | [`share/launchlayer/config-keys.tsv`](../share/launchlayer/config-keys.tsv) | [architecture.md](architecture.md) · Bash + Convex parity is tested |
 | Cutting a release | [release_runbook.md](release_runbook.md) | [CHANGELOG.md](../CHANGELOG.md) · [README § Testing](../README.md#testing) |
 
-When you add a user-facing key or tool, update **cli + tui + third-party (if upstream) + CHANGELOG**, and keep this index's topic table honest.
+When adding a user-facing key or tool, update the CLI reference, the affected TUI section, the third-party page when an upstream project is involved, and the changelog. Update this table if ownership of the topic changes.

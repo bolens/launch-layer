@@ -5,9 +5,9 @@
 launchlayer                  # same when symlinked, and opens TUI with no args when fzf + TTY
 ```
 
-Requires an interactive terminal. With [fzf](https://github.com/junegunn/fzf), menus are fuzzy lists with a bordered header, contextual footer key hints, and reverse layout. Without fzf, the same items appear as numbered prompts (`1) …`, `Choice:`).
+The TUI requires an interactive terminal. With [fzf](https://github.com/junegunn/fzf), it uses searchable lists, bordered headers, footer shortcuts, and a reverse layout. Without fzf, it presents the same actions as numbered prompts (`1) …`, `Choice:`).
 
-Press **`?`** in any fzf menu to open a keyboard-shortcuts panel (Esc to close). Every fzf menu shows a `Filter:` prompt. Patterns follow common TUIs (lazygit, k9s, yazi): footer hints, live status on hubs, split preview panes, and section gaps in grouped menus.
+Press **`?`** in any fzf menu to open the shortcuts panel; press Esc to close it. Every fzf menu has a `Filter:` prompt. Hub menus show live status, previews use a split pane, and blank rows separate groups.
 
 [Docs index](README.md) · [README](../README.md) · [CLI](cli.md) · [TUI](tui.md) · [Architecture](architecture.md) · [Third-party](third-party.md) · [Release](release_runbook.md) · [Changelog](../CHANGELOG.md)
 
@@ -19,7 +19,7 @@ Regenerate screenshots after UI changes: `make tui-screenshots` ([VHS](https://g
 
 ### Main menu
 
-Status banner, then the top-level hub with a live status footer (`filter`, `doctor`, `vm`, `backup`, `hub`):
+The main menu shows a status banner and a live footer for the current filter, doctor result, VM setting, backup timer, and Hub state:
 
 <p align="center">
   <img src="assets/tui-main-menu.png" alt="LaunchLayer main menu" width="720">
@@ -27,7 +27,7 @@ Status banner, then the top-level hub with a live status footer (`filter`, `doct
 
 ### Game picker
 
-Fuzzy search includes a live config preview and footer key hints. **Ctrl-E** opens the editor. **Ctrl-D** dry-runs the launch chain. **?** shows shortcuts. Multi-select omits the preview pane for speed.
+The game picker searches by name and shows the selected game's config. **Ctrl-E** opens the editor, **Ctrl-D** previews the launch chain, and **?** shows shortcuts. Multi-select hides the preview pane.
 
 <p align="center">
   <img src="assets/tui-game-picker.png" alt="LaunchLayer game picker with live preview" width="720">
@@ -73,7 +73,7 @@ Press Enter on an empty prompt to keep the current value. Type `-` to clear it. 
 
 ## On launch
 
-With fzf, **command output** from menu actions appears in the **right preview pane** on hub menus (no section headers: just the output). Highlight **Status** on the main menu (or open the Status hub) to see a grouped status dashboard in that pane. The footer still shows a one-line summary.
+With fzf, Hub menu commands write their output to the right preview pane. Highlight **Status** on the main menu, or open the Status menu, to show the grouped dashboard there. The footer retains its one-line summary.
 
 Without fzf, the two-line status banner prints above the numbered menu as before:
 
@@ -82,7 +82,7 @@ Without fzf, the two-line status banner prints above the numbered menu as before
 ── backup: ● │ maint: ◑ │ keep newest 7 after backup │ ○ fp:minimal
 ```
 
-**Glyphs:** ● active · ○ inactive · ◑ installed (timer not enabled) · ⚠ caution · ✕ error · — unavailable. Game-list CFG/NAT values use ●/○. An anticheat `-` also appears as —.
+**Glyphs:** ● active · ○ inactive · ◑ installed but not enabled · ⚠ caution · ✕ error · `—` unavailable. Game-list CFG/NAT values use ●/○. An anticheat `-` is displayed as `—`.
 
 For terminals, fonts, or assistive technology that do not handle those symbols well, enable **Settings → Interface → UI behavior → Text status labels** or run `launchlayer --tui-prefs set text_status 1`. Statuses then use words such as `on`, `off`, `yes`, `no`, `warn`, and `n/a`; fzf also uses an ASCII `>` pointer. Disable motion with **Animated progress** in the same menu or `launchlayer --tui-prefs set spinner 0`. `NO_COLOR=1` remains available independently.
 
@@ -90,10 +90,10 @@ For terminals, fonts, or assistive technology that do not handle those symbols w
 
 ## Main menu
 
-Header `LaunchLayer 0.12.0` (version from `LAUNCHLAYER_VERSION`). Footer shows live status, e.g. `filter:all · doctor:0 · vm:ok · backup:off · maint:off · hub:not configured · fp:minimal`. Optional prefix rows appear first when applicable:
+The header shows `LaunchLayer <version>` using `LAUNCHLAYER_VERSION`. The footer shows live status, e.g. `filter:all · doctor:0 · vm:ok · backup:off · maint:off · hub:not configured · fp:minimal`. Optional prefix rows appear first when applicable:
 
 ```
-LaunchLayer 0.12.0                          ← fzf --header
+LaunchLayer <version>                       ← fzf --header
 ────────────────────────────────────────
 Doctor ⚠2                                   ← only when doctor finds issues
 ▶ Resume: Games                            ← when a previous hub was saved

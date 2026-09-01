@@ -1,10 +1,10 @@
 # Release Runbook
 
-Checklist for cutting a `vX.Y.Z` release of LaunchLayer. Follow it in order. Do not tag until the release commit is on `main` with a green required `ci` check.
+Use this checklist to publish a `vX.Y.Z` release. Do not create the tag until the release commit is on `main` and the required `ci` check passes.
 
 [Docs index](README.md) · [README](../README.md) · [CLI](cli.md) · [TUI](tui.md) · [Architecture](architecture.md) · [Third-party](third-party.md) · [Release](release_runbook.md) · [Changelog](../CHANGELOG.md)
 
-Semver guidance: bump **minor** for user-visible features, **patch** for fixes/docs/tooling-only. The CLI version lives in `LAUNCHLAYER_VERSION` (`lib/cli.sh`). Local gates: [README § Testing](../README.md#testing) · [architecture.md § Tests](architecture.md#tests). Release notes: [CHANGELOG.md](../CHANGELOG.md).
+Use a minor version for user-visible features and a patch version for fixes, documentation, or tooling changes. The CLI version is `LAUNCHLAYER_VERSION` in `lib/cli.sh`. See [README § Testing](../README.md#testing), [architecture.md § Tests](architecture.md#tests), and [CHANGELOG.md](../CHANGELOG.md).
 
 ---
 
@@ -33,9 +33,14 @@ make check-all
 
 # Network-backed MCP conformance check when MCP surfaces changed:
 make check-mcp-inspector
+
+# Static Pages structure, JavaScript, links, and accessibility hooks:
+make check-pages
 ```
 
 Do **not** skip `make check` / `make check-hub`. Fix failures before bumping.
+
+After merging a site change, confirm that the **Pages** workflow deployed the expected commit and open the guide at `https://bolens.github.io/launch-layer/`.
 
 ---
 
@@ -50,8 +55,8 @@ make check-version
 | File | What changes |
 | --- | --- |
 | `lib/cli.sh` | `LAUNCHLAYER_VERSION=X.Y.Z` (via `bump-version`) |
-| `test/integration/cli.bats` | version assertion (via `bump-version`) |
-| `docs/tui.md` | example header version strings (via `bump-version`) |
+| `test/integration/cli.bats` | Reads the version dynamically; no edit required |
+| `docs/tui.md` | Uses a `<version>` placeholder; no edit required |
 | `CHANGELOG.md` | Move notes under `## [X.Y.Z] - YYYY-MM-DD` (**manual**) |
 
 ---

@@ -1,16 +1,16 @@
 # Third-party tools and licenses
 
-LaunchLayer is licensed under [CC BY-NC-SA 4.0](../LICENSE). Integrations invoke or optionally cache upstream tools. They **do not** relicense those projects or vendor binaries into the LaunchLayer source tree.
+LaunchLayer is licensed under [CC BY-NC-SA 4.0](../LICENSE). Its integrations call installed upstream tools or, when configured, cache their artifacts. The LaunchLayer license does not apply to those projects, and the repository does not contain their binaries.
 
 [Docs index](README.md) · [README](../README.md) · [CLI](cli.md) · [TUI](tui.md) · [Architecture](architecture.md) · [Third-party](third-party.md) · [Release](release_runbook.md) · [Changelog](../CHANGELOG.md)
 
-Auto-fetched artifacts (when enabled) live under `~/.local/share/launchlayer/cache/<tool>/` with a `NOTICE` file (upstream URL, version, SPDX/license). Prefer distro packages when available. See [architecture.md](architecture.md) (`lib/runtime/inject.sh`, `extras.sh`) for the cache/inject path.
+When fetching is enabled, LaunchLayer stores artifacts under `~/.local/share/launchlayer/cache/<tool>/` and writes a `NOTICE` containing the upstream URL, version, and license identifier. Use a distribution package when one is available. See [architecture.md](architecture.md) for the cache and injection code in `lib/runtime/inject.sh` and `extras.sh`.
 
 ## Policy
 
 - **Invoke** installed tools when possible (`PATH`, Vulkan layers).
 - **Never commit** third-party binaries to this repository.
-- **Purchase / EULA gates**: tools that require a separate purchase (e.g. Steam *Lossless Scaling* for lsfg-vk) must be owned by the user: LaunchLayer never downloads proprietary `Lossless.dll`.
+- **Purchase and EULA gates**: the user must own separately sold software such as Steam's *Lossless Scaling* for lsfg-vk. LaunchLayer never downloads proprietary `Lossless.dll`.
 - **Hub configs** strip mutate / remote-exec keys (inject paths, winetricks, wrappers, etc.).
 - Names are used for identification only. No endorsement is claimed.
 
@@ -49,7 +49,7 @@ Verify licenses upstream because they can change.
 
 ## lsfg-vk and layer stacking
 
-`LSFG_VK` enables the lsfg-vk Vulkan layer. Combining it with **MangoHud**, **vkBasalt**, and nested **Gamescope** can produce undefined layer order or overlays fighting for the swapchain. Prefer enabling one post-process/frame-gen path per game until you have verified stacking on your setup. Lossless Scaling's proprietary DLL must already be installed from Steam: LaunchLayer never downloads it (`inject_refuse_proprietary_redistrib` / purchase gate).
+`LSFG_VK` enables the lsfg-vk Vulkan layer. Combining it with MangoHud, vkBasalt, and nested Gamescope can leave layer order undefined or make multiple overlays contend for the swapchain. Enable one post-processing or frame-generation path first, then test each additional layer on that game. Install Lossless Scaling's proprietary DLL through Steam; LaunchLayer never downloads it (`inject_refuse_proprietary_redistrib`).
 
 ## Nested Gamescope (ScopeBuddy parity)
 

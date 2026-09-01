@@ -4,20 +4,20 @@
 
 # LaunchLayer
 
-**Layered launch orchestration for Steam games on Linux**
+**One launch command, layered settings, and repeatable Steam game tuning on Linux**
 
-*One Steam launch string. Per-game configs. GameMode, Gamescope, MangoHUD, and more: assembled automatically.*
+*Use the same Steam launch string for every game. Keep each game's settings in a plain config file.*
 
 [![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](LICENSE)
 [![CI](https://github.com/bolens/launch-layer/actions/workflows/ci.yml/badge.svg)](https://github.com/bolens/launch-layer/actions/workflows/ci.yml)
 [![Shell](https://img.shields.io/badge/shell-bash-4EAA25?logo=gnu-bash&logoColor=white)](launchlayer)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20BSD%20%7C%20macOS%20%7C%20WSL2-1793D2?logo=linux&logoColor=white)](launch.d/profiles/)
 
+[Player guide](https://bolens.github.io/launch-layer/) · [Technical documentation](docs/README.md) · [Interactive architecture](https://bolens.github.io/launch-layer/architecture.html)
+
 </div>
 
-**For Linux gamers** who tune every launch with GameMode, CPU affinity, MangoHUD, Gamescope, VRAM controls, or network settings, but do not want a different Steam launch string per title.
-
-LaunchLayer sits in Steam's **Launch Options** ahead of `%command%`. It loads layered config, runs preflight checks, and builds the wrapper chain before your game starts.
+LaunchLayer is for Linux players who use GameMode, CPU affinity, MangoHUD, Gamescope, VRAM controls, or network settings. Put it before `%command%` in Steam's **Launch Options**. It loads the applicable config files, checks the host, and builds the wrapper chain before starting the game.
 
 | Without LaunchLayer | With LaunchLayer |
 |---------------------|------------------|
@@ -25,11 +25,11 @@ LaunchLayer sits in Steam's **Launch Options** ahead of `%command%`. It loads la
 | Settings scattered across Steam, shell aliases, and one-off scripts | Plain `KEY=VALUE` files: profiles → presets → per-game |
 | No preflight for `vm.max_map_count`, shader bloat, or VRAM pressure | Doctor, cache trim, compositor-aware display detection |
 
-Built for a tuned workstation (7900X3D, RTX 3080 Ti, Wayland / Plasma 6), with auto-detection and profiles for Steam Deck, Flatpak Steam, BSD, and WSL2.
+The project began on a 7900X3D and RTX 3080 Ti workstation running Wayland and Plasma 6. Detection and profiles also cover Steam Deck, Flatpak Steam, BSD, and WSL2.
 
 **Requirements:** Bash 4.3+, Steam (or any launcher that passes `%command%`). Optional tools (`fzf`, `gamescope`, …) extend the stack but are not required for basic launches.
 
-### See it work
+### Preview a launch
 
 Preview the resolved layers and launch chain without starting a game:
 
@@ -56,11 +56,12 @@ Launch chain:
   <em><a href="docs/tui.md#screenshots">Interactive TUI</a>: browse games, preview configs, flip toggles</em>
 </p>
 
-### Quick paths
+### Find a topic
 
 | I want to… | Go to |
 |------------|-------|
-| Get running in five minutes | [Quick start](#quick-start) |
+| Install and configure LaunchLayer | [Quick start](#quick-start) |
+| Read the non-technical guide | [GitHub Pages](https://bolens.github.io/launch-layer/) |
 | Paste into Steam's Launch Options | [Steam integration](#integrating-with-steam-launch-options) |
 | Browse and edit games interactively | [Interactive TUI](#interactive-tui) · [screenshots](docs/tui.md#screenshots) |
 | Share configs with similar machines | [Community hub](#community-hub) |
@@ -69,7 +70,7 @@ Launch chain:
 | TUI menus and shortcuts | [docs/tui.md](docs/tui.md) |
 | Module-level internals | [docs/architecture.md](docs/architecture.md) |
 | Licenses / inject / nest Gamescope | [docs/third-party.md](docs/third-party.md) |
-| Docs map (topic → page) | [docs/README.md](docs/README.md) |
+| Find the canonical page for a topic | [docs/README.md](docs/README.md) |
 
 ---
 
@@ -112,7 +113,7 @@ cd ~/launchlayer
 ./launchlayer --setup --completions --symlink --print-launch-option --write-local-config
 ```
 
-This installs shell completions, adds `~/.local/bin/launchlayer`, prints your Steam launch string, and writes `launch.d/local.env`. Add `--systemd` for the maintenance timer or `--backup-timer` for scheduled config backups.
+The command installs shell completions, adds `~/.local/bin/launchlayer`, prints the Steam launch string, and writes `launch.d/local.env`. Add `--systemd` to install the maintenance timer or `--backup-timer` to schedule config backups.
 
 3. **Paste into Steam**: copy the printed string into each game's **Launch Options** (same string for every title):
 
@@ -130,7 +131,7 @@ See [Integrating with Steam launch options](#integrating-with-steam-launch-optio
 ./launchlayer --tui                                 # or browse interactively
 ```
 
-5. **Sanity check**:
+5. **Check the installation**:
 
 ```bash
 ./launchlayer --doctor
@@ -142,7 +143,7 @@ If Proton titles misbehave, fix `vm.max_map_count` once. See [System tuning](#sy
 
 ## Integrating with Steam launch options
 
-LaunchLayer hooks into Steam by **prefixing** the normal game command. Steam replaces `%command%` with Proton wrappers, the game binary, and any args Steam already knows about. LaunchLayer loads config, runs preflight, builds wrapper chains, then execs that command.
+LaunchLayer prefixes Steam's normal game command. Steam replaces `%command%` with its Proton wrappers, the game binary, and existing arguments. LaunchLayer loads config, runs its preflight checks, builds the wrapper chain, and executes that command.
 
 Use the **same launch string on every game** you want managed. Per-game tuning lives in `GAMES_DIR/<AppID>.env`. You do not need different launch options per title.
 
@@ -562,13 +563,13 @@ LaunchLayer includes a local, read-only MCP server for coding agents and desktop
 }
 ```
 
-It exposes game discovery, resolved configuration, paths, cache usage, launch statistics, status, detected defaults, environment checks, diagnostics, and config validation. It cannot launch games or change local or Hub configuration. Python 3 is required. Add `--privacy redacted` to the argument list to suppress local paths and exact hardware identifiers. See [the CLI reference](docs/cli.md#mcp-server) for the full data-sharing boundary.
+It exposes game discovery, resolved configuration, paths, cache usage, launch statistics, status, detected defaults, environment checks, diagnostics, and config validation. It cannot launch games or change local or Hub configuration. Python 3.9+ is required. Add `--privacy redacted` to the argument list to suppress local paths and exact hardware identifiers. See [the CLI reference](docs/cli.md#mcp-server) for the full data-sharing boundary.
 
 ---
 
 ## Community hub
 
-Share per-game configs and discover settings from **similar machines** (GPU, OS, display tier, profiles, Deck/Flatpak/WSL flags). Optional: local launches do not need the hub. Client: `lib/hub/`; backend: Convex app in `hub/`.
+The optional community Hub shares per-game configs and finds settings from machines with similar GPUs, operating systems, displays, profiles, and platform flags. Local launches do not contact it. The client lives in `lib/hub/`; the Convex backend lives in `hub/`.
 
 **Setup**: copy the template and set your deployment URL **and** publish token:
 
@@ -586,7 +587,7 @@ Hub rate limiting also fails closed. Route the HTTP actions endpoint through an 
 
 **Hub CLI commands:** [docs/cli.md § Community hub](docs/cli.md#community-hub)
 
-Also useful without the hub: `--suggest-config APPID|NAME [--apply]` ranks ProtonDB reports for this machine and can write allowlisted knobs into `games/<AppID>.env` ([docs/cli.md § Games and config](docs/cli.md#games-and-config)). TUI: **Games → *Game* → [Edit] Suggest from ProtonDB**.
+The separate `--suggest-config APPID|NAME [--apply]` command does not require the Hub. It ranks ProtonDB reports for the current machine and can write approved settings to `games/<AppID>.env`. See [docs/cli.md § Games and config](docs/cli.md#games-and-config). In the TUI, use **Games → *Game* → [Edit] Suggest from ProtonDB**.
 
 The TUI exposes hub flows under **Community hub** (main menu) and **[Hub] Community configs** (per-game actions), including viewing history and applying a historical version (also on **Apply config by ID**).
 
@@ -730,7 +731,7 @@ Under `$XDG_STATE_HOME/launchlayer` (default `~/.local/state/launchlayer/`):
 
 ## Optional dependencies
 
-The script degrades gracefully when tools are missing. Run `--doctor` or `--detect-environment` for distro-aware install hints.
+Missing optional tools disable only the features that need them. Run `--doctor` or `--detect-environment` for distribution-specific installation hints.
 
 | Tool | Used for |
 |------|----------|
@@ -808,7 +809,7 @@ Hub dependency audits run weekly via `.github/workflows/hub-audit.yml` (or `work
 No. Use the same `"/path/to/launchlayer" %command%` on every title. Per-game tuning lives in `GAMES_DIR/<AppID>.env`.
 
 **Can I keep `gamemoderun` or `mangohud` in Steam's launch options?**
-Remove external wrappers from Steam and enable `GAMEMODE=1`, `MANGOHUD=1`, `GAMESCOPE=1`, etc. in config instead: otherwise you get double-wrapped launches.
+Remove those wrappers from Steam and enable `GAMEMODE=1`, `MANGOHUD=1`, or `GAMESCOPE=1` in config. Leaving both forms enabled wraps the game twice.
 
 **Steam Overlay / Steam Input broken under nested Gamescope?**
 LaunchLayer clears `LD_PRELOAD` around nested desktop Gamescope by default (`GAMESCOPE_NESTED_FIX`). See [docs/third-party.md § Nested Gamescope](docs/third-party.md#nested-gamescope-scopebuddy-parity) and [docs/cli.md § Gamescope nest](docs/cli.md#gamescope-nest--extras).
@@ -832,7 +833,7 @@ This project is [CC BY-NC-SA 4.0](LICENSE). Commercial use requires separate per
 
 ## Contributing
 
-Issues and pull requests are welcome at [github.com/bolens/launch-layer](https://github.com/bolens/launch-layer).
+Open issues and pull requests at [github.com/bolens/launch-layer](https://github.com/bolens/launch-layer).
 
 ```bash
 make check      # shellcheck + hub secret guard + bats

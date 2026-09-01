@@ -43,7 +43,9 @@ jobs:
               - 'docs/tui.md'
               - 'docs/third-party.md'
               - 'docs/release_runbook.md'
-              - 'share/launchlayer/hub-untrusted-keys.txt'
+              - 'docs/architecture-diagram.json'
+              - 'docs/architecture-diagram.sha256'
+              - 'site/**'
               - '.github/workflows/ci-shell.yml'
               - '.github/workflows/ci.yml'
             hub:
