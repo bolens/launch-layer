@@ -55,7 +55,7 @@ Verify licenses upstream because they can change.
 
 ## Injector ownership
 
-Windows proxy DLLs are exclusive slots. LaunchLayer validates Special K, ReShade, OptiScaler, OpenVR-FSR, and OpenComposite together and refuses ambiguous ownership. All managed copies are recorded under the per-AppID inject tracker, existing files receive `.ll-bak` backups, and cleanup restores them after launch. Injector paths and toggles are stripped from Hub configs as untrusted host mutations.
+Windows proxy DLLs are exclusive slots. LaunchLayer validates Special K, ReShade, OptiScaler, OpenVR-FSR, and OpenComposite together and refuses ambiguous ownership. All managed copies are recorded under the per-AppID inject tracker, existing files receive `.ll-bak` backups, and cleanup restores them after launch or watchdog recovery. Backup failure aborts the copy. Archive imports reject absolute paths, parent traversal, and links before extraction. Injector paths and toggles are stripped from Hub configs as untrusted host mutations.
 
 ## Nested Gamescope (ScopeBuddy parity)
 
