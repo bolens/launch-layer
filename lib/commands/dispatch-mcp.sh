@@ -29,7 +29,11 @@ dispatch_mcp_subcommand() {
 			;;
 	esac
 	if ! command -v python3 >/dev/null 2>&1; then
-		echo "launchlayer: --mcp requires python3" >&2
+		echo "launchlayer: --mcp requires Python 3.9+" >&2
+		return 1
+	fi
+	if ! python3 -c 'import sys; raise SystemExit(sys.version_info < (3, 9))' 2>/dev/null; then
+		echo "launchlayer: --mcp requires Python 3.9+" >&2
 		return 1
 	fi
 	export LAUNCHLAYER_MCP_SERVER_VERSION="$LAUNCHLAYER_VERSION"

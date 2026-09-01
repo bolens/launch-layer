@@ -35,11 +35,29 @@ assert all(not tool["annotations"]["destructiveHint"] for tool in tools)
 	[[ "$output" == *'"code":-32002'* ]]
 }
 
+@test "MCP distinguishes malformed JSON from invalid JSON-RPC" {
+	run run_mcp \
+		'not-json' \
+		'{"jsonrpc":"2.0","id":2,"params":{}}' \
+		'[]' \
+		'{"jsonrpc":"2.0","id":[],"method":"ping"}'
+
+	[ "$status" -eq 0 ]
+	python3 -c '
+import json, sys
+messages = [json.loads(line) for line in sys.stdin]
+assert [message["error"]["code"] for message in messages] == [-32700, -32600, -32600, -32600]
+assert messages[1]["id"] == 2
+assert messages[2]["id"] is None
+assert messages[3]["id"] is None
+' <<< "$output"
+}
+
 @test "MCP 2026 discovers capabilities and serves tools without initialization" {
 	local meta
 	meta='"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{}}'
 	run run_mcp \
-		'{"jsonrpc":"2.0","id":1,"method":"server/discover","params":{}}' \
+		"{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"server/discover\",\"params\":{$meta}}" \
 		"{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\",\"params\":{$meta}}"
 
 	[ "$status" -eq 0 ]
@@ -50,7 +68,26 @@ assert messages[0]["result"]["supportedVersions"] == ["2026-07-28"]
 assert messages[0]["result"]["resultType"] == "complete"
 assert messages[1]["result"]["resultType"] == "complete"
 assert messages[1]["result"]["_meta"]["io.modelcontextprotocol/serverInfo"]["name"] == "launchlayer"
+assert messages[1]["result"]["ttlMs"] == 3600000
+assert messages[1]["result"]["cacheScope"] == "public"
 assert len(messages[1]["result"]["tools"]) >= 10
+' <<< "$output"
+}
+
+@test "MCP 2026 rejects incomplete and unsupported request envelopes" {
+	run run_mcp \
+		'{"jsonrpc":"2.0","id":1,"method":"server/discover","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28"}}}' \
+		'{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2099-01-01","io.modelcontextprotocol/clientCapabilities":{}}}}' \
+		'{"jsonrpc":"2.0","id":3,"method":"tools/list","params":{"_meta":{"io.modelcontextprotocol/clientCapabilities":{}}}}'
+
+	[ "$status" -eq 0 ]
+	python3 -c '
+import json, sys
+messages = [json.loads(line) for line in sys.stdin]
+assert messages[0]["error"]["code"] == -32021
+assert messages[1]["error"]["code"] == -32022
+assert messages[1]["error"]["data"]["supportedVersions"] == ["2026-07-28"]
+assert messages[2]["error"]["code"] == -32022
 ' <<< "$output"
 }
 
@@ -78,7 +115,8 @@ assert len(messages[1]["result"]["tools"]) >= 10
 
 	[ "$status" -eq 0 ]
 	[[ "$output" == *'"name":"launchlayer"'* ]]
-	[[ "$output" == *'"version":"0.12.0"'* ]]
+	expected_version="$(sed -n 's/^LAUNCHLAYER_VERSION=//p' "$REPO_ROOT/lib/cli.sh")"
+	[[ "$output" == *"\"version\":\"$expected_version\""* ]]
 }
 
 @test "MCP tool calls return structured LaunchLayer JSON" {
@@ -118,9 +156,40 @@ path = pathlib.Path(sys.argv[1])
 spec = importlib.util.spec_from_file_location("launchlayer_mcp", path)
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
-value = module.redact_data({"install_dir": "/games/private", "gpus": [{"name": "Exact GPU"}], "vendor": "nvidia"})
-assert value == {"install_dir": "[redacted]", "gpus": "[redacted]", "vendor": "nvidia"}
+value = module.redact_data({
+    "install_dir": "/games/private",
+    "gpus": [{"name": "Exact GPU"}],
+    "vendor": "nvidia",
+    "uri": "file:///games/private/config.env",
+    "windows": "C:\\Games\\Private",
+    "unc": "\\\\server\\private",
+})
+assert value == {
+    "install_dir": "[redacted]",
+    "gpus": "[redacted]",
+    "vendor": "nvidia",
+    "uri": "[redacted]",
+    "windows": "[redacted]",
+    "unc": "[redacted]",
+}
 ' "$MCP_SERVER"
+	[ "$status" -eq 0 ]
+}
+
+@test "MCP error text is bounded by UTF-8 byte size" {
+	run python3 - "$MCP_SERVER" <<'PY'
+import importlib.util
+import pathlib
+import sys
+
+spec = importlib.util.spec_from_file_location("launchlayer_mcp", pathlib.Path(sys.argv[1]))
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+value = "é" * 10
+truncated = module.truncate_utf8(value, 7)
+assert truncated == "é" * 3
+assert len(truncated.encode("utf-8")) <= 7
+PY
 	[ "$status" -eq 0 ]
 }
 
@@ -162,4 +231,43 @@ PY
 	[ "$status" -eq 0 ]
 	[[ "$output" == *"tool call cancelled"* ]]
 	rm -rf "$tmp"
+}
+
+@test "MCP ignores cancellation for unknown request IDs" {
+	run python3 - "$MCP_SERVER" <<'PY'
+import importlib.util
+import pathlib
+import sys
+
+spec = importlib.util.spec_from_file_location("launchlayer_mcp", pathlib.Path(sys.argv[1]))
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+for request_id in range(1000):
+    module.handle({"jsonrpc": "2.0", "method": "notifications/cancelled", "params": {"requestId": request_id}}, True)
+module.handle({"jsonrpc": "2.0", "method": "notifications/cancelled", "params": {"requestId": []}}, True)
+assert module.CANCELLED == set()
+assert module.PENDING == set()
+PY
+	[ "$status" -eq 0 ]
+}
+
+@test "MCP reports tool process startup failures and clears request state" {
+	run python3 - "$MCP_SERVER" <<'PY'
+import importlib.util
+import io
+import pathlib
+import sys
+
+spec = importlib.util.spec_from_file_location("launchlayer_mcp", pathlib.Path(sys.argv[1]))
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+module.LAUNCHLAYER = pathlib.Path("/definitely/missing/launchlayer")
+module.handle({"jsonrpc": "2.0", "id": 9, "method": "tools/call", "params": {"name": "doctor", "arguments": {}}}, True)
+for worker in module.WORKERS:
+    worker.join(2)
+assert module.PENDING == set()
+assert module.RUNNING == {}
+PY
+	[ "$status" -eq 0 ]
+	[[ "$output" == *'"code":-32603'* ]]
 }
