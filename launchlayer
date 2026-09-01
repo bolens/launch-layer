@@ -37,7 +37,9 @@
 #   --hub-fingerprint / --hub-publish / --hub-update / --hub-delete
 #   --hub-recommend / --hub-search / --hub-apply
 #   --tui                             interactive game/config browser
+#   --mcp                             read-only MCP server over stdio
 #   --install-systemd                 install user maintenance timer (resolved paths)
+#   --run-maintenance                 run the maintenance service payload
 #   --sysctl [status|install]         vm.max_map_count helper (install needs root)
 #   --pause-vram-hogs / --resume-vram-hogs / --cleanup-stale-launch [pid]
 #
@@ -94,9 +96,9 @@
 
 set -euo pipefail
 
-# Requires bash 4.2+ (associative arrays, mapfile, etc.).
-if (( BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 2) )); then
-	echo "launchlayer: requires bash >= 4.2 (found ${BASH_VERSION})" >&2
+# Requires bash 4.3+ (associative arrays, mapfile, namerefs, etc.).
+if (( BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 3) )); then
+	echo "launchlayer: requires bash >= 4.3 (found ${BASH_VERSION})" >&2
 	exit 1
 fi
 
@@ -110,6 +112,7 @@ elif command -v python3 >/dev/null 2>&1; then
 	[[ -n "$_script_resolved" ]] && _script_source="$_script_resolved"
 fi
 SCRIPT_DIR="$(cd "$(dirname "$_script_source")" && pwd)"
+LAUNCHLAYER_MAIN_SCRIPT="$_script_source"
 unset _script_source _script_resolved
 # Legacy env var aliases (deprecated).
 : "${LAUNCHLAYER_CONFIG_DIR:=${STEAM_LAUNCH_CONFIG_DIR:-}}"
@@ -124,13 +127,11 @@ LIB_DIR="$SCRIPT_DIR/lib"
 # Load modules in dependency order.
 # shellcheck source=lib/common.sh
 source "$LIB_DIR/common.sh"
-# shellcheck source=lib/keys.sh
-source "$LIB_DIR/keys.sh"
 # shellcheck source=lib/load-modules.sh
 source "$LIB_DIR/load-modules.sh"
-launchlayer_load_pre_main
-LAUNCHLAYER_MAIN_SCRIPT="$(realpath_portable "${BASH_SOURCE[0]}")"
-launchlayer_load_post_main
+# CLI parsing and presentation form the small bootstrap. Domain modules load
+# only after fast, side-effect-free commands have had a chance to exit.
+launchlayer_source_cli
 
 # Global flags (--quiet, --verbose) apply to subcommands and game launches.
 mapfile -t _launchlayer_argv < <(cli_parse_global_flags "$@")
@@ -142,6 +143,34 @@ if [[ "${1:-}" == "--dry-run" ]]; then
 	DRY_RUN=1
 	shift
 fi
+
+case "${1:-}" in
+	--version|-V)
+		print_version
+		exit 0
+		;;
+	--help|-h)
+		print_help
+		exit 0
+		;;
+	--mcp)
+		# shellcheck source=lib/commands/dispatch-mcp.sh
+		source "$LIB_DIR/commands/dispatch-mcp.sh"
+		dispatch_mcp_subcommand "$@"
+		exit $?
+		;;
+	"")
+		if [[ ! -t 0 || ! -t 1 ]] || ! command -v fzf >/dev/null 2>&1; then
+			print_usage_brief
+			exit 0
+		fi
+		;;
+esac
+
+# shellcheck source=lib/keys.sh
+source "$LIB_DIR/keys.sh"
+launchlayer_load_pre_main
+launchlayer_load_post_main
 
 # Utility verbs exit here; unrecognized --flags error instead of launching.
 if [[ $# -gt 0 && "${1:-}" == --* && "${1:-}" != "--dry-run" ]]; then

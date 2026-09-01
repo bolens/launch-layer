@@ -11,6 +11,7 @@ LAUNCHLAYER_VERSION=0.12.0
 LAUNCHLAYER_SUBCOMMANDS=(
 	--help -h
 	--version -V
+	--mcp
 	--doctor
 	--setup
 	--detect-environment
@@ -32,6 +33,7 @@ LAUNCHLAYER_SUBCOMMANDS=(
 	--restore-backup
 	--prune-backups
 	--run-scheduled-backup
+	--run-maintenance
 	--backup-timer
 	--backup-prefs
 	--tui-prefs

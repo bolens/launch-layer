@@ -60,6 +60,7 @@ $(cli_bold "Onboarding & health")
                                     Write launch.d/local.env from detection
   --completions [status|enable|disable|print] [--shell bash|zsh|fish|nu|pwsh|osh|all] [--json]
   --install-systemd                 Install user maintenance timer
+  --run-maintenance                 Run the maintenance service payload now
   --backup-timer [install|enable|disable|enable-service|disable-service|uninstall|status|reinstall] [--dir PATH] [--keep N] [--schedule ON_CALENDAR]
                                     Install/manage backup timer (prefs: ~/.config/launchlayer/backup.conf)
   --backup-prefs [show|reset|set|set-schedule] [args...] [--json] [--reinstall-timer]
@@ -117,7 +118,9 @@ $(cli_bold "Community hub") $(cli_dim "(requires hub.conf — see share/launchla
                                     User file: ~/.config/launchlayer/hub.conf
 
 $(cli_bold "Runtime & diagnostics")
-  --status [AppID|NAME] [--json]    Runtime state, shader/compatdata sizes
+	--mcp [--privacy standard|redacted]
+	                                  Run the read-only MCP stdio server (requires python3)
+	--status [AppID|NAME] [--json]    Runtime state, shader/compatdata sizes
   --show-cpu-topology               V-Cache CCD hints for X3D_CPUS
   --cache-report [--min-gb N] [--grep NAME] [--json] [--shader-only|--compat-only]
   --launch-stats [APPID|NAME] [--json]  Summarize launch.log

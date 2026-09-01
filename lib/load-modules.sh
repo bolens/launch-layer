@@ -140,6 +140,8 @@ launchlayer_source_cli() {
 
 # launchlayer_source_dispatch — Domain-specific CLI verb handlers.
 launchlayer_source_dispatch() {
+	# shellcheck source=commands/dispatch-mcp.sh
+	source "$LIB_DIR/commands/dispatch-mcp.sh"
 	# shellcheck source=commands/dispatch-launch.sh
 	source "$LIB_DIR/commands/dispatch-launch.sh"
 	# shellcheck source=commands/dispatch-config.sh
@@ -264,6 +266,7 @@ launchlayer_source_tui_system() {
 
 # launchlayer_source_tui — Interactive terminal UI.
 launchlayer_source_tui() {
+	[[ -n "${LAUNCHLAYER_KEYS_LOADED:-}" ]] || source "$LIB_DIR/keys.sh"
 	# shellcheck source=tui/config.sh
 	source "$LIB_DIR/tui/config.sh"
 	# shellcheck source=tui/spinner.sh
