@@ -55,6 +55,19 @@ EOF
 	[[ "$output" == "pnpm install --frozen-lockfile" ]]
 }
 
+@test "hub-pm.sh does not replace an existing pnpm with Corepack" {
+	_stub_echo pnpm
+	cat >"$FAKE_BIN/corepack" <<'EOF'
+#!/bin/bash
+echo "corepack should not run" >&2
+exit 1
+EOF
+	chmod +x "$FAKE_BIN/corepack"
+	run env PATH="$TEST_PATH" "$HUB_PM" install --frozen-lockfile
+	[[ $status -eq 0 ]]
+	[[ "$output" == "pnpm install --frozen-lockfile" ]]
+}
+
 @test "hub-pm.sh pnpm fallback maps lint to pnpm run lint" {
 	_stub_echo pnpm
 	run env PATH="$TEST_PATH" "$HUB_PM" lint

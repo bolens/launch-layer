@@ -24,7 +24,7 @@ if command -v vp >/dev/null 2>&1; then
 	esac
 fi
 
-if command -v corepack >/dev/null 2>&1; then
+if ! command -v pnpm >/dev/null 2>&1 && command -v corepack >/dev/null 2>&1; then
 	corepack enable >/dev/null 2>&1 || true
 fi
 
