@@ -9,6 +9,19 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-09-01
+
+### Changed
+
+- Update compatible Hub development dependencies while retaining the supported TypeScript toolchain.
+- Report per-game progress during bulk Hub publish and update operations without corrupting JSON output.
+
+### Fixed
+
+- Canonicalize client fingerprint hashes in the same key order as Convex validation.
+- Exclude Steam runtimes and tools identified by `toolmanifest.vdf` from game workflows and direct Hub operations.
+- Keep the primary player-guide content visible when JavaScript enhancement succeeds.
+
 ## [0.13.0] - 2026-09-01
 
 ### Added
@@ -120,7 +133,8 @@ and this project uses [Semantic Versioning](https://semver.org/).
 - Modular `lib/` layout, TUI, backups, profiles, and broad platform detection
 - LaunchLayer Hub client + Convex backend for sharing per-game configs
 
-[Unreleased]: https://github.com/bolens/launch-layer/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/bolens/launch-layer/compare/v0.13.1...HEAD
+[0.13.1]: https://github.com/bolens/launch-layer/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/bolens/launch-layer/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/bolens/launch-layer/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/bolens/launch-layer/releases/tag/v0.11.0
