@@ -322,6 +322,10 @@ EOF
 }
 
 @test "is_skippable_steam_package ignores runtimes and proton tools" {
+	local tool_dir
+	tool_dir="$(mktemp -d)"
+	touch "$tool_dir/toolmanifest.vdf"
+
 	run bash -c '
 		export CONFIG_DIR="'"$CONFIG_DIR"'"
 		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
@@ -339,6 +343,47 @@ EOF
 	'
 	[[ $status -eq 0 ]]
 	[[ "$output" == game ]]
+
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib steam
+		is_skippable_steam_package "Lepton" "'"$tool_dir"'" && echo skip || echo game
+	'
+	[[ $status -eq 0 ]]
+	[[ "$output" == skip ]]
+	rm -rf "$tool_dir"
+}
+
+@test "foreach_installed_game excludes toolmanifest packages" {
+	local root
+	root="$(fake_steam_root 3029110 Lepton Lepton)"
+	touch "$root/steamapps/common/Lepton/toolmanifest.vdf"
+	run env STEAM_ROOT="$root" bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib steam platform
+		capture() { echo "$1"; }
+		foreach_installed_game capture
+	'
+	[[ $status -eq 0 ]]
+	[[ -z "$output" ]]
+	rm -rf "$root"
+}
+
+@test "resolve_appid_query rejects numeric toolmanifest packages" {
+	local root
+	root="$(fake_steam_root 3029110 Lepton Lepton)"
+	touch "$root/steamapps/common/Lepton/toolmanifest.vdf"
+	run env STEAM_ROOT="$root" bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib steam platform
+		resolve_appid_query 3029110
+	'
+	[[ $status -eq 1 ]]
+	[[ "$output" == *"not found in installed Steam libraries"* ]]
+	rm -rf "$root"
 }
 
 @test "game_name_matches_grep is case insensitive" {

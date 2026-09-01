@@ -91,6 +91,10 @@ init_appid_config() {
 		echo "Usage: $0 --init-appid APPID|NAME [preset] [--force]" >&2
 		return 1
 	}
+	is_installed_game_appid "$appid" || {
+		echo "AppID $appid is not an installed game." >&2
+		return 1
+	}
 	name="$(get_game_name "$appid" 2>/dev/null || true)"
 	[[ -n "$name" ]] || {
 		echo "AppID $appid not found in installed Steam libraries." >&2
@@ -218,6 +222,7 @@ suggest_config() {
 		echo "suggest_config: AppID required" >&2
 		return 1
 	}
+	appid="$(resolve_appid_arg "$appid")" || return $?
 
 	load_profile_config
 	load_config_file "$LAUNCHD_DIR/default.env" 0

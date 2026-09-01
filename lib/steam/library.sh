@@ -114,7 +114,7 @@ resolve_appid_query() {
 	local -a matches=() match
 
 	if [[ "$query" =~ ^[0-9]+$ ]]; then
-		get_game_name "$query" >/dev/null 2>&1 || {
+		is_installed_game_appid "$query" || {
 			echo "AppID $query not found in installed Steam libraries." >&2
 			return 1
 		}
@@ -207,10 +207,24 @@ find_all_app_manifests() {
 	done < <(collect_steam_library_roots)
 }
 
-# is_skippable_steam_package — True for Steam runtimes, SDKs, and Proton tool entries.
+# is_skippable_steam_package — True for Steam runtimes, SDKs, and tool entries.
 is_skippable_steam_package() {
-	local name=$1
-	[[ "$name" == *Runtime* || "$name" == *Redistribut* || "$name" == *SDK* || "$name" == Proton* ]]
+	local name=$1 game_dir=${2:-}
+	[[ -n "$game_dir" && -f "$game_dir/toolmanifest.vdf" ]] \
+		|| [[ "$name" == *Runtime* || "$name" == *Redistribut* || "$name" == *SDK* || "$name" == Proton* ]]
+}
+
+# is_installed_game_appid — True for an installed game, false for tools and runtimes.
+is_installed_game_appid() {
+	local appid=$1 manifest name installdir game_dir
+	manifest="$(find_app_manifest "$appid" 2>/dev/null || true)"
+	[[ -n "$manifest" ]] || return 1
+	read_manifest_game_fields "$manifest"
+	name="$MANIFEST_NAME"
+	installdir="$MANIFEST_INSTALLDIR"
+	game_dir="${manifest%/*}/common/$installdir"
+	[[ -n "$name" ]] || return 1
+	! is_skippable_steam_package "$name" "$game_dir"
 }
 
 # game_name_matches_grep — True when name matches a case-insensitive grep pattern (or pattern empty).
@@ -237,7 +251,7 @@ foreach_installed_game() {
 		else
 			STEAM_GAME_DIR_BY_APPID["$appid"]=""
 		fi
-		is_skippable_steam_package "$name" && continue
+		is_skippable_steam_package "$name" "$game_dir" && continue
 		"$callback" "$appid" "$name" "$manifest" || return $?
 	done < <(find_all_app_manifests | LC_ALL=C sort -u)
 }
