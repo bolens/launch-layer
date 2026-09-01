@@ -11,7 +11,7 @@
 #   on_calendar             systemd OnCalendar expression (when timer_type=calendar)
 #   on_boot_sec             First run delay after boot (when timer_type=interval)
 #   on_unit_active_sec      Repeat interval (when timer_type=interval)
-#   randomized_delay_sec    Jitter for calendar timers (seconds; alias: delay)
+#   randomized_delay_sec    Calendar-timer jitter in seconds (alias: delay)
 #   include_local           Include launch.d/local.env in scheduled backups (0|1)
 #   include_profiles        Include launch.d/profiles/ in scheduled backups (0|1)
 #   include_tui             Include ~/.config/launchlayer/tui.conf in backups (0|1)

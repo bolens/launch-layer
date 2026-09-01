@@ -146,7 +146,7 @@ EOF
 	run bash -c '
 		example="'"$example"'"
 		for key in game_filter cache_min_gb default_preset last_menu json_output \
-			resume_last_menu press_enter_lines fzf_height fzf_preview; do
+			resume_last_menu text_status spinner press_enter_lines fzf_height fzf_preview; do
 			grep -q "^${key}=" "$example" || { echo "missing:$key"; exit 1; }
 			echo "present:$key"
 		done

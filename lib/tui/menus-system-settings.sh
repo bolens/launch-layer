@@ -34,6 +34,8 @@ tui_interface_ui_menu() {
 		action="$(tui_menu_anchored "UI behavior" "$last_anchor" \
 			"JSON view output: $(tui_glyph_pref "${TUI_JSON_OUTPUT:-0}")" \
 			"Auto-resume last hub: $(tui_glyph_pref "${TUI_RESUME_LAST_MENU:-0}")" \
+			"Text status labels: $(tui_glyph_pref "${TUI_TEXT_STATUS:-0}")" \
+			"Animated progress: $(tui_glyph_pref "${TUI_SPINNER:-1}")" \
 			"Press-enter threshold: ${TUI_PRESS_ENTER_LINES:-8}" \
 			"Back")" || return 0
 		case "$action" in
@@ -44,6 +46,14 @@ tui_interface_ui_menu() {
 			"Auto-resume last hub:"*)
 				last_anchor="Auto-resume last hub:"
 				[[ "${TUI_RESUME_LAST_MENU:-0}" == "1" ]] && TUI_RESUME_LAST_MENU=0 || TUI_RESUME_LAST_MENU=1
+				;;
+			"Text status labels:"*)
+				last_anchor="Text status labels:"
+				[[ "${TUI_TEXT_STATUS:-0}" == "1" ]] && TUI_TEXT_STATUS=0 || TUI_TEXT_STATUS=1
+				;;
+			"Animated progress:"*)
+				last_anchor="Animated progress:"
+				[[ "${TUI_SPINNER:-1}" == "1" ]] && TUI_SPINNER=0 || TUI_SPINNER=1
 				;;
 			"Press-enter threshold:"*)
 				read -r -p "Lines before pause [${TUI_PRESS_ENTER_LINES:-8}]: " val </dev/tty || continue
@@ -83,7 +93,7 @@ tui_interface_settings_items() {
 	local filter=${TUI_GAME_FILTER:-all} preset=${TUI_DEFAULT_PRESET:-standard}
 	out_arr=(
 		"[Games] filter: ${filter} · preset: ${preset}"
-		"[UI] json $(tui_glyph_pref "${TUI_JSON_OUTPUT:-0}") · resume $(tui_glyph_pref "${TUI_RESUME_LAST_MENU:-0}") · pause ${TUI_PRESS_ENTER_LINES:-8}"
+		"[UI] json $(tui_glyph_pref "${TUI_JSON_OUTPUT:-0}") · resume $(tui_glyph_pref "${TUI_RESUME_LAST_MENU:-0}") · text $(tui_glyph_pref "${TUI_TEXT_STATUS:-0}") · motion $(tui_glyph_pref "${TUI_SPINNER:-1}") · pause ${TUI_PRESS_ENTER_LINES:-8}"
 		"[Cache] min ${TUI_CACHE_MIN_GB:-5} GB"
 		"[fzf] $(tui_prefs_truncate "${LAUNCHLAYER_TUI_HEIGHT:-40%} · ${LAUNCHLAYER_TUI_PREVIEW:-${LAUNCHLAYER_TUI_PREVIEW_DEFAULT:-right:35%:wrap}}" 56)"
 	)

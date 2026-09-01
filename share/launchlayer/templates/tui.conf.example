@@ -7,9 +7,11 @@
 #   game_filter         Game picker filter: all | configured | unconfigured
 #   cache_min_gb        Cache report minimum size threshold (GB)
 #   default_preset      Default preset for init-unconfigured scaffolding
-#   last_menu           Last main-menu hub visited (auto-saved; resume hint on launch)
+#   last_menu           Last main-menu hub visited (auto-saved, with a resume hint on launch)
 #   json_output         1 = view commands use JSON (pretty-printed when possible)
 #   resume_last_menu    1 = auto-open last_menu hub when TUI starts
+#   text_status         1 = replace status glyphs with words and use an ASCII pointer
+#   spinner             0 = disable animated progress indicators
 #   press_enter_lines   Minimum output lines before "Press Enter" pause
 #   fzf_height          fzf height (e.g. 40%)
 #   fzf_preview         fzf preview window layout (e.g. right:35%:wrap)
@@ -20,6 +22,8 @@ default_preset=standard
 last_menu=
 json_output=0
 resume_last_menu=0
+text_status=0
+spinner=1
 press_enter_lines=8
 fzf_height=40%
 fzf_preview=right:35%:wrap

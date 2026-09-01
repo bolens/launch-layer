@@ -7,7 +7,7 @@ Type "clear"
 Enter
 Show
 
-Type "bash scripts/tui-screenshots/frame-main-menu.sh"
+Type "LAUNCHLAYER_SCREENSHOT_FIXTURES=1 bash scripts/tui-screenshots/frame-main-menu.sh"
 Enter
-Sleep 2s
+Sleep 8s
 Screenshot docs/assets/tui-main-menu.png

@@ -34,6 +34,10 @@ tui_games_cache_watch_stop() {
 # tui_games_cache_spinner_frame — Current braille spinner frame (sub-second rotation).
 tui_games_cache_spinner_frame() {
 	local i now_ms
+	if [[ "${TUI_SPINNER:-1}" == "0" || "${TUI_TEXT_STATUS:-0}" == "1" ]]; then
+		printf '%s' '…'
+		return 0
+	fi
 	now_ms="$(date +%s%3N 2>/dev/null || printf '%s000' "$(date +%s)")"
 	i=$((now_ms / 120 % ${#TUI_SPINNER_FRAMES[@]}))
 	printf '%s' "${TUI_SPINNER_FRAMES[i]}"
@@ -88,11 +92,16 @@ work="\${lines}.work.\$\$"
 finish() {
 	rm -f "\$work"
 	rm -f "\${lines}.new"
-	rm -f "\$pidfile"
+	if [[ -f "\$pidfile" ]] && [[ "\$(<"\$pidfile")" == "\$\$" ]]; then
+		rm -f "\$pidfile"
+	fi
 	touch "\$refresh"
 }
 trap finish EXIT
 if LAUNCH_QUIET=1 "\$main" --list-games 2>>"\$log" | tail -n +2 > "\$work"; then
+	if [[ ! -f "\$pidfile" ]] || [[ "\$(<"\$pidfile")" != "\$\$" ]]; then
+		exit 0
+	fi
 	mv -f "\$work" "\$lines"
 	printf 'ready\n' > "\$status"
 else

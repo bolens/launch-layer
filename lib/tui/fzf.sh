@@ -31,6 +31,7 @@ tui_fzf_sort_binds() {
 	[[ -n "$suffix" ]] && suffix="+${suffix}"
 	out_arr+=(--bind "alt-s:toggle-sort${suffix}")
 	[[ "$no_sort" == 1 ]] && out_arr+=(--no-sort)
+	return 0
 }
 
 # tui_fzf_build_args — Shared fzf chrome: borders, footer hints, pointer, help bind.
@@ -48,8 +49,8 @@ tui_fzf_build_args() {
 		--layout=reverse
 		--info=inline
 		--cycle
-		--pointer='▶'
-		--prompt='  '
+		--pointer="$([[ "${TUI_TEXT_STATUS:-0}" == "1" ]] && printf '>' || printf '▶')"
+		--prompt='Filter: '
 	)
 	if [[ -z "$footer" ]]; then
 		footer="$(tui_fzf_context_footer "$context")"
@@ -106,6 +107,7 @@ tui_fzf_build_args() {
 				;;
 		esac
 	fi
+	return 0
 }
 
 # tui_fzf_game_picker_args — Preview pane and editor/dry-run binds for game lists.
@@ -139,6 +141,7 @@ tui_fzf_game_picker_args() {
 		)
 	fi
 	[[ "$mode" == multi ]] && out_arr+=(--multi)
+	return 0
 }
 
 # tui_fzf_run_stdin — Run fzf reading candidate lines from stdin.
