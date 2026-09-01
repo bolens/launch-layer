@@ -79,7 +79,7 @@ _filter_import_files_by_appid() {
 }
 
 # import_config — Restore configs from an export/backup tarball.
-import_config() {
+import_config() (
 	local archive=$1 dry_run=${2:-1} mode=${3:-merge} yes=${4:-0} include_local=${5:-1}
 	local include_profiles=${6:-1} include_tui=${7:-0} json=${8:-0} filter_appid=${9:-}
 	local tmpdir bundle_root rel src dest action
@@ -97,8 +97,8 @@ import_config() {
 		return 1
 	}
 
-	tmpdir="$(mktemp -d)"
-	trap 'rm -rf "'"$tmpdir"'"' RETURN
+	tmpdir="$(mktemp -d)" || return 1
+	trap 'rm -rf -- "$tmpdir"' EXIT
 	if ! _tar_archive_members_are_safe "$archive"; then
 		echo "Archive contains unsafe member paths: $archive" >&2
 		return 1
@@ -242,4 +242,4 @@ import_config() {
 	elif (( added + replaced > 0 )); then
 		echo "Re-run with --yes to apply (use --replace to overwrite existing files)."
 	fi
-}
+)

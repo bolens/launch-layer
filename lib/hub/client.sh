@@ -39,13 +39,13 @@ hub_curl_status_error() {
 }
 
 # hub_fetch_publish_auth_required — 1 when hub GET /api/auth reports token required.
-hub_fetch_publish_auth_required() {
+hub_fetch_publish_auth_required() (
 	local url tmp code body curl_status=0
 	load_hub_prefs
 	hub_http_limits || return 1
 	url="${HUB_PREFS_URL%/}/api/auth"
 	tmp="$(mktemp)"
-	trap 'rm -f "'"$tmp"'"' RETURN
+	trap 'rm -f -- "$tmp"' EXIT
 	code="$(curl -sS -o "$tmp" -w '%{http_code}' \
 		--connect-timeout "$HUB_HTTP_CONNECT_TIMEOUT" \
 		--max-time "$HUB_HTTP_REQUEST_TIMEOUT" \
@@ -64,7 +64,7 @@ hub_fetch_publish_auth_required() {
 		*'"publish_auth_required":true'* | *'"publish_auth_required": true'*) echo 1 ;;
 		*) echo 0 ;;
 	esac
-}
+)
 
 # hub_require_privileged_auth — Fail when hub requires token but hub.conf has none.
 hub_require_privileged_auth() {
@@ -134,7 +134,7 @@ for row in data.get("results") or []:
 }
 
 # hub_curl_json — HTTP JSON call; pass privileged=1 for publish/delete (auth enforced).
-hub_curl_json() {
+hub_curl_json() (
 	local method=$1 path=$2 body=${3:-} privileged=${4:-0}
 	local url tmp code curl_status=0
 	hub_require_url || return 1
@@ -145,7 +145,7 @@ hub_curl_json() {
 	fi
 	url="${HUB_PREFS_URL%/}${path}"
 	tmp="$(mktemp)"
-	trap 'rm -f "'"$tmp"'"' RETURN
+	trap 'rm -f -- "$tmp"' EXIT
 
 	if [[ "$method" == POST ]]; then
 		if [[ -n "${HUB_PREFS_PUBLISH_TOKEN:-}" ]]; then
@@ -187,7 +187,7 @@ hub_curl_json() {
 
 	echo "Hub error ($code): $(cat "$tmp" 2>/dev/null)" >&2
 	return 1
-}
+)
 
 # hub_settings_json_for_publish — Hub API expects {key,value} only (no source layer).
 hub_settings_json_for_publish() {
