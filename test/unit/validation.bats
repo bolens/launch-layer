@@ -243,16 +243,20 @@ EOF
 GPU_SELECT=voodoo
 OPTISCALER_PROXY=kernel32
 GAMESCOPE_RESHADE_TECHNIQUE=first
+GAMESCOPE_W=wide
+GAMESCOPE_FSR_SHARPNESS=21
 EOF
 	run env CONFIG_DIR="$tmp" VALIDATION_FILE="$tmp/launch.d/local.env" bash -c '
 		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
 		source_lib platform steam keys config runtime inspect
 		validate_single_config_file "$VALIDATION_FILE" 2>&1
 	'
-	[[ $status -eq 3 ]]
-	[[ "$output" == *"GPU_SELECT must be"* ]]
-	[[ "$output" == *"unsupported OPTISCALER_PROXY"* ]]
+	[[ $status -eq 5 ]]
+	[[ "$output" == *"GPU_SELECT must be one of"* ]]
+	[[ "$output" == *"OPTISCALER_PROXY must be one of"* ]]
 	[[ "$output" == *"GAMESCOPE_RESHADE_TECHNIQUE must be"* ]]
+	[[ "$output" == *"GAMESCOPE_W must be a positive integer"* ]]
+	[[ "$output" == *"GAMESCOPE_FSR_SHARPNESS must be an integer from 0 to 20"* ]]
 	rm -rf "$tmp"
 }
 

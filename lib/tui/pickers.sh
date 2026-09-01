@@ -536,7 +536,11 @@ tui_pick_enum_key() {
 			printf '%s' "$choice"
 			;;
 		*)
-			return 1
+			IFS='|' read -ra opts <<< "$(config_key_enum_values "$key")"
+			((${#opts[@]} > 0)) || return 1
+			choice="$(tui_menu "$key" "${opts[@]}" "Back")" || return 1
+			[[ "$choice" == Back || -z "$choice" ]] && return 1
+			printf '%s' "$choice"
 			;;
 	esac
 }

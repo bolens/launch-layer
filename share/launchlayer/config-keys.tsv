@@ -16,14 +16,14 @@ GAMESCOPE	boolean	toggle	1	trusted
 GAMESCOPE_W	value	advanced	1	trusted
 GAMESCOPE_H	value	advanced	1	trusted
 GAMESCOPE_R	value	advanced	1	trusted
-GAMESCOPE_ADAPTIVE_SYNC	value	advanced	0	trusted
+GAMESCOPE_ADAPTIVE_SYNC	enum	advanced	0	trusted
 GAMESCOPE_EXPOSE_WAYLAND	boolean	toggle	0	trusted
 GAMESCOPE_FSR	boolean	toggle	0	trusted
 GAMESCOPE_FSR_SHARPNESS	value	advanced	0	trusted
 GAMESCOPE_EXTRA_ARGS	value	advanced	0	trusted
 GAMESCOPE_PREFER_OUTPUT	value	advanced	0	trusted
 GAMESCOPE_FRAME_LIMIT	value	advanced	0	trusted
-GAMESCOPE_FILTER	value	advanced	0	trusted
+GAMESCOPE_FILTER	enum	advanced	0	trusted
 GAMESCOPE_RESHADE_EFFECT	value	advanced	1	trusted
 GAMESCOPE_RESHADE_TECHNIQUE	value	advanced	1	trusted
 GAMESCOPE_FOCUSED_FPS	value	advanced	0	trusted
@@ -93,7 +93,7 @@ LSFG_CONFIG_FILE	value	advanced	0	trusted
 OBS_VKCAPTURE	boolean	toggle	1	trusted
 DISCORD_IPC	boolean	toggle	1	trusted
 REPLAY_CAPTURE	boolean	toggle	1	trusted
-REPLAY_TOOL	value	advanced	0	trusted
+REPLAY_TOOL	enum	advanced	0	trusted
 BLOCK_INTERNET	boolean	toggle	1	untrusted
 CONTY	boolean	toggle	1	untrusted
 CONTY_PATH	value	advanced	0	untrusted
@@ -132,7 +132,7 @@ FLAWLESS_WIDESCREEN	boolean	toggle	1	untrusted
 FWS	value	advanced	0	untrusted
 FWS_PATH	value	advanced	0	untrusted
 FWS_COLAUNCH	boolean	toggle	0	untrusted
-SPECIALTY_RUNTIME	value	advanced	1	untrusted
+SPECIALTY_RUNTIME	enum	advanced	1	untrusted
 OPENVR_FSR	boolean	toggle	1	untrusted
 OPENVR_FSR_SOURCE	value	advanced	0	untrusted
 OPENCOMPOSITE	boolean	toggle	1	untrusted

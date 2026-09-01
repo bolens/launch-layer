@@ -1,0 +1,8 @@
+# key	pipe-separated values
+GPU_SELECT	auto|discrete|nvidia|amd|intel
+GAMESCOPE_ADAPTIVE_SYNC	auto|0|1
+GAMESCOPE_FILTER	fsr|nis|linear|nearest|place
+DLSS_SWAPPER	0|1|dll
+REPLAY_TOOL	auto|gpu-screen-recorder|replay-sorcery
+OPTISCALER_PROXY	dxgi|winmm|version|dbghelp|d3d12|wininet|winhttp|optiscaler|optiscaler.asi
+SPECIALTY_RUNTIME	boxtron|luxtorpeda|roberta
