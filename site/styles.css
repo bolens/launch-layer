@@ -159,10 +159,6 @@ details pre { margin-top: 1rem; }
 .doc-card small { color: var(--muted); }
 
 footer { display: flex; justify-content: space-between; gap: 2rem; padding: 2rem clamp(1.25rem, 5vw, 5rem); border-top: 1px solid var(--line); color: var(--muted); font-size: .85rem; }
-.reveal { opacity: 1; transform: none; }
-.has-js .reveal { opacity: 0; transform: translateY(1rem); transition: opacity .65s ease, transform .65s ease; }
-.has-js .reveal.is-visible { opacity: 1; transform: none; }
-
 @keyframes trace { 0% { transform: translateY(0); height: 8%; } 50% { transform: translateY(13rem); height: 30%; } 100% { transform: translateY(0); height: 8%; } }
 @keyframes scan { 0%, 25% { transform: translateX(-100%); } 65%, 100% { transform: translateX(100%); } }
 

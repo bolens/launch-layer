@@ -23,6 +23,11 @@ done
 
 node --check "$SITE/site.js"
 
+if grep -Eq 'IntersectionObserver|\.has-js[[:space:]]+\.reveal' "$SITE/site.js" "$SITE/styles.css"; then
+	echo "primary content must not depend on scroll-triggered reveal state" >&2
+	exit 1
+fi
+
 python3 - "$ROOT" <<'PY'
 import hashlib
 import sys
