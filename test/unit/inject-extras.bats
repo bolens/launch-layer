@@ -186,6 +186,128 @@ setup() {
 	[[ "$output" == *"ok"* ]]
 }
 
+@test "inject_copy_renamed refuses overwrite when backup fails" {
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'" XDG_DATA_HOME="'"$XDG_DATA_HOME"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform runtime
+		src="'"$BATS_TEST_TMPDIR"'/source.dll"
+		dest_dir="'"$BATS_TEST_TMPDIR"'/game"
+		mkdir -p "$dest_dir"
+		printf replacement > "$src"
+		printf original > "$dest_dir/dxgi.dll"
+		cp() {
+			[[ "${3:-}" == *.ll-bak ]] && return 1
+			command cp "$@"
+		}
+		if inject_copy_renamed "$src" "$dest_dir" dxgi.dll 42 test; then exit 2; fi
+		test "$(cat "$dest_dir/dxgi.dll")" = original
+		test ! -e "$dest_dir/dxgi.dll.ll-bak"
+	'
+	[[ "$status" -eq 0 ]]
+}
+
+@test "inject_copy_renamed refuses a source that is already the destination" {
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'" XDG_DATA_HOME="'"$XDG_DATA_HOME"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform runtime
+		dll="'"$BATS_TEST_TMPDIR"'/dxgi.dll"
+		printf original > "$dll"
+		if inject_copy_renamed "$dll" "$(dirname "$dll")" dxgi.dll 42 test; then exit 2; fi
+		test "$(cat "$dll")" = original
+		test ! -e "$dll.ll-bak"
+	'
+	[[ "$status" -eq 0 ]]
+}
+
+@test "inject_copy_renamed rejects destination traversal" {
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'" XDG_DATA_HOME="'"$XDG_DATA_HOME"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform runtime
+		src="'"$BATS_TEST_TMPDIR"'/source.dll"
+		dest_dir="'"$BATS_TEST_TMPDIR"'/game"
+		mkdir -p "$dest_dir"
+		printf replacement > "$src"
+		! inject_copy_renamed "$src" "$dest_dir" ../escape.dll 42 test
+		test ! -e "'"$BATS_TEST_TMPDIR"'/escape.dll"
+	'
+	[[ "$status" -eq 0 ]]
+}
+
+@test "inject tracking rejects unsafe manifest identifiers" {
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'" XDG_DATA_HOME="'"$XDG_DATA_HOME"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform runtime
+		! inject_track_file ../escape specialk /tmp/file
+		! inject_track_file 42 ../escape /tmp/file
+		test ! -e "$(inject_track_root)/../escape-specialk.txt"
+	'
+	[[ "$status" -eq 0 ]]
+}
+
+@test "inject archive validation rejects traversal and absolute members" {
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform runtime
+		inject_archive_member_is_safe shaders/file.fx || exit 2
+		! inject_archive_member_is_safe ../escape.dll
+		! inject_archive_member_is_safe /tmp/escape.dll
+		! inject_archive_member_is_safe shaders/../../escape.dll
+	'
+	[[ "$status" -eq 0 ]]
+}
+
+@test "inject archive validation checks listed members before extraction" {
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform runtime
+		archive="'"$BATS_TEST_TMPDIR"'/unsafe.tar"
+		: > "$archive"
+		tar() { printf "%s\n" safe/file ../escape; }
+		! inject_archive_members_are_safe "$archive"
+	'
+	[[ "$status" -eq 0 ]]
+}
+
+@test "inject archive validation rejects tar links" {
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform runtime
+		archive="'"$BATS_TEST_TMPDIR"'/linked.tar"
+		: > "$archive"
+		tar() {
+			if [[ "$1" == -tvf ]]; then
+				printf "%s\n" "lrwxrwxrwx user/group 0 date link -> ../../escape"
+			else
+				printf "%s\n" safe/file
+			fi
+		}
+		! inject_archive_members_are_safe "$archive"
+	'
+	[[ "$status" -eq 0 ]]
+}
+
+@test "inject cleanup includes global ValvePlug tracking" {
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform runtime
+		CALLS=()
+		inject_cleanup_tracked() { CALLS+=("$1:$2"); }
+		inject_cleanup_launch_tracks 42
+		printf "%s\n" "${CALLS[@]}"
+	'
+	[[ "$status" -eq 0 ]]
+	[[ "$output" == *"42:optiscaler"* ]]
+	[[ "$output" == *"steam:valveplug"* ]]
+}
+
 @test "apply_vkbasalt exports config file when set" {
 	run bash -c '
 		export CONFIG_DIR="'"$CONFIG_DIR"'"
@@ -213,6 +335,20 @@ setup() {
 	'
 	[[ "$status" -eq 0 ]]
 	[[ "$output" == *"d3d11=n,b"* ]]
+}
+
+@test "proxy injectors reject unsafe DLL names before setting Wine overrides" {
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform runtime
+		is_native=0
+		SPECIAL_K=1 SPECIAL_K_DLL=../escape apply_special_k
+		RESHADE=1 RESHADE_DLL=subdir/dxgi apply_reshade
+		test -z "${WINEDLLOVERRIDES:-}"
+	'
+	[[ "$status" -eq 0 ]]
+	[[ "$output" == *"unsafe proxy DLL name"* ]]
 }
 
 @test "SPECIAL_K_FETCH extracts zip via LAUNCHLAYER_FETCH_CMD" {

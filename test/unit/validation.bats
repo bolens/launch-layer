@@ -275,3 +275,18 @@ EOF
 	[[ "$output" == *"injector conflict on dxgi.dll"* ]]
 	rm -rf "$tmp"
 }
+
+@test "validate_single_config_file rejects proxy path traversal" {
+	local tmp
+	tmp="$(temp_config_dir)"
+	printf '%s\n' 'SPECIAL_K_DLL=../dxgi' 'RESHADE_DLL=subdir/d3d11' > "$tmp/launch.d/local.env"
+	run env CONFIG_DIR="$tmp" VALIDATION_FILE="$tmp/launch.d/local.env" bash -c '
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform steam keys config runtime inspect
+		validate_single_config_file "$VALIDATION_FILE" 2>&1
+	'
+	[[ $status -eq 2 ]]
+	[[ "$output" == *"SPECIAL_K_DLL must be a proxy DLL leaf name"* ]]
+	[[ "$output" == *"RESHADE_DLL must be a proxy DLL leaf name"* ]]
+	rm -rf "$tmp"
+}

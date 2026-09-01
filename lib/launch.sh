@@ -122,6 +122,11 @@ run_game_launch() {
 		[[ ${#game_extra_argv[@]} -gt 0 ]] && launch+=("${game_extra_argv[@]}")
 
 		echo $$ > "$ACTIVE_LAUNCH_PID_FILE"
+		if [[ "${steam_app_id:-}" =~ ^[0-9]+$ ]]; then
+			printf '%s\n' "$steam_app_id" > "$ACTIVE_LAUNCH_APPID_FILE"
+		else
+			rm -f "$ACTIVE_LAUNCH_APPID_FILE"
+		fi
 		[[ "${LAUNCH_WATCHDOG:-0}" == "1" ]] && start_launch_watchdog $$
 
 		"${launch[@]}" || exit_code=$?

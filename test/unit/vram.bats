@@ -92,6 +92,28 @@ setup() {
 	rm -rf "$tmp"
 }
 
+@test "cleanup_stale_launch restores tracked injectors for recorded appid" {
+	local tmp dead_pid
+	tmp="$(temp_state_dir)"
+	dead_pid=999998
+	mkdir -p "$tmp/state/launchlayer"
+	printf '%s\n' "$dead_pid" > "$tmp/state/launchlayer/active-launch.pid"
+	printf '%s\n' 42424242 > "$tmp/state/launchlayer/active-launch.appid"
+	run env CONFIG_DIR="$CONFIG_DIR" XDG_STATE_HOME="$tmp/state" bash -c '
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib vram
+		stop_launch_watchdog() { :; }
+		restore_nvidia_power_mode() { :; }
+		inject_cleanup_launch_tracks() { echo "inject:$1"; }
+		cleanup_stale_launch "'"$dead_pid"'"
+		test ! -e "$ACTIVE_LAUNCH_PID_FILE"
+		test ! -e "$ACTIVE_LAUNCH_APPID_FILE"
+	'
+	[[ $status -eq 0 ]]
+	[[ "$output" == *"inject:42424242"* ]]
+	rm -rf "$tmp"
+}
+
 @test "resume_vram_hogs keeps services paused until refcount zero" {
 	local tmp
 	tmp="$(temp_state_dir)"

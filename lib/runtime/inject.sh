@@ -147,6 +147,10 @@ inject_refuse_proprietary_redistrib() {
 inject_extract_archive() {
 	local archive=$1 dest_dir=$2
 	[[ -f "$archive" && -n "$dest_dir" ]] || return 1
+	inject_archive_members_are_safe "$archive" || {
+		warn "inject_extract: unsafe archive members: $archive"
+		return 1
+	}
 	mkdir -p "$dest_dir"
 	case "${archive,,}" in
 		*.zip)
@@ -183,6 +187,88 @@ inject_extract_archive() {
 	return 0
 }
 
+# inject_archive_member_is_safe — Reject absolute and parent-traversing members.
+inject_archive_member_is_safe() {
+	local member=${1//\\//} part
+	[[ -n "$member" && "$member" != /* ]] || return 1
+	while [[ "$member" == ./* ]]; do member="${member#./}"; done
+	[[ -n "$member" ]] || return 0
+	local old_ifs=$IFS
+	IFS=/
+	for part in $member; do
+		[[ "$part" != ".." ]] || {
+			IFS=$old_ifs
+			return 1
+		}
+	done
+	IFS=$old_ifs
+	return 0
+}
+
+# inject_archive_members_are_safe — List members before extraction and validate each.
+inject_archive_members_are_safe() {
+	local archive=$1 member listed=0 seven_zip_entries=0
+	local -a list_cmd=()
+	inject_archive_contains_links "$archive" && return 1
+	case "${archive,,}" in
+		*.zip) list_cmd=(unzip -Z1 "$archive") ;;
+		*.7z)
+			if command_available 7z; then
+				list_cmd=(7z l -slt "$archive")
+			elif command_available 7za; then
+				list_cmd=(7za l -slt "$archive")
+			else
+				return 1
+			fi
+			;;
+		*.tar|*.tar.gz|*.tgz|*.tar.xz|*.tar.bz2) list_cmd=(tar -tf "$archive") ;;
+		*)
+			if command_available unzip && [[ "$(head -c 2 "$archive" 2>/dev/null || true)" == PK ]]; then
+				list_cmd=(unzip -Z1 "$archive")
+			else
+				return 1
+			fi
+			;;
+	esac
+	while IFS= read -r member || [[ -n "$member" ]]; do
+		[[ "${archive,,}" == *.7z ]] && {
+			if [[ "$member" == ---------- ]]; then
+				seven_zip_entries=1
+				continue
+			fi
+			(( seven_zip_entries == 1 )) || continue
+			[[ "$member" == "Path = "* ]] || continue
+			member="${member#Path = }"
+		}
+		listed=1
+		inject_archive_member_is_safe "$member" || return 1
+	done < <("${list_cmd[@]}" 2>/dev/null) || return 1
+	(( listed == 1 ))
+}
+
+# inject_archive_contains_links — Reject archive links before extracting files.
+inject_archive_contains_links() {
+	local archive=$1
+	case "${archive,,}" in
+		*.tar|*.tar.gz|*.tgz|*.tar.xz|*.tar.bz2)
+			tar -tvf "$archive" 2>/dev/null \
+				| awk 'substr($1, 1, 1) == "l" || substr($1, 1, 1) == "h" { found=1 } END { exit !found }'
+			;;
+		*.zip)
+			unzip -Z -l "$archive" 2>/dev/null \
+				| awk 'substr($1, 1, 1) == "l" { found=1 } END { exit !found }'
+			;;
+		*)
+			if [[ "$(head -c 2 "$archive" 2>/dev/null || true)" == PK ]]; then
+				unzip -Z -l "$archive" 2>/dev/null \
+					| awk 'substr($1, 1, 1) == "l" { found=1 } END { exit !found }'
+			else
+				return 1
+			fi
+			;;
+	esac
+}
+
 # inject_find_file — Find first matching filename under dir (maxdepth 6).
 inject_find_file() {
 	local dir=$1 name=$2
@@ -195,10 +281,18 @@ inject_track_file() {
 	local appid=$1 tool=$2 path=$3
 	local manifest
 	[[ -n "$appid" && -n "$tool" && -n "$path" ]] || return 1
+	inject_track_identifiers_are_safe "$appid" "$tool" || return 1
+	[[ "$path" == /* && "$path" != *$'\n'* && "$path" != *$'\r'* ]] || return 1
 	inject_ensure_dirs
 	manifest="$(inject_track_root)/${appid}-${tool}.txt"
 	touch "$manifest"
 	grep -Fxq "$path" "$manifest" 2>/dev/null || printf '%s\n' "$path" >> "$manifest"
+}
+
+# inject_track_identifiers_are_safe — Keep manifest names inside the track root.
+inject_track_identifiers_are_safe() {
+	local appid=$1 tool=$2
+	[[ "$appid" =~ ^([0-9]+|steam)$ && "$tool" =~ ^[a-z0-9_]+$ ]]
 }
 
 # inject_cleanup_tracked — Restore *.ll-bak then remove other tracked inject files.
@@ -206,6 +300,7 @@ inject_cleanup_tracked() {
 	local appid=$1 tool=$2
 	local manifest path orig
 	local -a restored=()
+	inject_track_identifiers_are_safe "$appid" "$tool" || return 1
 	manifest="$(inject_track_root)/${appid}-${tool}.txt"
 	[[ -f "$manifest" ]] || return 0
 	# Pass 1: restore backups
@@ -243,9 +338,16 @@ inject_cleanup_launch_tracks() {
 	local appid=${1:-${steam_app_id:-}}
 	[[ -n "$appid" ]] || return 0
 	local tool
-	for tool in specialk reshade optiscaler openvr_fsr opencomposite valveplug; do
+	for tool in specialk reshade optiscaler openvr_fsr opencomposite; do
 		inject_cleanup_tracked "$appid" "$tool"
 	done
+	inject_cleanup_tracked steam valveplug
+}
+
+# inject_proxy_name_is_safe — Accept only a proxy DLL leaf name.
+inject_proxy_name_is_safe() {
+	local proxy=${1,,}
+	[[ "$proxy" =~ ^[a-z0-9_+-]+(\.dll)?$ ]]
 }
 
 # inject_proxy_slot — Normalize a Windows proxy DLL name for conflict checks.
@@ -292,17 +394,30 @@ inject_provider_conflict_errors() {
 inject_copy_renamed() {
 	local src=$1 dest_dir=$2 dest_name=$3
 	local appid=${4:-} tool=${5:-}
-	local dest
+	local dest tmp
 	[[ -f "$src" && -n "$dest_dir" && -n "$dest_name" ]] || return 1
+	[[ "$dest_name" =~ ^[A-Za-z0-9._+-]+$ && "$dest_name" != "." && "$dest_name" != ".." ]] || return 1
 	mkdir -p "$dest_dir"
 	dest="${dest_dir%/}/$dest_name"
+	[[ -e "$dest" && "$src" -ef "$dest" ]] && return 1
+	tmp="$(mktemp "${dest_dir%/}/.launchlayer-inject.XXXXXX")" || return 1
+	cp -f "$src" "$tmp" || {
+		rm -f "$tmp"
+		return 1
+	}
 	if [[ -f "$dest" && ! -f "${dest}.ll-bak" ]]; then
-		cp -f "$dest" "${dest}.ll-bak" || true
+		cp -f "$dest" "${dest}.ll-bak" || {
+			rm -f "$tmp"
+			return 1
+		}
 		if [[ -n "$appid" && -n "$tool" ]]; then
 			inject_track_file "$appid" "$tool" "${dest}.ll-bak"
 		fi
 	fi
-	cp -f "$src" "$dest" || return 1
+	mv -f "$tmp" "$dest" || {
+		rm -f "$tmp"
+		return 1
+	}
 	if [[ -n "$appid" && -n "$tool" ]]; then
 		inject_track_file "$appid" "$tool" "$dest"
 	fi

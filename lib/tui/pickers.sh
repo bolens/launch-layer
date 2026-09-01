@@ -523,6 +523,18 @@ tui_pick_enum_key() {
 				*) return 1 ;;
 			esac
 			;;
+		GPU_SELECT)
+			opts=("auto" "discrete" "nvidia" "amd" "intel")
+			choice="$(tui_menu "GPU_SELECT" "${opts[@]}" "Back")" || return 1
+			[[ "$choice" == Back || -z "$choice" ]] && return 1
+			printf '%s' "$choice"
+			;;
+		OPTISCALER_PROXY)
+			opts=("dxgi" "winmm" "version" "dbghelp" "d3d12" "wininet" "winhttp" "optiscaler" "OptiScaler.asi")
+			choice="$(tui_menu "OPTISCALER_PROXY" "${opts[@]}" "Back")" || return 1
+			[[ "$choice" == Back || -z "$choice" ]] && return 1
+			printf '%s' "$choice"
+			;;
 		*)
 			return 1
 			;;

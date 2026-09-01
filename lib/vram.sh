@@ -175,7 +175,7 @@ recover_stale_vram_state() {
 #
 # Optional expected_pid guards against cleaning up a newer concurrent session.
 cleanup_stale_launch() {
-	local expected_pid=${1:-} active_pid=""
+	local expected_pid=${1:-} active_pid="" active_appid=""
 	stop_launch_watchdog
 
 	[[ -f "$ACTIVE_LAUNCH_PID_FILE" ]] && active_pid="$(<"$ACTIVE_LAUNCH_PID_FILE")"
@@ -188,7 +188,14 @@ cleanup_stale_launch() {
 		return 0
 	fi
 
-	rm -f "$ACTIVE_LAUNCH_PID_FILE"
+	if [[ -f "$ACTIVE_LAUNCH_APPID_FILE" ]]; then
+		active_appid="$(<"$ACTIVE_LAUNCH_APPID_FILE")"
+		[[ "$active_appid" =~ ^[0-9]+$ ]] || active_appid=""
+	fi
+	if [[ -n "$active_appid" ]] && declare -F inject_cleanup_launch_tracks >/dev/null 2>&1; then
+		inject_cleanup_launch_tracks "$active_appid"
+	fi
+	rm -f "$ACTIVE_LAUNCH_PID_FILE" "$ACTIVE_LAUNCH_APPID_FILE"
 	restore_nvidia_power_mode
 	declare -F restore_pipewire_low_latency >/dev/null 2>&1 && restore_pipewire_low_latency
 	declare -F restore_runtime_tuning >/dev/null 2>&1 && restore_runtime_tuning
@@ -236,9 +243,10 @@ start_launch_watchdog() {
 # on_launch_exit — EXIT/INT/TERM trap handler for normal launch teardown.
 on_launch_exit() {
 	stop_launch_watchdog
+	inject_cleanup_launch_tracks "${steam_app_id:-}"
 	restore_nvidia_power_mode
 	restore_pipewire_low_latency
 	restore_runtime_tuning
-	rm -f "$ACTIVE_LAUNCH_PID_FILE"
+	rm -f "$ACTIVE_LAUNCH_PID_FILE" "$ACTIVE_LAUNCH_APPID_FILE"
 	[[ "${VRAM_HOGS:-0}" == "1" ]] && resume_vram_hogs
 }
