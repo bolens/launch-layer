@@ -5,11 +5,26 @@ systemd_user_dir() {
 	echo "${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 }
 
+# systemd_exec_quote — Quote one literal argv item for systemd ExecStart syntax.
+systemd_exec_quote() {
+	local value=$1
+	[[ "$value" != *$'\n'* && "$value" != *$'\r'* ]] || return 1
+	value="${value//\\/\\\\}"
+	value="${value//\"/\\\"}"
+	value="${value//\%/%%}"
+	value="${value//\$/\$\$}"
+	printf '"%s"' "$value"
+}
+
 # install_systemd_user_units — Write maintenance timer/service with resolved script path.
 install_systemd_user_units() {
-	local unit_dir script service timer
+	local unit_dir script script_exec service timer
 	unit_dir="$(systemd_user_dir)"
 	script="${LAUNCHLAYER_MAIN_SCRIPT:?}"
+	script_exec="$(systemd_exec_quote "$script")" || {
+		echo "launchlayer: executable path contains a newline and cannot be used in a systemd unit" >&2
+		return 1
+	}
 	mkdir -p "$unit_dir"
 	service="$unit_dir/launchlayer-maintenance.service"
 	timer="$unit_dir/launchlayer-maintenance.timer"
@@ -21,7 +36,9 @@ Description=Steam launch maintenance (stale cleanup + cache report)
 
 [Service]
 Type=oneshot
-ExecStart=/bin/bash -c '${script} --cleanup-stale-launch 2>/dev/null || true; ${script} --cache-report --min-gb 10 2>/dev/null | logger -t launchlayer-maintenance || true'
+ExecStart=${script_exec} --run-maintenance
+StandardOutput=journal
+StandardError=journal
 EOF
 
 	if [[ -f "$(launchlayer_share_dir)/systemd/launchlayer-maintenance.timer" ]]; then
@@ -209,9 +226,13 @@ uninstall_systemd_backup_units() {
 
 # install_systemd_backup_units — Write backup timer/service with resolved script path.
 install_systemd_backup_units() {
-	local unit_dir script service timer backup_dir enable_now
+	local unit_dir script script_exec service timer backup_dir enable_now
 	unit_dir="$(systemd_user_dir)"
 	script="${LAUNCHLAYER_MAIN_SCRIPT:?}"
+	script_exec="$(systemd_exec_quote "$script")" || {
+		echo "launchlayer: executable path contains a newline and cannot be used in a systemd unit" >&2
+		return 1
+	}
 	enable_now=${1:-1}
 
 	backup_prefs_apply_env
@@ -228,7 +249,9 @@ Description=LaunchLayer config backup and archive pruning
 
 [Service]
 Type=oneshot
-ExecStart=/bin/bash -c '${script} --run-scheduled-backup 2>/dev/null | logger -t launchlayer-backup || true'
+ExecStart=${script_exec} --run-scheduled-backup
+StandardOutput=journal
+StandardError=journal
 EOF
 
 	_write_backup_timer_unit "$timer"

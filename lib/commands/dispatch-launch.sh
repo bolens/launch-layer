@@ -9,6 +9,16 @@ dispatch_launch_subcommand() {
 	local verb=${1:-}
 	shift || true
 	case "$verb" in
+		--run-maintenance)
+			[[ $# -eq 0 ]] || {
+				echo "Usage: $(cli_basename) --run-maintenance" >&2
+				return 2
+			}
+			local maintenance_status=0
+			cleanup_stale_launch || maintenance_status=$?
+			cache_report 10 both "" 0 || maintenance_status=$?
+			return "$maintenance_status"
+			;;
 		--pause-vram-hogs)
 			pause_vram_hogs
 			echo "Paused VRAM-heavy services (ref=$(get_vram_ref_count))"
