@@ -6,6 +6,23 @@ setup() {
 	bats_unit_setup
 }
 
+@test "config export preserves the caller RETURN trap" {
+	local tmp archive
+	tmp="$(temp_config_dir)"
+	archive="$tmp/export.tar.gz"
+	run env CONFIG_DIR="$tmp" bash -c '
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib platform cli keys config inspect prefs
+		trap ": caller-return-trap" RETURN
+		before="$(trap -p RETURN)"
+		export_config "'"$archive"'" 0 1 0 0 >/dev/null
+		after="$(trap -p RETURN)"
+		[[ "$before" == "$after" && -f "'"$archive"'" ]]
+	'
+	[[ $status -eq 0 ]]
+	rm -rf "$tmp"
+}
+
 @test "config_bundle_sha256 hashes file contents" {
 	local tmp file
 	tmp="$(mktemp -d)"

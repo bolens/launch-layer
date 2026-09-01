@@ -55,6 +55,32 @@ setup() {
 	rm -rf "$tmp"
 }
 
+@test "hub HTTP helpers preserve the caller RETURN trap" {
+	run bash -c '
+		export CONFIG_DIR="'"$CONFIG_DIR"'"
+		source "'"$BATS_TEST_DIRNAME"'/../helpers.bash"
+		source_lib prefs hub
+		load_hub_prefs() {
+			HUB_PREFS_URL=https://hub.invalid
+			HUB_PREFS_PUBLISH_TOKEN=
+		}
+		curl() {
+			local output=""
+			while [[ $# -gt 0 ]]; do
+				if [[ "$1" == -o ]]; then output=$2; shift 2; else shift; fi
+			done
+			printf "%s" "{\"publish_auth_required\":false}" > "$output"
+			printf 200
+		}
+		trap ": caller-return-trap" RETURN
+		before="$(trap -p RETURN)"
+		[[ "$(hub_fetch_publish_auth_required)" == 0 ]]
+		after="$(trap -p RETURN)"
+		[[ "$before" == "$after" ]]
+	'
+	[[ $status -eq 0 ]]
+}
+
 @test "hub_publish_payload includes config_id when updating" {
 	local fp='{"gpu_vendor":"nvidia","os_family":"arch","session_type":"wayland","desktop":"kde","profiles":["arch-linux"],"display_tier":"1440p","refresh_tier":"mid75_120","has_x3d":false,"vrr":false,"wsl2":false,"flatpak_steam":false,"steam_deck":false,"immutable":false,"container":false}'
 	run hub_publish_payload "$fp" 42424242 "Test Game" "GAMEMODE=1" "note" "cfg-existing"

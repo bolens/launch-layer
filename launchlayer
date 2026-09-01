@@ -167,6 +167,9 @@ case "${1:-}" in
 		;;
 esac
 
+# Filesystem migration belongs to startup orchestration, not module loading.
+migrate_legacy_install_paths || warn "could not migrate legacy steam-launch directories"
+
 # shellcheck source=lib/keys.sh
 source "$LIB_DIR/keys.sh"
 launchlayer_load_pre_main

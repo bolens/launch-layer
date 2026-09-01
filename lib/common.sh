@@ -46,21 +46,28 @@ sysctl_dropin_source() {
 # STEAM_ROOT resolved in lib/platform/profiles.sh unless already exported and valid.
 : "${STEAM_ROOT:=}"
 
-# migrate_legacy_install_paths — Move pre-rename config/state dirs on first run.
+# _migrate_legacy_dir — Race-safe move of one pre-rename directory.
+_migrate_legacy_dir() {
+	local old_dir=$1 new_dir=$2
+	[[ -d "$old_dir" && ! -e "$new_dir" ]] || return 0
+	if mv "$old_dir" "$new_dir" 2>/dev/null; then
+		return 0
+	fi
+	# Another LaunchLayer process may have completed the same migration.
+	[[ ! -e "$old_dir" && -e "$new_dir" ]]
+}
+
+# migrate_legacy_install_paths — Move pre-rename config/state dirs on startup.
 migrate_legacy_install_paths() {
-	local old_config new_config old_state new_state
+	local old_config new_config old_state new_state status=0
 	old_config="${XDG_CONFIG_HOME:-$HOME/.config}/steam-launch"
 	new_config="${XDG_CONFIG_HOME:-$HOME/.config}/launchlayer"
 	old_state="${XDG_STATE_HOME:-$HOME/.local/state}/steam-launch"
 	new_state="${XDG_STATE_HOME:-$HOME/.local/state}/launchlayer"
-	if [[ -d "$old_config" && ! -e "$new_config" ]]; then
-		mv "$old_config" "$new_config"
-	fi
-	if [[ -d "$old_state" && ! -e "$new_state" ]]; then
-		mv "$old_state" "$new_state"
-	fi
+	_migrate_legacy_dir "$old_config" "$new_config" || status=1
+	_migrate_legacy_dir "$old_state" "$new_state" || status=1
+	return "$status"
 }
-migrate_legacy_install_paths
 
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/launchlayer"
 

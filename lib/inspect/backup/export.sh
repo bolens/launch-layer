@@ -5,7 +5,7 @@
 LAUNCHLAYER_BACKUP_EXPORT_LOADED=1
 
 # export_config — Pack managed launch.d files (and optional TUI prefs) into a tarball.
-export_config() {
+export_config() (
 	local output=${1:-} include_local=${2:-0} include_profiles=${3:-1} include_tui=${4:-0} json=${5:-0}
 	local output_prefix=${6:-launchlayer-export}
 	local -a files=()
@@ -32,8 +32,8 @@ export_config() {
 		return 1
 	fi
 
-	tmpdir="$(mktemp -d)"
-	trap 'rm -rf "'"$tmpdir"'"' RETURN
+	tmpdir="$(mktemp -d)" || return 1
+	trap 'rm -rf -- "$tmpdir"' EXIT
 	staging="$tmpdir/staging"
 	mkdir -p "$staging/launch.d/profiles" "$staging/launch.d/presets" "$staging/games"
 
@@ -117,7 +117,7 @@ export_config() {
 	echo "=== Export config ==="
 	echo "Wrote $output_abs ($file_count file(s))"
 	echo "Includes: local=$([[ "$include_local" == "1" ]] && echo yes || echo no) profiles=$([[ "$include_profiles" == "1" ]] && echo yes || echo no) tui=$([[ "$include_tui" == "1" ]] && echo yes || echo no)"
-}
+)
 
 # backup_config — Timestamped export alias (defaults to backup_dir from backup.conf).
 backup_config() {
