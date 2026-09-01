@@ -15,12 +15,13 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ### Security
 
-- Reject unsafe injector destinations, tracking identifiers, and archive traversal or link entries before modifying game files.
+- Reject unsafe injector destinations, tracking identifiers, oversized downloads or archives, and archive traversal or link entries before modifying game files.
 
 ### Fixed
 
 - Restore tracked injections after signals, early launch failures, and watchdog recovery from force-quit sessions.
-- Clean global ValvePlug tracking and expose typed GPU and OptiScaler choices in the TUI.
+- Roll back multi-file tool installs as a unit and restore tracked INI edits.
+- Clean global ValvePlug tracking, drive typed choices from shared metadata, and skip unsupported Gamescope ReShade flags.
 
 ## [0.13.2] - 2026-09-01
 

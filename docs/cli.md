@@ -193,7 +193,7 @@ For hybrid-GPU systems, `GPU_SELECT=auto|discrete|nvidia|amd|intel` applies stan
 
 ## Wine inject (local mutate: hub-stripped)
 
-See [docs/third-party.md](third-party.md) for licenses. Prefer user-supplied DLL directories; optional fetch only with explicit URLs / NOTICE cache. The `hub` column in [`share/launchlayer/config-keys.tsv`](../share/launchlayer/config-keys.tsv) marks keys that remote configs may not set.
+See [docs/third-party.md](third-party.md) for licenses. Prefer user-supplied DLL directories; optional fetch only with explicit URLs / NOTICE cache. Downloads, expanded archive bytes, archive member counts, and archive links are checked before installation. Managed multi-file providers roll back all files when any copy fails. The `hub` column in [`share/launchlayer/config-keys.tsv`](../share/launchlayer/config-keys.tsv) marks keys that remote configs may not set.
 
 | Key | Effect |
 |-----|--------|
@@ -226,11 +226,13 @@ See [docs/third-party.md](third-party.md) for licenses. Prefer user-supplied DLL
 | `GAMESCOPE_PREFER_OUTPUT=…` | `-O` prefer-output |
 | `GAMESCOPE_FRAME_LIMIT=…` | `--framerate-limit` |
 | `GAMESCOPE_FILTER=nis\|fsr\|…` | `--filter` |
-| `GAMESCOPE_RESHADE_EFFECT` / `GAMESCOPE_RESHADE_TECHNIQUE` | Native Gamescope `--reshade-effect` and `--reshade-technique-idx` arguments |
+| `GAMESCOPE_RESHADE_EFFECT` / `GAMESCOPE_RESHADE_TECHNIQUE` | Native Gamescope `--reshade-effect` and `--reshade-technique-idx` arguments when supported by the installed Gamescope |
 | `GAMESCOPE_FOCUSED_FPS` / `GAMESCOPE_UNFOCUSED_FPS` | Focused/unfocused FPS caps |
 | `GAMESCOPE_ADAPTIVE_SYNC=` | Empty/`auto` detects VRR. `0`/`1` forces the value. The TUI exposes this under Advanced, not boolean flip. |
 
 Inside gamescope-session, `GAMESCOPE=1` is skipped automatically. Details: [third-party.md](third-party.md).
+
+Validation requires positive integer Gamescope dimensions, refresh and frame limits; FSR sharpness is limited to `0`–`20`. Enum choices used by validation and the TUI are shared in [`share/launchlayer/config-enums.tsv`](../share/launchlayer/config-enums.tsv).
 
 Only one injector may own a proxy DLL slot. Validation and launch abort when Special K, ReShade, OptiScaler, OpenVR-FSR, or OpenComposite claim the same filename; choose distinct supported proxies instead.
 
