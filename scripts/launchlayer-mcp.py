@@ -233,6 +233,19 @@ def command_for(name: str, arguments: Dict[str, Any]) -> List[str]:
 	raise KeyError(name)
 
 
+def stop_process(process: subprocess.Popen[str], force: bool = False) -> None:
+	"""Stop a tool and its descendants without depending on shell timing."""
+	try:
+		if os.name == "posix":
+			os.killpg(process.pid, signal.SIGKILL if force else signal.SIGTERM)
+		elif force:
+			stop_process(process, force=True)
+		else:
+			stop_process(process)
+	except ProcessLookupError:
+		pass
+
+
 def call_tool(name: str, arguments: Dict[str, Any], request_id: Any = None) -> Dict[str, Any]:
 	try:
 		args = command_for(name, arguments)
@@ -247,13 +260,14 @@ def call_tool(name: str, arguments: Dict[str, Any], request_id: Any = None) -> D
 			[str(LAUNCHLAYER)] + args,
 			cwd=str(ROOT), env=environment, stdin=subprocess.DEVNULL,
 			stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+		start_new_session=os.name == "posix",
 		)
 	with RUNNING_LOCK:
 		RUNNING[request_id] = process
 		cancelled = request_id in CANCELLED
 	if cancelled:
 		try:
-			process.terminate()
+			stop_process(process)
 		except OSError:
 			pass
 	try:
@@ -369,7 +383,7 @@ def handle(request: Dict[str, Any], initialized: bool) -> bool:
 			process = RUNNING.get(cancel_id)
 		if process is not None:
 			try:
-				process.terminate()
+				stop_process(process)
 			except OSError:
 				pass
 		return initialized
