@@ -9,6 +9,8 @@ required=(
 	index.html
 	architecture.html
 	styles.css
+	syntax-highlight.css
+	syntax-highlight.js
 	site.js
 	theme.js
 	assets/launchlayer.svg
@@ -53,6 +55,11 @@ for contract in 'rel="canonical"' 'og:site_name' 'og:image:width' 'twitter:image
 done
 
 node --check "$SITE/site.js"
+node --check "$SITE/syntax-highlight.js"
+grep -q 'syntax-highlight.css' "$SITE/index.html"
+grep -q 'syntax-highlight.js' "$SITE/index.html"
+grep -q 'createTextNode' "$SITE/syntax-highlight.js"
+! grep -q 'innerHTML' "$SITE/syntax-highlight.js"
 python3 "$ROOT/scripts/render-changelog.py" --name LaunchLayer --base-url https://bolens.github.io/launch-layer/ --accent "#ff5f56" --source "$ROOT/CHANGELOG.md" --output "$SITE/changelog/index.html"
 
 if grep -Eq '\.has-js[[:space:]]+\.reveal' "$SITE/styles.css"; then

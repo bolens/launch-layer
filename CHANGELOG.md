@@ -9,6 +9,10 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Pages code examples use theme-aware shell syntax highlighting without changing copied commands.
+
 ## [0.14.0] - 2026-09-01
 
 ### Added
