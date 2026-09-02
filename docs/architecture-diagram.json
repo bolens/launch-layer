@@ -28,6 +28,18 @@
         "label": "Optional community hub",
         "focus": ["configuration", "hubClient", "hubService"],
         "note": "Community settings remain optional and pass through local trust checks before use."
+      },
+      {
+        "id": "preview",
+        "label": "Preview without launch",
+        "focus": ["entrypoints", "orchestrator", "configuration", "discovery", "runtime"],
+        "note": "Preview resolves the same layers, host facts, and wrapper chain without starting the game process."
+      },
+      {
+        "id": "launch-record",
+        "label": "Launch and record",
+        "focus": ["steam", "runtime", "game", "state"],
+        "note": "Steam's command enters the prepared wrapper chain, starts the game, and records the local outcome."
       }
     ]
   },
