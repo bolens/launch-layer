@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-color-mode-storage="launchlayer-theme">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -25,6 +25,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="manifest" href="site.webmanifest">
   <link rel="stylesheet" href="styles.css">
+  <script src="theme.js"></script>
   <script src="site.js" defer></script>
 </head>
 <body>
@@ -39,9 +40,7 @@
       <a href="#fix">Fix a problem</a>
       <a href="architecture.html">Diagram</a>
     </nav>
-    <button class="theme-toggle" type="button" aria-label="Use light theme" aria-pressed="false">
-      <span aria-hidden="true">◐</span><span class="theme-label">Light</span>
-    </button>
+    <label class="theme-toggle"><span class="theme-label">Theme</span><select data-color-mode aria-label="Color theme"><option value="system">System</option><option value="time">Day cycle</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
   </header>
 
   <main id="main">

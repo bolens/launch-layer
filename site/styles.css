@@ -50,7 +50,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .site-header nav a { color: var(--muted); font-size: .84rem; font-weight: 750; letter-spacing: .06em; text-decoration: none; text-transform: uppercase; }
 .site-header nav a, .release-strip a, .section-link a, footer a { min-height: 1.5rem; display: inline-flex; align-items: center; }
 .site-header nav a:hover { color: var(--ink); }
-.theme-toggle { display: none; min-width: 5.6rem; min-height: 2.75rem; align-items: center; justify-content: center; gap: .45rem; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink); font: 700 .82rem var(--body); cursor: pointer; }
+.theme-toggle { display: none; min-width: 5.6rem; min-height: 2.75rem; align-items: center; justify-content: center; gap: .45rem; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink); font: 700 .82rem var(--body); cursor: pointer; }.theme-toggle select { border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
 .has-js .theme-toggle { display: inline-flex; }
 
 .hero { min-height: calc(100svh - 4.5rem); display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(19rem, .72fr); align-items: center; gap: clamp(3rem, 7vw, 8rem); max-width: 96rem; margin: auto; padding: clamp(4.5rem, 10vw, 9rem) clamp(1.25rem, 6vw, 6rem); }

@@ -10,6 +10,7 @@ required=(
 	architecture.html
 	styles.css
 	site.js
+	theme.js
 	assets/launchlayer.svg
 	favicon.svg
 	apple-touch-icon.png
@@ -109,7 +110,7 @@ class SiteParser(HTMLParser):
             self.ids.add(identifier)
         if tag == "h1":
             self.has_h1 = True
-        if tag == "button" and values.get("aria-label"):
+        if tag in ("button", "select") and values.get("aria-label"):
             self.has_labeled_button = True
         if tag == "a" and (href := values.get("href")):
             self.links.append(href)
@@ -133,7 +134,7 @@ if not parser.has_skip_link:
 if not parser.has_h1:
     errors.append("site/index.html needs one primary heading")
 if not parser.has_labeled_button:
-    errors.append("site/index.html buttons need accessible names")
+    errors.append("site/index.html controls need accessible names")
 if parser.duplicate_ids:
     errors.append("duplicate IDs: " + ", ".join(sorted(parser.duplicate_ids)))
 if parser.images_without_alt:
