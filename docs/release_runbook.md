@@ -94,7 +94,7 @@ EOF
 
 ```bash
 gh pr checks <n> --watch
-gh pr merge <n> --merge --delete-branch
+gh pr merge <n> --squash --delete-branch
 git checkout main && git pull origin main
 ```
 
@@ -105,7 +105,7 @@ Do **not** tag while the required **`ci`** check is red.
 ## 5. Tag and publish the GitHub release
 
 ```bash
-git tag -a "vX.Y.Z" -m "vX.Y.Z"
+git tag -s "vX.Y.Z" -m "vX.Y.Z"
 git push origin "vX.Y.Z"
 
 gh release create "vX.Y.Z" --title "vX.Y.Z" --notes-file - <<EOF
@@ -154,9 +154,9 @@ git checkout -b release/vX.Y.Z
 git add -A && git commit -m "release: vX.Y.Z …" && git push -u origin HEAD
 gh pr create --fill
 gh pr checks --watch
-gh pr merge --merge --delete-branch
+gh pr merge --squash --delete-branch
 git checkout main && git pull origin main
-git tag -a vX.Y.Z -m vX.Y.Z && git push origin vX.Y.Z
+git tag -s vX.Y.Z -m vX.Y.Z && git push origin vX.Y.Z
 gh release create vX.Y.Z --generate-notes
 ```
 
