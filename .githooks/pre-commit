@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+root=$(git rev-parse --show-toplevel)
+cd "$root"
+git diff --cached --check
+
+mapfile -t shell_files < <(git diff --cached --name-only --diff-filter=ACMR -- '*.sh' 'launchlayer')
+if ((${#shell_files[@]})); then
+  shellcheck "${shell_files[@]}"
+fi
+if ! git diff --cached --quiet -- 'CHANGELOG.md' 'scripts/check-changelog.py'; then
+  python3 scripts/check-changelog.py
+fi
+if ! git diff --cached --quiet -- '.github/workflows/*.yml' '.github/workflows/*.yaml'; then
+  actionlint
+  zizmor --offline --min-severity medium --min-confidence medium .github
+fi
+if ! git diff --cached --quiet -- 'site/**' 'scripts/build-site.sh' 'Makefile'; then
+  make check-pages
+fi
+bash scripts/check-dependency-pins.sh

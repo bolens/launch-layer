@@ -873,3 +873,7 @@ make test       # bats only
 Third-party tools keep their own licenses. See [docs/third-party.md](docs/third-party.md) for upstream links, SPDX notes, purchase gates (e.g. Lossless Scaling for lsfg-vk), and redistrib rules. LaunchLayer never vendors proprietary/GPL binaries into this repository.
 
 You may use, modify, and share this project for personal or non-commercial purposes if you credit **bolens**, link to [github.com/bolens/launch-layer](https://github.com/bolens/launch-layer), and release any derivatives under the same terms. Commercial use requires separate permission.
+
+### Git hooks
+
+Run `bash scripts/install-git-hooks` once per clone. The pre-commit hook runs fast staged checks; pre-push runs the broader local CI gate.

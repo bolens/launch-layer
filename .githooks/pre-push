@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+root=$(git rev-parse --show-toplevel)
+cd "$root"
+bash scripts/hub-pm.sh install --frozen-lockfile
+make check-all check-pages
+python3 scripts/check-changelog.py
+actionlint
+zizmor --offline --min-severity medium --min-confidence medium .github
