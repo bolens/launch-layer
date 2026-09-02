@@ -9,6 +9,8 @@ updates:
       github-actions:
         patterns:
           - "*"
+    cooldown:
+      default-days: 7
 
   - package-ecosystem: npm
     directory: /hub
@@ -33,3 +35,5 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "@convex-dev/eslint-plugin"
         update-types: ["version-update:semver-major"]
+    cooldown:
+      default-days: 7
