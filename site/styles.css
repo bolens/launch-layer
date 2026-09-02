@@ -209,3 +209,6 @@ footer { display: flex; justify-content: space-between; gap: 2rem; padding: 2rem
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
   .reveal { opacity: 1; transform: none; }
 }
+
+/* Launch-trace signature: controls share one readable rhythm. */
+::selection{background:var(--blue);color:var(--canvas)}h1,h2{text-wrap:balance}p{text-wrap:pretty}.trace-card{border-top:.3rem solid var(--blue)}.trace-heading{color:color-mix(in srgb,var(--blue) 72%,var(--ink))}
