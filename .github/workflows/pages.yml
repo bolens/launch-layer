@@ -1,7 +1,7 @@
 name: Pages
 
 on:
-  workflow_run:
+  workflow_run: # zizmor: ignore[dangerous-triggers] Downloads only the successful CI artifact from the protected main branch.
     workflows: [CI]
     types: [completed]
     branches: [main]

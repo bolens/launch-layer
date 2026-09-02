@@ -65,27 +65,12 @@ jobs:
   actionlint:
     needs: changes
     if: needs.changes.outputs.workflows == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Download actionlint
-        env:
-          ACTIONLINT_VERSION: "1.7.12"
-          ACTIONLINT_SHA256: "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"
-        run: |
-          set -euo pipefail
-          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
-          curl --proto '=https' --tlsv1.2 -fsSLO \
-            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${archive}"
-          echo "${ACTIONLINT_SHA256}  ${archive}" | sha256sum --check -
-          tar -xzf "${archive}" actionlint
-
-      - name: Run actionlint
-        run: ./actionlint -color
+    permissions:
+      contents: read
+      security-events: write
+    uses: bolens/.github/.github/workflows/reusable-actionlint.yml@d30ff6a56b47317d3d565e7b4747d133966db8d2
+    with:
+      security-audit: true
 
   pages:
     name: Pages / validated artifact
