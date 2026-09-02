@@ -15,7 +15,9 @@ Use a minor version for user-visible features and a patch version for fixes, doc
 - [ ] You know the target version
 - [ ] Local tools available: `bash`, `bats`, `shellcheck`, Node **22.13+** + pnpm (for hub gates)
 
-`main` requires the **`ci`** status check: prefer a release PR over pushing straight to `main`.
+`main` requires a pull request and the **`ci`** status check, including for
+administrators. Squash-merge the release PR; never push straight to `main` or
+bypass protection.
 
 ---
 
