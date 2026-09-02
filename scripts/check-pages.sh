@@ -53,6 +53,7 @@ for contract in 'rel="canonical"' 'og:site_name' 'og:image:width' 'twitter:image
 done
 
 node --check "$SITE/site.js"
+python3 "$ROOT/scripts/render-changelog.py" --name LaunchLayer --base-url https://bolens.github.io/launch-layer/ --accent "#ff5f56" --source "$ROOT/CHANGELOG.md" --output "$SITE/changelog/index.html"
 
 if grep -Eq '\.has-js[[:space:]]+\.reveal' "$SITE/styles.css"; then
 	echo "site/styles.css: primary content must not use JavaScript-only reveal concealment" >&2

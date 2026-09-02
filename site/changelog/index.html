@@ -1,0 +1,140 @@
+<!doctype html><html lang="en" data-changelog-mode="system" data-color-mode-storage="launchlayer-changelog-mode"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light"><meta name="theme-color" content="#09111d"><title>Changelog · LaunchLayer</title><meta name="description" content="Release history for LaunchLayer."><link rel="canonical" href="https://bolens.github.io/launch-layer/changelog/"><meta property="og:type" content="website"><meta property="og:title" content="Changelog · LaunchLayer"><meta property="og:description" content="Release history for LaunchLayer."><meta property="og:url" content="https://bolens.github.io/launch-layer/changelog/"><meta property="og:site_name" content="LaunchLayer"><meta property="og:image" content="https://bolens.github.io/launch-layer/social-card.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="LaunchLayer release history"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Changelog · LaunchLayer"><meta name="twitter:description" content="Release history for LaunchLayer."><meta name="twitter:image" content="https://bolens.github.io/launch-layer/social-card.png"><meta name="twitter:image:alt" content="LaunchLayer release history"><link rel="icon" href="../favicon.svg"><script>(()=>{const r=document.documentElement,k='launchlayer-changelog-mode',q=s=>typeof matchMedia==='function'?matchMedia(s):{matches:false},l=q('(prefers-color-scheme: light)'),d=q('(prefers-color-scheme: dark)');let m;try{m=localStorage.getItem(k)}catch{}if(!['system','time','light','dark'].includes(m))m='system';const x=()=>m==='time'?(new Date().getHours()>=7&&new Date().getHours()<19?'light':'dark'):m==='light'||m==='dark'?m:l.matches?'light':d.matches?'dark':'dark';const apply=()=>{r.dataset.changelogMode=m;r.dataset.changelogScheme=x()};apply();addEventListener('DOMContentLoaded',()=>{const s=document.querySelector('[data-mode]');s.value=m;s.addEventListener('change',()=>{m=s.value;try{localStorage.setItem(k,m)}catch{}apply()})});l.addEventListener?.('change',apply);d.addEventListener?.('change',apply);setInterval(()=>{if(m==='time')apply()},60000)})()</script><style>
+:root{--accent:#ff5f56;--bg:#09111d;--panel:#111d2d;--ink:#edf5ff;--muted:#9fb0c5;--line:#2a3c53;color-scheme:dark}[data-changelog-scheme=light]{--bg:#f5f7fa;--panel:#fff;--ink:#142033;--muted:#56677d;--line:#c8d2df;color-scheme:light}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 ui-sans-serif,system-ui,sans-serif}a{color:var(--accent)}header{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.8rem max(1rem,calc((100vw - 74rem)/2));border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(16px)}header>a{font-weight:800;text-decoration:none;color:var(--ink)}nav,label{display:flex;align-items:center;gap:.75rem}label{color:var(--muted);font-size:.8rem}select{max-width:9rem;padding:.45rem .6rem;border:1px solid var(--line);border-radius:.55rem;background:var(--panel);color:var(--ink)}main{width:min(74rem,calc(100% - 2rem));margin:auto;padding:clamp(2rem,6vw,5rem) 0}.intro{max-width:46rem;margin-bottom:2.5rem}h1{font-size:clamp(2.4rem,7vw,5.4rem);line-height:.95;letter-spacing:-.055em;margin:.2rem 0 1rem}.intro p{color:var(--muted);font-size:1.08rem}h2{display:inline-block;min-width:14rem;margin:2rem 2rem 1rem 0;padding-top:1.5rem;border-top:1px solid var(--line);font-size:1.15rem}h3{margin:1rem 0 .25rem;color:var(--accent);font-size:.78rem;text-transform:uppercase;letter-spacing:.12em}p,ul{max-width:52rem;overflow-wrap:anywhere;margin:.25rem 0 1rem}li+li{margin-top:.6rem}code{padding:.12rem .3rem;border-radius:.3rem;background:var(--panel)}footer{padding:2rem;text-align:center;color:var(--muted);border-top:1px solid var(--line)}@media(max-width:700px){header{align-items:flex-start;flex-wrap:wrap}nav{flex-wrap:wrap}label span{position:absolute;width:1px;height:1px;overflow:hidden}}
+</style></head><body><header><a href="../">LaunchLayer</a><nav><a aria-current="page" href="./">Changelog</a><a href="https://github.com/bolens/launch-layer">GitHub</a><label><span>Theme</span><select data-mode aria-label="Color theme"><option value="system">System</option><option value="time">Day cycle</option><option value="light">Light</option><option value="dark">Dark</option></select></label></nav></header><main><div class="intro"><p>Release notes</p><h1>What changed.</h1><p>Generated from the project changelog whenever its release history changes.</p></div><p>All notable changes to LaunchLayer are documented here.</p>
+<p>Format follows <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>, and this project uses <a href="https://semver.org/">Semantic Versioning</a>.</p>
+<p><a href="https://github.com/bolens/launch-layer/blob/main/docs/README.md">Docs index</a> · <a href="https://github.com/bolens/launch-layer/blob/main/README.md">README</a> · <a href="https://github.com/bolens/launch-layer/blob/main/docs/cli.md">CLI</a> · <a href="https://github.com/bolens/launch-layer/blob/main/docs/tui.md">TUI</a> · <a href="https://github.com/bolens/launch-layer/blob/main/docs/architecture.md">Architecture</a> · <a href="https://github.com/bolens/launch-layer/blob/main/docs/third-party.md">Third-party</a> · <a href="https://github.com/bolens/launch-layer/blob/main/docs/release_runbook.md">Release</a> · <a href="https://github.com/bolens/launch-layer/blob/main/CHANGELOG.md">Changelog</a></p>
+<h2 id="unreleased">Unreleased</h2>
+<h2 id="0-14-0-2026-09-01">0.14.0 - 2026-09-01</h2>
+<h3>Added</h3>
+<ul>
+<li>Add managed OptiScaler and OpenComposite layers, hybrid-GPU selection, and native Gamescope ReShade controls.</li>
+</ul>
+<h3>Security</h3>
+<ul>
+<li>Reject unsafe injector destinations, tracking identifiers, oversized downloads or archives, and archive traversal or link entries before modifying game files.</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li>Restore tracked injections after signals, early launch failures, and watchdog recovery from force-quit sessions.</li>
+<li>Roll back multi-file tool installs as a unit and restore tracked INI edits.</li>
+<li>Clean global ValvePlug tracking, drive typed choices from shared metadata, and skip unsupported Gamescope ReShade flags.</li>
+</ul>
+<h2 id="0-13-2-2026-09-01">0.13.2 - 2026-09-01</h2>
+<h3>Changed</h3>
+<ul>
+<li>Limit automatic ProtonDB settings to recent, corroborated reports with strict key and value validation.</li>
+<li>Mark generated recommendations so later runs can reconcile stale advice without overwriting user settings.</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li>Preserve complete post-<code>%command%</code> game arguments while excluding wrapper arguments.</li>
+<li>Respect effective native/<code>FORCE_PROTON</code> selection and keep standard Valve Proton on Steam&#x27;s default compatibility path instead of writing stale overrides.</li>
+<li>Recognize Arch-derived profiles and installed Steam Proton version labels during report ranking.</li>
+<li>Avoid redundant per-game <code>GAMEMODE=1</code> overrides.</li>
+</ul>
+<h2 id="0-13-1-2026-09-01">0.13.1 - 2026-09-01</h2>
+<h3>Changed</h3>
+<ul>
+<li>Update compatible Hub development dependencies while retaining the supported TypeScript toolchain.</li>
+<li>Report per-game progress during bulk Hub publish and update operations without corrupting JSON output.</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li>Canonicalize client fingerprint hashes in the same key order as Convex validation.</li>
+<li>Exclude Steam runtimes and tools identified by <code>toolmanifest.vdf</code> from game workflows and direct Hub operations.</li>
+<li>Keep the primary player-guide content visible when JavaScript enhancement succeeds.</li>
+</ul>
+<h2 id="0-13-0-2026-09-01">0.13.0 - 2026-09-01</h2>
+<h3>Added</h3>
+<ul>
+<li>Add a dependency-free, read-only MCP stdio server with game, configuration, path, cache, launch-statistics, environment, recommendation, diagnostic, and validation tools.</li>
+<li>Add MCP 2026 discovery support, cancellation, redacted privacy mode, and a pinned Inspector conformance target.</li>
+<li>Add a canonical configuration-key metadata registry shared by validation, summaries, the TUI, and Hub trust checks.</li>
+<li>Add accessible TUI status views, text labels, reduced-motion behavior, and deterministic visual evidence.</li>
+<li>Add a responsive GitHub Pages guide for players, live release and CI status, and an interactive repository-backed architecture diagram.</li>
+</ul>
+<h3>Changed</h3>
+<ul>
+<li>Require Bash 4.3 and verify the minimum runtime in CI.</li>
+<li>Lazy-load command modules for substantially faster version and help output.</li>
+<li>Bound Hub HTTP connection time, request time, and response size.</li>
+<li>Cache Steam manifests and bounded engine indexes to reduce repeated filesystem scans.</li>
+<li>Update the Hub dependency set and require Node 22.13 or newer.</li>
+<li>Make ProtonDB recommendation ranking deterministic across report and Proton version ordering.</li>
+<li>Make version bumps atomic and portable across GNU and BSD systems.</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li>Generate direct systemd maintenance and backup commands so failures reach the journal and unit status.</li>
+<li>Preserve paths containing whitespace throughout Steam discovery and preflight checks.</li>
+<li>Serialize config, Hub apply, completion, launch-log, and backup writes to prevent lost concurrent updates.</li>
+<li>Keep rapid Hub applies and same-second backups under unique recovery names.</li>
+<li>Validate MCP request envelopes and IDs before they reach shared worker state.</li>
+<li>Scope temporary-file cleanup to its owning operation and keep directory migration out of module loading.</li>
+</ul>
+<h2 id="0-12-0-2026-08-11">0.12.0 - 2026-08-11</h2>
+<h3>Added</h3>
+<ul>
+<li>TUI access to ProtonDB suggestions, per-game runtime status, hub config history, historical config application, restore merge paths, bulk INCLUDE filtering/preview, and global launch statistics</li>
+</ul>
+<h3>Security</h3>
+<ul>
+<li>Harden config parsing, INCLUDE containment, backup archives, fetched artifact checksum verification, hub client identity, retention limits, and dependency/action pin enforcement</li>
+<li>Require explicitly configured trusted ingress identity and HMAC protection for hub rate limiting</li>
+<li>Patch all known npm advisories in the hub dependency graph, including <code>js-yaml</code>, <code>brace-expansion</code>, PostCSS, Nano ID, and <code>ws</code></li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li>Main-menu <strong>Doctor</strong> shortcut (<code>Doctor ⚠N</code>) actually runs doctor (case was <code>Doctor:*</code>)</li>
+<li>Preserve launch tuning cleanup, standalone module loading, read-only state-cache behavior, and hub cleanup rescheduling</li>
+</ul>
+<h3>Changed</h3>
+<ul>
+<li>Bound hub candidate queries, prioritize recent recommendations, and expire stale client data</li>
+<li>Strengthen CI quality, secret, dependency-pin, and action-pin gates</li>
+<li>Update compatible hub dependencies while retaining exact version pins</li>
+</ul>
+<h2 id="0-11-0-2026-07-14">0.11.0 - 2026-07-14</h2>
+<h3>Added</h3>
+<ul>
+<li>CachyOS, Arch, and Bazzite launch options for DLSS swapping, shader caches, Gamescope, vkBasalt, capture tools, Wine injection, specialty runtimes, and VR workflows.</li>
+<li>A shared download and injection path stores third-party tools in the XDG cache with notices instead of vendoring binaries.</li>
+<li>The TUI exposes every supported launch key through quick toggles or typed advanced controls.</li>
+<li>Optional playtime logging, crash hints, and launch-exit restoration for modified files.</li>
+</ul>
+<h3>Changed</h3>
+<ul>
+<li>Detected defaults enable safe platform-specific tuning while dry-run output shows the selected environment.</li>
+<li>Hub publish and apply strip remote-execution and local-mutation keys from shared configurations.</li>
+<li>Overlapping wrappers and aliases are validated so each behavior has one configuration path.</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li>Nested Gamescope sessions avoid inherited <code>LD_PRELOAD</code> and skip redundant nesting.</li>
+<li>Special K, Flawless Widescreen, winetricks, and related injectors preserve existing files and use valid source paths.</li>
+</ul>
+<h2 id="0-10-0-2026-07-14">0.10.0 - 2026-07-14</h2>
+<h3>Added</h3>
+<ul>
+<li>Community hub config history (<code>--hub-history</code>, apply historical revisions)</li>
+<li>ProtonDB-based <code>--suggest-config</code> rankings</li>
+<li>Release runbook (<code>docs/release_runbook.md</code>) with <code>make bump-version</code> / <code>make check-version</code></li>
+</ul>
+<h3>Security</h3>
+<ul>
+<li>Fail-closed hub publish/delete unless <code>HUB_PUBLISH_TOKEN</code> is set (or <code>HUB_ALLOW_OPEN_PUBLISH=1</code> for local/dev)</li>
+<li>Reject/strip remote-exec keys (<code>PRE_LAUNCH_CMD</code>, wrappers, <code>OVERRIDE_PROTON</code>, VRAM-hog controls) on hub publish/apply</li>
+<li>Harden <code>INCLUDE=</code> path containment and tar import member checks</li>
+<li>Rate-limit privileged hub write routes and stop keying rate limits on client fingerprint alone</li>
+<li>Tighten hub prefs token hygiene (<code>chmod 600</code>, never echo token values)</li>
+</ul>
+<h3>Changed</h3>
+<ul>
+<li>CI path filters cover docs/changelog. Shell Bats and hub lint/test run as matrices.</li>
+</ul>
+<h2 id="0-9-0-2026-06-12">0.9.0 - 2026-06-12</h2>
+<h3>Added</h3>
+<ul>
+<li>Modular <code>lib/</code> layout, TUI, backups, profiles, and broad platform detection</li>
+<li>LaunchLayer Hub client + Convex backend for sharing per-game configs</li>
+</ul></main><footer><a href="../">Back to LaunchLayer</a></footer></body></html>
