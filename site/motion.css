@@ -1,0 +1,7 @@
+.launch-signal { display:block; width:100%; height:2.5rem; margin-bottom:.5rem; overflow:visible; }
+.launch-signal path { fill:none; stroke:var(--line); stroke-width:2; stroke-dasharray:.06 .03; animation:launch-track 5.4s linear infinite; }
+.launch-signal circle { fill:var(--blue); }
+.launch-signal .launch-pulse { fill:var(--green); filter:drop-shadow(0 0 7px var(--green)); animation:launch-pulse 5.4s cubic-bezier(.45,0,.2,1) infinite; }
+@keyframes launch-track { to { stroke-dashoffset:-1; } }
+@keyframes launch-pulse { 0%,8%{transform:translateX(0)}84%,100%{transform:translateX(404px)} }
+@media(prefers-reduced-motion:reduce){.launch-signal *{animation:none!important}.launch-signal .launch-pulse{transform:translateX(404px)}}
