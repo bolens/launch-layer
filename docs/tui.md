@@ -22,7 +22,7 @@ Regenerate screenshots after UI changes: `make tui-screenshots` ([VHS](https://g
 The main menu shows a status banner and a live footer for the current filter, doctor result, VM setting, backup timer, and Hub state:
 
 <p align="center">
-  <img src="assets/tui-main-menu.png" alt="LaunchLayer main menu" width="720">
+  <img src="assets/tui-main-menu.png" alt="LaunchLayer main menu" width="720" loading="lazy" decoding="async">
 </p>
 
 ### Game picker
@@ -30,7 +30,7 @@ The main menu shows a status banner and a live footer for the current filter, do
 The game picker searches by name and shows the selected game's config. **Ctrl-E** opens the editor, **Ctrl-D** previews the launch chain, and **?** shows shortcuts. Multi-select hides the preview pane.
 
 <p align="center">
-  <img src="assets/tui-game-picker.png" alt="LaunchLayer game picker with live preview" width="720">
+  <img src="assets/tui-game-picker.png" alt="LaunchLayer game picker with live preview" width="720" loading="lazy" decoding="async">
 </p>
 
 ### Game actions
@@ -44,7 +44,7 @@ Per-game boolean overrides. Green and red labels mark values set in `GAMES_DIR/<
 Covers every 0/1 launch flag (GameMode / MangoHUD / Gamescope family, shader/compatdata checks, NVIDIA power, Proton/`PROTON_*_UPGRADE` / indicators / NVIDIA libs, Arch latency knobs, `DISABLE_STEAM_DECK`, `DLSS_SWAPPER` cycles `0`→`1`→`dll`→`0`, etc.). Assist-only toggles (`DEPTH3D`, `GEO11`, `SBS_VR`, `FLAT2VR`) show an `assist` suffix: path/env markers, not injectors. Prefer `FLAWLESS_WIDESCREEN` over the Advanced-only `FWS` alias. Use **Advanced config → Proton & tools** for specialty runtime pickers, or **Open in $EDITOR**.
 
 <p align="center">
-  <img src="assets/tui-quick-toggles.png" alt="LaunchLayer per-game quick toggles" width="720">
+  <img src="assets/tui-quick-toggles.png" alt="LaunchLayer per-game quick toggles" width="720" loading="lazy" decoding="async">
 </p>
 
 ### Advanced config
