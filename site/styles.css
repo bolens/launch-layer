@@ -162,6 +162,15 @@ footer { display: flex; justify-content: space-between; gap: 2rem; padding: 2rem
 @keyframes trace { 0% { transform: translateY(0); height: 8%; } 50% { transform: translateY(13rem); height: 30%; } 100% { transform: translateY(0); height: 8%; } }
 @keyframes scan { 0%, 25% { transform: translateX(-100%); } 65%, 100% { transform: translateX(100%); } }
 
+@media (min-width: 100rem) {
+  .hero { max-width: 112rem; grid-template-columns: minmax(0, 1.15fr) minmax(24rem, .65fr); padding-inline: 8rem; }
+  .section { max-width: 104rem; }
+  .configure > *, .fix > *, .architecture-callout { max-width: 92rem; }
+  .section-intro { grid-template-columns: minmax(14rem, .45fr) minmax(28rem, 1fr); gap-inline: 6rem; }
+  .steps > li > div:last-child { grid-template-columns: minmax(14rem, .65fr) minmax(24rem, 1fr); gap-inline: 4rem; }
+  .docs-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+
 @media (max-width: 860px) {
   .site-header { grid-template-columns: 1fr auto; gap: .75rem; }
   .site-header nav { grid-row: 2; grid-column: 1 / -1; justify-content: flex-start; overflow-x: auto; padding-bottom: .2rem; }
