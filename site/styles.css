@@ -1,3 +1,17 @@
+/* Launch-console polish: compact controls around one decisive command. */
+::selection { background: var(--blue); color: #03101f; }
+h1, h2 { text-wrap: balance; }
+p { text-wrap: pretty; }
+.button, .trace-card, .choice, .doc-card { transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease; }
+.button:hover { transform: translateY(-2px); }
+.trace-card:hover { border-color: var(--blue); box-shadow: 0 1.25rem 3rem rgb(0 0 0 / 18%); }
+.choice:hover, .doc-card:hover { transform: translateY(-3px); }
+.section, .configure, .fix { content-visibility: auto; contain-intrinsic-size: 760px; }
+.site-header nav { scrollbar-width: none; }
+.site-header nav::-webkit-scrollbar { display: none; }
+@media (max-height: 560px) and (orientation: landscape) { .hero { min-height: auto !important; padding-block: 2.75rem !important; gap: 3rem; } h1 { font-size: clamp(3rem, 9vw, 5.6rem); } .trace-card { transform: scale(.92); transform-origin: center right; } }
+@media (prefers-reduced-motion: reduce) { .button, .trace-card, .choice, .doc-card { transition: none; } .button:hover, .choice:hover, .doc-card:hover { transform: none; } }
+
 :root {
   color-scheme: dark;
   --ink: #edf5ff;
