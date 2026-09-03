@@ -20,6 +20,9 @@ required=(
 	icon-512.png
 	social-card.png
 	site.webmanifest
+	robots.txt
+	sitemap.xml
+	llms.txt
 	.nojekyll
 )
 

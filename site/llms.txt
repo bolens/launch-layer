@@ -1,0 +1,13 @@
+# LaunchLayer
+
+LaunchLayer is a Bash launch orchestrator for Steam games. It composes profiles, per-game settings, compatibility tools, performance options, and launch hooks while keeping dry-run and inspection paths available.
+
+## Documentation
+
+- Overview: https://bolens.github.io/launch-layer/
+- Architecture: https://bolens.github.io/launch-layer/architecture.html
+
+## Source
+
+- Repository: https://github.com/bolens/launch-layer
+- Issues: https://github.com/bolens/launch-layer/issues
