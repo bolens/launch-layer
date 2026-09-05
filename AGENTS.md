@@ -1,5 +1,9 @@
 # AGENTS.md
 
+Before Spec Kit planning or implementation, read
+`.specify/memory/project-guide.md` with the project constitution. It maps
+requirements to this repository's source, acceptance evidence, and validation.
+
 ## Purpose
 
 LaunchLayer is a Bash 4.3+ launch orchestrator for Steam games. The repository
