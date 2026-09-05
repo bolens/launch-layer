@@ -309,7 +309,6 @@ def match_version(suggested, installed):
         match = re.search(r'ge-proton(\d+)(?:-(\d+))?', s_lower)
         if match:
             major = match.group(1)
-            minor = match.group(2) if match.group(2) else ""
             # Find closest installed GE-Proton
             ge_installed = [inst for inst in installed if "ge-proton" in inst.lower()]
             if ge_installed:
@@ -475,7 +474,6 @@ def main():
     tier = summary.get("tier", "pending").lower()
     trending_tier = summary.get("trendingTier", "pending").lower()
     confidence = summary.get("confidence", "unknown").upper()
-    score = summary.get("score", 0.0)
     total_reports = summary.get("total", 0)
     
     tier_color = TIER_COLORS.get(tier, RESET)
