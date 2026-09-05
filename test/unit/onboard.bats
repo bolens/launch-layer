@@ -5,6 +5,8 @@ load '../helpers.bash'
 setup() {
 	bats_unit_setup
 	SETUP_HOME="$(mktemp -d)"
+	export CONFIG_DIR="$SETUP_HOME/config"
+	mkdir -p "$CONFIG_DIR/launch.d"
 	export HOME="$SETUP_HOME"
 	export XDG_CONFIG_HOME="$SETUP_HOME"
 }
