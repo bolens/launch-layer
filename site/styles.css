@@ -166,8 +166,8 @@ footer { display: flex; justify-content: space-between; gap: 2rem; padding: 2rem
   .hero { max-width: 112rem; grid-template-columns: minmax(0, 1.15fr) minmax(24rem, .65fr); padding-inline: 8rem; }
   .section { max-width: 104rem; }
   .configure > *, .fix > *, .architecture-callout { max-width: 92rem; }
-  .section-intro { grid-template-columns: minmax(14rem, .45fr) minmax(28rem, 1fr); gap-inline: 6rem; }
-  .steps > li > div:last-child { grid-template-columns: minmax(14rem, .65fr) minmax(24rem, 1fr); gap-inline: 4rem; }
+  .section-intro { grid-template-columns: minmax(14rem, .45fr) minmax(28rem, 1fr); column-gap: 6rem; }
+  .steps > li > div:last-child { grid-template-columns: minmax(14rem, .65fr) minmax(24rem, 1fr); column-gap: 4rem; }
   .docs-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 }
 
