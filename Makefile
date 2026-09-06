@@ -2,6 +2,8 @@
 
 SHELL := /bin/bash
 BATS ?= bats
+TEST_SHARD ?= 0
+TEST_SHARDS ?= 1
 HUB_PM := bash scripts/hub-pm.sh
 # Parallel across bats files when GNU parallel (or rush) is available.
 # Keep tests within a file serial — several suites share setup state.
@@ -11,10 +13,10 @@ BATS_PARALLEL := $(shell if command -v parallel >/dev/null 2>&1 || command -v ru
 test: test-integration test-unit
 
 test-unit:
-	$(BATS) $(BATS_PARALLEL) test/unit
+	bash scripts/run-bats-shard.sh unit $(TEST_SHARD) $(TEST_SHARDS) $(BATS) $(BATS_PARALLEL)
 
 test-integration:
-	$(BATS) $(BATS_PARALLEL) test/integration
+	bash scripts/run-bats-shard.sh integration $(TEST_SHARD) $(TEST_SHARDS) $(BATS) $(BATS_PARALLEL)
 
 test-hub:
 	$(HUB_PM) test

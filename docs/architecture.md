@@ -292,3 +292,9 @@ CI (`.github/workflows/ci.yml`) uses path filters:
 `pnpm audit` is a weekly workflow (`.github/workflows/hub-audit.yml`), not part of the PR gate.
 
 Cutting a tagged release: [release_runbook.md](release_runbook.md). User-facing CLI/TUI: [cli.md](cli.md) · [tui.md](tui.md).
+
+CI splits unit Bats files across two runners and keeps integration tests in one
+job. Each shard preserves serial execution within a file. Reproduce a unit shard
+with `make test-unit TEST_SHARD=0 TEST_SHARDS=2` (then index 1). The default
+`make test` still executes every file. New files are discovered automatically;
+`test/unit/ci-sharding.bats` verifies the partitions cover both complete suites.
