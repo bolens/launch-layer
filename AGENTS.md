@@ -1,8 +1,6 @@
 # AGENTS.md
 
-Before Spec Kit planning or implementation, read
-`.specify/memory/project-guide.md` with the project constitution. It maps
-requirements to this repository's source, acceptance evidence, and validation.
+[Documentation](docs/README.md) maps architecture, deployment, state, and document ownership.
 
 ## Purpose
 
@@ -13,29 +11,11 @@ Keep changes narrow, portable, and covered by the closest relevant tests.
 
 ## Instruction scope
 
-- This file applies to the repository except where a deeper `AGENTS.md`
+- This file applies to the repository except where a deeper [AGENTS.md](AGENTS.md)
   overrides it.
-- Work under `hub/` must follow `hub/AGENTS.md` as well as this file.
+- Work under `hub/` must follow [hub/AGENTS.md](hub/AGENTS.md) as well as this file.
 - Preserve user changes in a dirty worktree. Do not rewrite unrelated files.
 - Do not modify machine-local `launch.d/local.env` unless explicitly asked.
-
-## Repository map
-
-- `launchlayer`: executable entrypoint and top-level dispatch.
-- `lib/load-modules.sh`: canonical module dependency and source order.
-- `lib/`: Bash implementation.
-  - `commands/`: CLI dispatch and domain commands.
-  - `runtime/`: launch chain, environment tuning, hooks, and logging.
-  - `platform/`, `hardware/`, `steam/`: detection and discovery.
-  - `inspect/`, `setup/`, `prefs/`, `completions/`: supporting workflows.
-  - `tui/`: interactive UI; it should reuse the same domain functions as CLI.
-- `launch.d/`: shipped defaults, profiles, presets, and data lists.
-- `share/launchlayer/`: installed templates, completions, systemd, and sysctl
-  assets.
-- `test/unit/`, `test/integration/`: Bats tests.
-- `hub/`: Node 22+, pnpm, Convex, TypeScript; see its local instructions.
-- `docs/architecture.md`: source of truth for module and launch architecture.
-- `docs/cli.md`, `docs/tui.md`: user-facing command and TUI references.
 
 ## Working conventions
 
@@ -120,7 +100,7 @@ unavailable, report which checks were not run rather than weakening tests.
 
 - Update user-facing docs when flags, config keys, output, workflows, or TUI
   behavior change.
-- Update `docs/architecture.md` when module boundaries, load order, config
+- Update [docs/architecture.md](docs/architecture.md) when module boundaries, load order, config
   precedence, or the launch pipeline changes.
 - Keep README examples and shipped templates consistent with implementation.
 - Regenerate TUI screenshots only for intentional visual changes with
@@ -135,28 +115,19 @@ unavailable, report which checks were not run rather than weakening tests.
 - Run and report the checks appropriate to the changed scope.
 - Summarize behavior changes and call out any validation not completed.
 
-## Spec-driven changes
+## Planning and evidence
 
-Use Spec Kit for new capabilities, architecture, security-sensitive behavior,
-migrations, and coordinated multi-file changes. Keep narrow fixes, dependency
-updates, prose edits, and release housekeeping in the normal repository
-workflow unless their risk warrants a written specification. Keep completed
-feature directories under `specs/` as decision history. Backfill finished work
-only when explicitly requested. Label those
-specifications as retrospective baselines, record the inspected revision, and map
-requirements to source and acceptance evidence. Separate observed behavior from
-corrective requirements. Never imply the specification preceded its code or mark
-unverified checks complete.
+Use the [project guide](.specify/memory/project-guide.md) and
+[constitution](.specify/memory/constitution.md) for substantial changes. The guide
+owns Spec Kit scope, retained history, retrospective requirements, and acceptance
+evidence. Prose maintenance uses the normal repository workflow.
 
 ## Context and handoffs
 
-- Locate source with targeted searches before reading. For exploratory reads of
-  files over 350 lines, select relevant ranges. Read required guidance and actual
-  source before edits or correctness claims; summaries do not replace them.
-- When delegation is permitted, give each worker one question or concrete output,
-  allowed paths, and a check. Return findings with source locations, changed paths,
-  and verification gaps. Keep final review with the coordinating agent.
-- Record durable user corrections in the [project guide](.specify/memory/project-guide.md)
-  or owning contract with scope, reason, and evidence. Replace superseded advice;
-  read relevant corrections before reusing assumptions. Keep temporary progress
-  in task notes and preserve existing authority rules.
+- Search before reading. Use bounded source excerpts for exploratory reads over
+  350 lines, and inspect required guidance and actual source before editing.
+- When delegation is permitted, assign a bounded question or output, paths, and
+  check. Return source locations, changes, and verification gaps for final review.
+- Keep durable corrections in the [project guide](.specify/memory/project-guide.md)
+  or owning contract. Replace superseded advice and read it before reuse.
+  Temporary progress belongs in task notes. Preserve existing authority rules.

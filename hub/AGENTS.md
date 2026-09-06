@@ -1,7 +1,9 @@
 # Hub guidance
 
-Follow the root `AGENTS.md`, `.specify/memory/constitution.md`, and
-`.specify/memory/project-guide.md` as well as these hub-specific rules.
+[Documentation](../docs/README.md) maps architecture, deployment, state, and document ownership.
+
+Follow the root [AGENTS.md](../AGENTS.md), [.specify/memory/constitution.md](../.specify/memory/constitution.md), and
+[.specify/memory/project-guide.md](../.specify/memory/project-guide.md) as well as these hub-specific rules.
 
 - The hub uses TypeScript and Convex. Read the affected schema, server function,
   and test before editing. Keep the hub contract compatible with the Bash client.
