@@ -80,7 +80,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [unit, integration]
+        include:
+          - suite: unit
+            shard: 0
+            shards: 2
+          - suite: unit
+            shard: 1
+            shards: 2
+          - suite: integration
+            shard: 0
+            shards: 1
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -95,7 +104,7 @@ jobs:
         run: sudo sysctl -w vm.max_map_count=2147483642
 
       - name: Bats ${{ matrix.suite }}
-        run: make test-${{ matrix.suite }}
+        run: make test-${{ matrix.suite }} TEST_SHARD=${{ matrix.shard }} TEST_SHARDS=${{ matrix.shards }}
 
   portability:
     name: Portability / ${{ matrix.os }}
