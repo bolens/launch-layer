@@ -81,3 +81,5 @@ cross-references brief.
 When adding a user-facing key or tool, update the CLI reference, the affected TUI section, the
 third-party page when an upstream project is involved, and the changelog. Update this table if
 ownership of the topic changes.
+
+- [Editor setup](../.vscode/README.md)
