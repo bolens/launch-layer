@@ -10,5 +10,6 @@
     "test:hub": "bash scripts/hub-pm.sh run test",
     "lint:hub": "bash scripts/hub-pm.sh run lint",
     "convex:deploy": "bash scripts/hub-pm.sh run convex:deploy"
-  }
+  },
+  "license": "MIT"
 }

@@ -1,6 +1,6 @@
 # Third-party tools and licenses
 
-LaunchLayer is licensed under [CC BY-NC-SA 4.0](../LICENSE). Its integrations call installed upstream tools or, when configured, cache their artifacts. The LaunchLayer license does not apply to those projects, and the repository does not contain their binaries.
+LaunchLayer is licensed under [MIT](../LICENSE). Its integrations call installed upstream tools or, when configured, cache their artifacts. The LaunchLayer license does not apply to those projects, and the repository does not contain their binaries.
 
 [Docs index](README.md) · [README](../README.md) · [CLI](cli.md) · [TUI](tui.md) · [Architecture](architecture.md) · [Third-party](third-party.md) · [Release](release_runbook.md) · [Changelog](../CHANGELOG.md)
 
