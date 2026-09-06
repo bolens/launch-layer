@@ -8,7 +8,7 @@
 
 *Use the same Steam launch string for every game. Keep each game's settings in a plain config file.*
 
-[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![CI](https://github.com/bolens/launch-layer/actions/workflows/ci.yml/badge.svg)](https://github.com/bolens/launch-layer/actions/workflows/ci.yml)
 [![Shell](https://img.shields.io/badge/shell-bash-4EAA25?logo=gnu-bash&logoColor=white)](launchlayer)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20BSD%20%7C%20macOS%20%7C%20WSL2-1793D2?logo=linux&logoColor=white)](launch.d/profiles/)
@@ -830,7 +830,7 @@ No. Local launches, the TUI, backup/restore, and doctor all work without it. The
 In `~/.local/share/launchlayer/games/<AppID>.env` by default: not in the git repo. See [Configuration](#configuration).
 
 **Commercial use?**
-This project is [CC BY-NC-SA 4.0](LICENSE). Commercial use requires separate permission from bolens. Third-party tool licenses: [docs/third-party.md](docs/third-party.md).
+This project is licensed under [MIT](LICENSE). Third-party tool licenses: [docs/third-party.md](docs/third-party.md).
 
 ---
 
@@ -868,12 +868,17 @@ make test       # bats only
 
 ## License
 
-[CC BY-NC-SA 4.0](LICENSE): non-commercial use with attribution. Derivatives must use the same license.
+[MIT](LICENSE). Preserve the copyright and permission notice when redistributing copies or substantial portions.
 
 Third-party tools keep their own licenses. See [docs/third-party.md](docs/third-party.md) for upstream links, SPDX notes, purchase gates (e.g. Lossless Scaling for lsfg-vk), and redistrib rules. LaunchLayer never vendors proprietary/GPL binaries into this repository.
 
-You may use, modify, and share this project for personal or non-commercial purposes if you credit **bolens**, link to [github.com/bolens/launch-layer](https://github.com/bolens/launch-layer), and release any derivatives under the same terms. Commercial use requires separate permission.
+The MIT grant covers LaunchLayer code owned by bolens. Third-party code, assets, services, and downloaded tools remain subject to their own terms. Earlier versions remain available under the license granted with those versions.
 
 ### Git hooks
 
 Run `bash scripts/install-git-hooks` once per clone. The pre-commit hook runs fast staged checks; pre-push runs the broader local CI gate.
+
+## License scope and attribution
+
+See [third-party notices](THIRD_PARTY_NOTICES.md) for the project license scope,
+retained upstream notices, and dependency or asset exceptions.
