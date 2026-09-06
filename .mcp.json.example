@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "launch-layer": {
+      "command": "/absolute/path/to/launch-layer/launchlayer",
+      "args": [
+        "--mcp",
+        "--privacy",
+        "redacted"
+      ]
+    }
+  }
+}
