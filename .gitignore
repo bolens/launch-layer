@@ -98,3 +98,6 @@ __pycache__/
 # Packaging / install scratch
 dist/
 site/architecture.visual-check.*
+
+# Local tooling and runtime artifacts
+.ruff_cache/
