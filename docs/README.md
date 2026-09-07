@@ -83,3 +83,4 @@ third-party page when an upstream project is involved, and the changelog. Update
 ownership of the topic changes.
 
 - [Editor setup](../.vscode/README.md)
+- [License scope and attribution](../THIRD_PARTY_NOTICES.md)
