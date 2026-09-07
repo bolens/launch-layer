@@ -37,3 +37,13 @@ updates:
         update-types: ["version-update:semver-major"]
     cooldown:
       default-days: 7
+
+  - package-ecosystem: docker
+    directory: /.devcontainer
+    cooldown:
+      default-days: 7
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: chore(deps)
