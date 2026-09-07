@@ -1,5 +1,7 @@
 # Release playbook
 
+[Documentation](docs/README.md)
+
 The authoritative LaunchLayer procedure is
 [`docs/release_runbook.md`](docs/release_runbook.md). It covers the shell and
 hub gates, `LAUNCHLAYER_VERSION`, changelog preparation, protected squash-merge
