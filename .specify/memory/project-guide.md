@@ -1,5 +1,7 @@
 # launch-layer Spec Kit project guide
 
+[Documentation](../../docs/README.md)
+
 A Bash Steam launch orchestrator with shared CLI/TUI behavior and an optional
 TypeScript/Convex hub.
 
