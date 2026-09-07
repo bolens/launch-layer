@@ -48,7 +48,7 @@ inject_store_notice() {
 		printf 'Version: %s\n' "$version"
 		printf 'Upstream: %s\n' "$url"
 		printf 'License: %s\n' "$license"
-		printf 'Cached by LaunchLayer for local use only — not part of the CC BY-NC-SA source tree.\n'
+		printf 'Cached by LaunchLayer for local use only — not part of the MIT-licensed LaunchLayer source tree.\n'
 		[[ -n "$extra" ]] && printf '%s\n' "$extra"
 	} > "$notice"
 }
