@@ -790,6 +790,13 @@ make bump-version VERSION=X.Y.Z
 make check-version     # LAUNCHLAYER_VERSION consistency gate
 ```
 
+Ordinary full Linux shell and Node 26 hub validation run on
+[Woodpecker](https://woodpecker.bolens.dev/repos). Hosted CI retains the declared
+minimum Node runtime in one serial hub job, Python 3.9, Bash 4.3, Ubuntu/macOS
+portability, real editor-image checks, supply-chain validation and Pages. Reusable
+workflow callers retain their existing full-validation defaults. The required
+native shell/hub results complement the retained hosted `ci` and source-lint gates.
+
 Integration doctor tests use an owned read-only `sysctl` fixture for the expected
 healthy `vm.max_map_count`; all other fixture requests fail. They do not depend
 on or tune the CI host's kernel. Unit tests still cover low-limit issue reporting.
