@@ -40,6 +40,8 @@ make check-all
 Start with the relevant Bats file or hub lint/test target. Do not use real game
 launches, privileged tuning, process killing, or Steam-library writes as test setup.
 Generated Convex files and local launch configuration are not editable contract sources.
+Systemd installation tests must intercept `systemctl` with an owned fixture. A temporary
+HOME does not isolate the real user bus; never enable workstation units during tests.
 
 ## Working through Spec Kit
 
