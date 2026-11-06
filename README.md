@@ -790,6 +790,10 @@ make bump-version VERSION=X.Y.Z
 make check-version     # LAUNCHLAYER_VERSION consistency gate
 ```
 
+Integration doctor tests use an owned read-only `sysctl` fixture for the expected
+healthy `vm.max_map_count`; all other fixture requests fail. They do not depend
+on or tune the CI host's kernel. Unit tests still cover low-limit issue reporting.
+
 Releases: follow [docs/release_runbook.md](docs/release_runbook.md). Notes live in [CHANGELOG.md](CHANGELOG.md).
 
 Or directly:
