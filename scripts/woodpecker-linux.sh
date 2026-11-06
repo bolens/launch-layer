@@ -5,7 +5,7 @@ cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
 case ${1:-} in
 	shell)
 		apt-get update
-		apt-get install --yes --no-install-recommends bats ca-certificates curl git jq make parallel python3 shellcheck
+		apt-get install --yes --no-install-recommends bats ca-certificates curl gawk git jq make parallel python3 shellcheck
 		make check check-pages BATS_JOBS=2
 		;;
 	hub)
