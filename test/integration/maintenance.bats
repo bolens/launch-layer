@@ -28,6 +28,17 @@ teardown() {
 	bats_integration_teardown
 }
 
+@test "integration sysctl fixture permits only its expected read" {
+	run sysctl -n vm.max_map_count
+	[[ $status -eq 0 ]]
+	[[ "$output" == 2147483642 ]]
+	# Use the explicit owned fixture path even when checking rejected writes.
+	run "$BATS_TEST_STATE_HOME/bin/sysctl" --system
+	[[ $status -eq 97 ]]
+	run "$BATS_TEST_STATE_HOME/bin/sysctl" -w vm.max_map_count=65530
+	[[ $status -eq 97 ]]
+}
+
 @test "doctor runs" {
 	run "$SCRIPT" --doctor
 	[[ $status -eq 0 ]]

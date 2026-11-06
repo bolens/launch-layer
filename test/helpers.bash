@@ -142,6 +142,7 @@ bats_unit_setup() {
 # bats_integration_setup — Common setup for test/integration/*.bats.
 bats_integration_setup() {
 	source "$BATS_TEST_DIRNAME/../helpers.bash"
+	BATS_SAVED_PATH=$PATH
 	BATS_SAVED_HOME="${HOME:-}"
 	BATS_SAVED_XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-}"
 	BATS_SAVED_XDG_STATE_HOME="${XDG_STATE_HOME:-}"
@@ -151,7 +152,18 @@ bats_integration_setup() {
 	export XDG_STATE_HOME="$BATS_TEST_STATE_HOME"
 	export XDG_CACHE_HOME="$BATS_TEST_STATE_HOME/cache"
 	export LAUNCHLAYER_GAMES_DIR="$BATS_TEST_STATE_HOME/games"
-	mkdir -p "$XDG_CACHE_HOME" "$LAUNCHLAYER_GAMES_DIR"
+	mkdir -p "$XDG_CACHE_HOME" "$LAUNCHLAYER_GAMES_DIR" "$BATS_TEST_STATE_HOME/bin"
+	# Doctor integration fixtures describe a healthy machine, not the CI host's
+	# kernel tuning. Allow only this read; no sysctl writes can reach the host.
+	cat > "$BATS_TEST_STATE_HOME/bin/sysctl" <<'MOCK'
+#!/usr/bin/env bash
+case "$*" in
+	'-n vm.max_map_count') printf '%s\n' 2147483642 ;;
+	*) printf 'Unexpected sysctl request in integration fixture\n' >&2; exit 97 ;;
+esac
+MOCK
+	chmod +x "$BATS_TEST_STATE_HOME/bin/sysctl"
+	export PATH="$BATS_TEST_STATE_HOME/bin:$PATH"
 	SCRIPT="$(launchlayer_script)"
 	REPO_ROOT="$(launchlayer_root)"
 	export SCRIPT REPO_ROOT
@@ -160,6 +172,7 @@ bats_integration_setup() {
 
 # bats_integration_teardown — Restore env vars some integration tests override.
 bats_integration_teardown() {
+	export PATH=$BATS_SAVED_PATH
 	[[ -n "${BATS_SAVED_HOME:-}" ]] && export HOME="$BATS_SAVED_HOME"
 	if [[ -n "${BATS_SAVED_XDG_CONFIG_HOME:-}" ]]; then
 		export XDG_CONFIG_HOME="$BATS_SAVED_XDG_CONFIG_HOME"
