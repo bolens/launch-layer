@@ -1,0 +1,22 @@
+# Isolated credential-free Linux validation; hosted platform/admin lanes remain.
+labels:
+  platform: linux/amd64
+  backend: docker
+clone:
+  git:
+    image: docker.io/woodpeckerci/plugin-git@sha256:9802cb7852dcf31f9c5c1d1ddeadfb9002d4fae85751f7b6a792eedb267bcc59
+    settings:
+      depth: 0
+      partial: false
+when:
+  - event: push
+    branch: main
+  - event: [pull_request, manual]
+steps:
+  - name: verify
+    image: docker.io/library/node:26-trixie-slim@sha256:c0753125a3789977aefe869cbebccf70e3cfd7ea84ca48547458f02e4f1d7146
+    environment:
+      CI: 'true'
+      DEBIAN_FRONTEND: noninteractive
+    commands:
+      - bash scripts/woodpecker-linux.sh shell

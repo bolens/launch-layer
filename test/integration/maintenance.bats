@@ -4,9 +4,27 @@ load '../helpers.bash'
 
 setup() {
 	bats_integration_setup
+	# Writing units under a temporary HOME does not isolate the user bus.
+	# Never let installation tests reach the workstation's systemd manager.
+	SYSTEMCTL_SAVED_PATH=$PATH
+	export LAUNCHLAYER_TEST_SYSTEMCTL_LOG="$BATS_TEST_STATE_HOME/systemctl.calls"
+	mkdir -p "$BATS_TEST_STATE_HOME/bin"
+	cat > "$BATS_TEST_STATE_HOME/bin/systemctl" <<'MOCK'
+#!/usr/bin/env bash
+case "$*" in
+	'--user daemon-reload'|'--user enable --now launchlayer-maintenance.timer')
+		printf '%s\n' "$*" >> "$LAUNCHLAYER_TEST_SYSTEMCTL_LOG"
+		;;
+	*) exit 1 ;;
+esac
+MOCK
+	chmod +x "$BATS_TEST_STATE_HOME/bin/systemctl"
+	export PATH="$BATS_TEST_STATE_HOME/bin:$PATH"
 }
 
 teardown() {
+	export PATH=$SYSTEMCTL_SAVED_PATH
+	unset LAUNCHLAYER_TEST_SYSTEMCTL_LOG
 	bats_integration_teardown
 }
 
@@ -88,6 +106,7 @@ teardown() {
 	grep -q launchlayer "$unit_dir/launchlayer-maintenance.service"
 	grep -q -- '--run-maintenance' "$unit_dir/launchlayer-maintenance.service"
 	! grep -q '/bin/bash -c' "$unit_dir/launchlayer-maintenance.service"
+	[[ $(cat "$LAUNCHLAYER_TEST_SYSTEMCTL_LOG") == $'--user daemon-reload\n--user enable --now launchlayer-maintenance.timer' ]]
 	rm -rf "$tmp"
 }
 

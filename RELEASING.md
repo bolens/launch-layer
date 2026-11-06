@@ -26,3 +26,19 @@ with the same tooling revision pinned in
 [the workflow](.github/workflows/source-lint.yml). Review exclusions when adding
 source files; generated and imported files retain their native validation.
 Require the new check to pass on the current PR head before merging.
+
+## Woodpecker Linux validation
+
+[Woodpecker](https://woodpecker.bolens.dev/repos) runs `make check check-pages`
+and the frozen-lockfile hub lint, tests and coverage gates on every pull request
+and push to `main`. The two ordinary Docker workflows use the pinned public
+Node 26 Debian image, disposable distribution tool installation and bounded
+Bats concurrency. They need no secrets, Docker socket, host mounts or tuning.
+
+Run `bash scripts/woodpecker-linux.sh shell` or `hub` only inside the disposable
+Debian CI container: these entry points install container tools. For local
+checks, keep using `make check-all check-pages`. Node 22.13 and Python 3.9
+minimum-runtime checks, Bash 4.3 builds, macOS portability, hosted supply-chain
+checks, Pages and administrative workflows remain on GitHub. GitHub Linux
+checks remain active during native verification and protected-check cutover.
+No release or production deployment is triggered by these validation workflows.
