@@ -4,6 +4,11 @@ name: CI / Shell
 
 on:
   workflow_call:
+    inputs:
+      full_linux_validation:
+        description: Run the full hosted Linux suite for reusable callers
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -59,6 +64,7 @@ jobs:
           printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{}}}' | /tmp/bash-4.3-install/bin/bash ./launchlayer --mcp | grep -q '"name":"launchlayer"'
 
   shellcheck:
+    if: inputs.full_linux_validation
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -75,6 +81,7 @@ jobs:
         run: make shellcheck
 
   bats:
+    if: inputs.full_linux_validation
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -99,9 +106,6 @@ jobs:
         with:
           packages: bats python3 parallel
           version: 1.1
-
-      - name: Prepare vm.max_map_count for doctor tests
-        run: sudo sysctl -w vm.max_map_count=2147483642
 
       - name: Bats ${{ matrix.suite }}
         run: make test-${{ matrix.suite }} TEST_SHARD=${{ matrix.shard }} TEST_SHARDS=${{ matrix.shards }}

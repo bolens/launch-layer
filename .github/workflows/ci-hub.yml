@@ -5,12 +5,18 @@ name: CI / Hub
 
 on:
   workflow_call:
+    inputs:
+      combined_minimum:
+        description: Run the declared minimum-runtime checks in one serial job
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 jobs:
   hub:
+    if: ${{ !inputs.combined_minimum }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -38,3 +44,34 @@ jobs:
 
       - name: Hub ${{ matrix.task }}
         run: bash scripts/hub-pm.sh ${{ matrix.task }}
+
+  minimum:
+    name: Declared minimum Node
+    if: inputs.combined_minimum
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # version omitted — reads packageManager from hub/package.json
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: hub/package.json
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+          cache-dependency-path: hub/pnpm-lock.yaml
+
+      - name: Install hub dependencies
+        run: bash scripts/hub-pm.sh install --frozen-lockfile
+
+      - name: Validate the hub at its declared minimum Node version
+        run: |
+          set -euo pipefail
+          bash scripts/hub-pm.sh lint
+          bash scripts/hub-pm.sh test
+          bash scripts/hub-pm.sh test:coverage

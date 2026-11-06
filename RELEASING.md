@@ -38,7 +38,17 @@ Bats concurrency. They need no secrets, Docker socket, host mounts or tuning.
 Run `bash scripts/woodpecker-linux.sh shell` or `hub` only inside the disposable
 Debian CI container: these entry points install container tools. For local
 checks, keep using `make check-all check-pages`. Node 22.13 and Python 3.9
-minimum-runtime checks, Bash 4.3 builds, macOS portability, hosted supply-chain
-checks, Pages and administrative workflows remain on GitHub. GitHub Linux
-checks remain active during native verification and protected-check cutover.
-No release or production deployment is triggered by these validation workflows.
+minimum-runtime checks, Bash 4.3 builds, Ubuntu/macOS portability, hosted
+supply-chain checks, Pages and administrative workflows remain on GitHub.
+
+Require `ci/woodpecker/pr/shell` and `ci/woodpecker/pr/hub` alongside the existing
+`ci` and `lint / Source lint` checks. The ordinary caller skips duplicate hosted
+ShellCheck/Bats jobs; external reusable shell callers retain full validation by
+default. The hub's declared minimum Node version still runs lint, tests and
+coverage in one hosted serial job; external reusable callers keep the original
+matrix by default. The existing hosted aggregate rejects failed selected suites.
+
+Validate the actual final-head native and retained hosted checks before merging,
+then verify both merged-main native workflows and Pages publication. Validation
+does not create product tags or deploy Convex; the existing hosted Pages workflow
+publishes its validated CI artifact after a successful CI run.
