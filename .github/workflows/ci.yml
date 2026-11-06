@@ -23,6 +23,7 @@ jobs:
       shell: ${{ steps.filter.outputs.shell }}
       hub: ${{ steps.filter.outputs.hub }}
       workflows: ${{ steps.filter.outputs.workflows }}
+      editor: ${{ steps.filter.outputs.editor }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -64,6 +65,12 @@ jobs:
               - '.github/workflows/hub-audit.yml'
             workflows:
               - '.github/workflows/**'
+            editor:
+              - '.devcontainer/**'
+              - '.github/workflows/ci.yml'
+              - 'hub/package.json'
+              - 'hub/pnpm-lock.yaml'
+              - 'hub/pnpm-workspace.yaml'
 
   actionlint:
     needs: changes
@@ -86,7 +93,7 @@ jobs:
       - name: Validate Pages site
         run: make check-pages
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: github-pages-site
           path: site
@@ -131,10 +138,33 @@ jobs:
     if: needs.changes.outputs.hub == 'true'
     uses: ./.github/workflows/ci-hub.yml
 
+  editor:
+    name: Editor devcontainer
+    needs: changes
+    if: needs.changes.outputs.editor == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build and initialize the editor devcontainer
+        run: |
+          set -euo pipefail
+          image="localhost/launchlayer-editor:${GITHUB_SHA}"
+          trap 'docker image rm "$image" >/dev/null' EXIT
+          docker build --tag "$image" --file .devcontainer/Dockerfile .devcontainer
+          docker run --rm --read-only --cap-drop ALL \
+            --security-opt no-new-privileges --pids-limit 128 --memory 1g \
+            --cpus 2 --user "$(id -u):$(id -g)" --tmpfs /tmp:rw,size=512m \
+            --env HOME=/tmp/editor-home \
+            --mount "type=bind,source=${GITHUB_WORKSPACE},target=/workspace" \
+            --workdir /workspace "$image" bash .devcontainer/post-create.sh
+
   # Always runs. Require this job name ("ci") in branch protection.
   # Succeeds when path-filtered suites are skipped; fails if a needed suite failed.
   ci:
-    needs: [changes, actionlint, pages, shell, hub, supply_chain]
+    needs: [changes, actionlint, pages, shell, hub, supply_chain, editor]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -151,6 +181,8 @@ jobs:
           actionlint_result='${{ needs.actionlint.result }}'
           pages_result='${{ needs.pages.result }}'
           supply_chain_result='${{ needs.supply_chain.result }}'
+          editor_needed='${{ needs.changes.outputs.editor }}'
+          editor_result='${{ needs.editor.result }}'
 
           echo "changes=$changes_result actionlint_needed=$workflows_needed actionlint=$actionlint_result pages=$pages_result shell_needed=$shell_needed shell=$shell_result hub_needed=$hub_needed hub=$hub_result"
 
@@ -181,6 +213,11 @@ jobs:
 
           if [[ "$hub_needed" == "true" && "$hub_result" != "success" ]]; then
             echo "hub suite required but result was: $hub_result"
+            exit 1
+          fi
+
+          if [[ "$editor_needed" == "true" && "$editor_result" != "success" ]]; then
+            echo "editor devcontainer required but result was: $editor_result"
             exit 1
           fi
 
