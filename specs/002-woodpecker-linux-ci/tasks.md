@@ -9,7 +9,7 @@ Final run identities and merge SHAs belong in the PR/coordinator receipt.
 ## Corrective acceptance
 
 The first genuine main shell run exposed doctor tests reading the runner's
-`vm.max_map_count`; The two CI runners have different legitimate host values.
+`vm.max_map_count`; the two CI runners have different legitimate host values.
 
 - [x] Reproduce the low-limit failure with an owned read-only command fixture.
 - [x] Isolate healthy integration fixtures, reject fixture writes, and retain low-limit unit assertions.
