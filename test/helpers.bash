@@ -86,6 +86,17 @@ stop_hub_mock_server() {
 	unset HUB_MOCK_PID HUB_MOCK_URL HUB_MOCK_PORT
 }
 
+# Resolve version-manager launchers before fixtures isolate HOME and XDG paths.
+# The mock uses the real executable so its interpreter cannot depend on that state.
+bats_select_python() {
+	BATS_PYTHON_EXECUTABLE="$(python3 -I -c 'import os, sys; print(os.path.realpath(sys.executable))')" || return
+	[[ "$BATS_PYTHON_EXECUTABLE" == /* && -x "$BATS_PYTHON_EXECUTABLE" ]] || {
+		echo "unable to resolve the test Python executable" >&2
+		return 1
+	}
+	export BATS_PYTHON_EXECUTABLE
+}
+
 # start_hub_mock_server — Start hub-mock-server.py; sets HUB_MOCK_URL and HUB_MOCK_PID.
 # Usage: start_hub_mock_server [token] [open=0|1]
 start_hub_mock_server() {
@@ -101,7 +112,12 @@ start_hub_mock_server() {
 	args=(--token "$token")
 	[[ "$open" == "1" ]] && args+=(--open)
 	port_file="$(mktemp)"
-	python3 "$script" "${args[@]}" >"$port_file" &
+	[[ "${BATS_PYTHON_EXECUTABLE:-}" == /* && -x "$BATS_PYTHON_EXECUTABLE" ]] || {
+		rm -f "$port_file"
+		echo "select the test Python executable before fixture isolation" >&2
+		return 1
+	}
+	"$BATS_PYTHON_EXECUTABLE" "$script" "${args[@]}" >"$port_file" &
 	HUB_MOCK_PID=$!
 	local i=0
 	while (( i < 50 )); do
@@ -135,6 +151,7 @@ EOF
 # bats_unit_setup — Common setup for test/unit/*.bats.
 bats_unit_setup() {
 	source "$BATS_TEST_DIRNAME/../helpers.bash"
+	bats_select_python || return
 	CONFIG_DIR="$(launchlayer_root)"
 	export CONFIG_DIR
 }
@@ -142,6 +159,7 @@ bats_unit_setup() {
 # bats_integration_setup — Common setup for test/integration/*.bats.
 bats_integration_setup() {
 	source "$BATS_TEST_DIRNAME/../helpers.bash"
+	bats_select_python || return
 	BATS_SAVED_PATH=$PATH
 	BATS_SAVED_HOME="${HOME:-}"
 	BATS_SAVED_XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-}"
