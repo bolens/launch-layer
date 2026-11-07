@@ -35,6 +35,25 @@ and push to `main`. The two ordinary Docker workflows use the pinned public
 Node 26 Debian image, disposable distribution tool installation and bounded
 Bats concurrency. They need no secrets, Docker socket, host mounts or tuning.
 
+### CI organization
+
+Use the [shared purpose phases](https://github.com/bolens/.github/blob/main/docs/woodpecker-transition.md#ci-organization)
+to find the existing shell, hub and site groups. `make check-all check-pages`
+is the composite local gate; focused rows expose its component commands.
+
+| Phase | Check group / canonical local command | Native workflow / step | Retained hosted owner / boundary |
+| --- | --- | --- | --- |
+| `validate` | Shell and staged-secret checks: `make shellcheck check-hub-git check-dependency-pins` | `shell` / `verify` | PR, main push and native manual validation |
+| `test` | Disposable shell suites: `make test` | `shell` / `verify` | Minimum Bash/Python and Ubuntu/macOS portability remain hosted |
+| `validate` | Hub lint: `make lint-hub` | `hub` / `verify` | Frozen package-manager inputs; minimum Node validation remains hosted |
+| `test` | Hub tests: `make test-hub`; coverage: `bash scripts/hub-pm.sh test:coverage` | `hub` / `verify` | Existing hosted aggregate still joins selected suites |
+| `site` | Static site checks: `make check-pages` | `shell` / `verify` | Hosted CI produces the Pages artifact |
+| `publish` | Explicit version/tag procedure in the [release runbook](docs/release_runbook.md) | Publication remains with its existing owner | Hosted Pages consumes the successful main CI artifact; product release and Convex deployment retain their separate authority |
+
+Native aliases, required check names and the `CI` to `Pages` dependency stay
+stable. Linux container setup helpers install tools inside disposable CI;
+local development uses the commands in this index.
+
 Run `bash scripts/woodpecker-linux.sh shell` or `hub` only inside the disposable
 Debian CI container: these entry points install container tools. For local
 checks, keep using `make check-all check-pages`. Node 22.13 and Python 3.9
