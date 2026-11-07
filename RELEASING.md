@@ -44,6 +44,7 @@ is the composite local gate; focused rows expose its component commands.
 | Phase | Check group / canonical local command | Native workflow / step | Retained hosted owner / boundary |
 | --- | --- | --- | --- |
 | `validate` | Shell and staged-secret checks: `make shellcheck check-hub-git check-dependency-pins` | `shell` / `verify` | PR, main push and native manual validation |
+| `validate` | Full shared source policy: `bash scripts/ci/check-policy.sh` | `repository` / `source-policy` | Exact shared SourceLint 7603518; hosted Source lint remains during native verification |
 | `test` | Disposable shell suites: `make test` | `shell` / `verify` | Minimum Bash/Python and Ubuntu/macOS portability remain hosted |
 | `validate` | Hub lint: `make lint-hub` | `hub` / `verify` | Frozen package-manager inputs; minimum Node validation remains hosted |
 | `test` | Hub tests: `make test-hub`; coverage: `bash scripts/hub-pm.sh test:coverage` | `hub` / `verify` | Existing hosted aggregate still joins selected suites |
@@ -71,3 +72,13 @@ Validate the actual final-head native and retained hosted checks before merging,
 then verify both merged-main native workflows and Pages publication. Validation
 does not create product tags or deploy Convex; the existing hosted Pages workflow
 publishes its validated CI artifact after a successful CI run.
+
+The native repository group invokes the exact shared source selector and locked
+tooling at `7603518f305fb76f7bb1b9979f2692521f633b82`, covering the configured
+Python and site JavaScript/CSS sets. The `hub/*` exclusion stays owned by the
+hub's existing lint and test commands. Local reproduction requires Git, Node 24,
+Python 3 with venv support and ShellCheck; downloaded tools use a disposable
+temporary directory. Container package installation stays in the YAML step.
+Keep hosted Source lint and all current required checks during exact-head PR
+and genuine-main verification. A later status migration must preserve `ci`,
+`hub`, `shell`, minimum-runtime/platform checks and the CI-to-Pages artifact.
