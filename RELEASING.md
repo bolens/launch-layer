@@ -31,7 +31,7 @@ Require the new check to pass on the current PR head before merging.
 
 [Woodpecker](https://woodpecker.bolens.dev/repos) runs `make check check-pages`
 and the frozen-lockfile hub lint, tests and coverage gates on every pull request
-and push to `main`. The two ordinary Docker workflows use the pinned public
+and push to `main`. The existing shell and hub Docker workflows use the pinned public
 Node 26 Debian image, disposable distribution tool installation and bounded
 Bats concurrency. They need no secrets, Docker socket, host mounts or tuning.
 
@@ -39,7 +39,8 @@ Bats concurrency. They need no secrets, Docker socket, host mounts or tuning.
 
 Use the [shared purpose phases](https://github.com/bolens/.github/blob/main/docs/woodpecker-transition.md#ci-organization)
 to find the existing shell, hub and site groups. `make check-all check-pages`
-is the composite local gate; focused rows expose its component commands.
+is the existing application composite gate; pair it with the source-policy
+command below for complete validation. Focused rows expose each component.
 
 | Phase | Check group / canonical local command | Native workflow / step | Retained hosted owner / boundary |
 | --- | --- | --- | --- |
@@ -69,7 +70,7 @@ coverage in one hosted serial job; external reusable callers keep the original
 matrix by default. The existing hosted aggregate rejects failed selected suites.
 
 Validate the actual final-head native and retained hosted checks before merging,
-then verify both merged-main native workflows and Pages publication. Validation
+then verify all merged-main native workflows and Pages publication. Validation
 does not create product tags or deploy Convex; the existing hosted Pages workflow
 publishes its validated CI artifact after a successful CI run.
 
