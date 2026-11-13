@@ -2,19 +2,6 @@
 name: Spec Kit
 
 on:
-  pull_request:
-    paths:
-      - .agents/skills/speckit-*/**
-      - .specify/**
-      - .github/workflows/spec-kit.yml
-      - AGENTS.md
-  push:
-    branches: [main]
-    paths:
-      - .agents/skills/speckit-*/**
-      - .specify/**
-      - .github/workflows/spec-kit.yml
-      - AGENTS.md
   schedule:
     - cron: "20 10 * * 2"
   workflow_dispatch:

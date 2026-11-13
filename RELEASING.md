@@ -47,7 +47,7 @@ command below for complete validation. Focused rows expose each component.
 | --- | --- | --- | --- |
 | `validate` | Shell and staged-secret checks: `make shellcheck check-hub-git check-dependency-pins` | `shell` / `verify` | PR, main push and native manual validation |
 | `validate` | Full shared source policy: `bash scripts/ci/check-policy.sh` | `repository` / `source-policy` | Exact shared SourceLint 7603518. Duplicate hosted Source lint is disabled after verified native cutover |
-| `validate` | Managed Spec Kit integrity: `bash scripts/ci/check-spec-kit.sh` (included in repository policy) | Existing policy step | Immutable C161 validator. Hosted PR/push validation retained during native qualification. Updater remains scheduled/manual on GitHub |
+| `validate` | Managed Spec Kit integrity: `bash scripts/ci/check-spec-kit.sh` (included in repository policy) | Existing policy step | Immutable C161 validator. Automatic PR/main validation is native. Hosted manual validation and scheduled/manual updater stay active |
 | `test` | Disposable shell suites: `make test` | `shell` / `verify` | Minimum Bash/Python and Ubuntu/macOS portability remain hosted |
 | `validate` | Hub lint: `make lint-hub` | `hub` / `verify` | Frozen package-manager inputs; minimum Node validation remains hosted |
 | `test` | Hub tests: `make test-hub`; coverage: `bash scripts/hub-pm.sh test:coverage` | `hub` / `verify` | Existing hosted aggregate still joins selected suites |
@@ -101,7 +101,13 @@ HTTPS access. It uses temporary files and requires no secrets or installed skill
 Source/workflow policy now runs in Woodpecker. Duplicate GitHub policy workflows
 are disabled, including manual and scheduled execution, after verified cutover.
 Their tracked source remains available for rollback. The mixed
-Spec Kit workflow still runs its hosted read-only PR/push validation while this
-native integration is qualified on actual PR and genuine-main revisions. Its
-scheduled/manual updater remains on GitHub. Preserve all current check names and
-publication/platform boundaries during that qualification.
+Spec Kit workflow stays active for manual read-only validation and its
+scheduled/manual updater. Automatic PR/push validation is covered by the native
+repository-policy gate after exact-head PR and genuine-main acceptance.
+
+The repository maintainer reviews the validator pin during monthly dependency
+maintenance and whenever a shared-validator security fix is published. Review
+the immutable commit and SHA-256 together and require actual native validation
+on the updated source. Existing dependency automation does not monitor this
+embedded supplier pin. Preserve the current check names and publication/platform
+boundaries.
