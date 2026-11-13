@@ -181,6 +181,13 @@ Run `bash scripts/woodpecker-linux.sh shell` or `hub` only inside the disposable
 Debian CI container: these entry points install container tools. For local
 checks, keep using `make check-all check-pages`. Node 22.13 and Python 3.9
 minimum-runtime checks, Bash 4.3 builds, macOS portability, hosted supply-chain
-checks, Pages and administrative workflows remain on GitHub. GitHub Linux
-checks remain active during native verification and protected-check cutover.
+checks, Pages and administrative workflows remain on GitHub. Duplicate hosted
+source policy retains scheduled/manual execution after verified native cutover.
 No release or production deployment is triggered by these validation workflows.
+
+Native repository policy, including read-only Spec Kit integrity validation, is
+reproduced with `bash scripts/ci/check-policy.sh`. See
+[the CI organization](../RELEASING.md#ci-organization) for its separation from
+minimum-runtime/platform checks and the CI-to-Pages publication boundary.
+The mixed Spec Kit workflow retains hosted validation during native acceptance
+and keeps its scheduled/manual updater on GitHub.
