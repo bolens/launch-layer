@@ -182,7 +182,8 @@ Debian CI container: these entry points install container tools. For local
 checks, keep using `make check-all check-pages`. Node 22.13 and Python 3.9
 minimum-runtime checks, Bash 4.3 builds, macOS portability, hosted supply-chain
 checks, Pages and administrative workflows remain on GitHub. Duplicate hosted
-source policy retains scheduled/manual execution after verified native cutover.
+source policy is disabled after verified native cutover. Its tracked source
+remains available for rollback.
 No release or production deployment is triggered by these validation workflows.
 
 Native repository policy, including read-only Spec Kit integrity validation, is

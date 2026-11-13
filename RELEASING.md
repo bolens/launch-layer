@@ -20,7 +20,8 @@ Fleet policy: <https://github.com/bolens/.github/blob/main/RELEASING.md>.
 
 The native repository policy checks maintained python, javascript, css files selected by
 [`.github/source-lint.json`](.github/source-lint.json) through Woodpecker on every pull request and push to `main`.
-The hosted counterpart retains scheduled/manual execution after verified native cutover.
+The duplicate hosted workflow is disabled after verified native cutover. Its
+tracked source remains available for rollback.
 Use the [shared local reproduction instructions](https://github.com/bolens/.github/blob/7603518f305fb76f7bb1b9979f2692521f633b82/docs/source-lint.md)
 with the same tooling revision pinned in
 [the native helper](scripts/ci/check-policy.sh). Review exclusions when adding
@@ -45,8 +46,8 @@ command below for complete validation. Focused rows expose each component.
 | Phase | Check group / canonical local command | Native workflow / step | Retained hosted owner / boundary |
 | --- | --- | --- | --- |
 | `validate` | Shell and staged-secret checks: `make shellcheck check-hub-git check-dependency-pins` | `shell` / `verify` | PR, main push and native manual validation |
-| `validate` | Full shared source policy: `bash scripts/ci/check-policy.sh` | `repository` / `source-policy` | Exact shared SourceLint 7603518; hosted Source lint is scheduled/manual after verified native cutover |
-| `validate` | Managed Spec Kit integrity: `bash scripts/ci/check-spec-kit.sh` (included in repository policy) | Existing policy step | Immutable C161 validator; hosted PR/push validation retained during native qualification; updater remains scheduled/manual on GitHub |
+| `validate` | Full shared source policy: `bash scripts/ci/check-policy.sh` | `repository` / `source-policy` | Exact shared SourceLint 7603518. Duplicate hosted Source lint is disabled after verified native cutover |
+| `validate` | Managed Spec Kit integrity: `bash scripts/ci/check-spec-kit.sh` (included in repository policy) | Existing policy step | Immutable C161 validator. Hosted PR/push validation retained during native qualification. Updater remains scheduled/manual on GitHub |
 | `test` | Disposable shell suites: `make test` | `shell` / `verify` | Minimum Bash/Python and Ubuntu/macOS portability remain hosted |
 | `validate` | Hub lint: `make lint-hub` | `hub` / `verify` | Frozen package-manager inputs; minimum Node validation remains hosted |
 | `test` | Hub tests: `make test-hub`; coverage: `bash scripts/hub-pm.sh test:coverage` | `hub` / `verify` | Existing hosted aggregate still joins selected suites |
@@ -81,7 +82,8 @@ Python and site JavaScript/CSS sets. The `hub/*` exclusion stays owned by the
 hub's existing lint and test commands. Local reproduction requires Git, Node 24,
 Python 3 with venv support and ShellCheck; downloaded tools use a disposable
 temporary directory. Container package installation stays in the YAML step.
-Source lint now retains scheduled/manual execution after verified native cutover.
+The duplicate hosted Source lint workflow is disabled after verified native
+cutover. Its tracked source remains available for rollback.
 Require the native repository status while preserving `ci`, `hub`, `shell`,
 minimum-runtime/platform checks and the CI-to-Pages artifact.
 
@@ -96,8 +98,9 @@ SHA-256, limits the download to 64 KiB and 60 seconds, and bounds validation to
 four minutes. Local reproduction needs Bash and Python 3 on Linux/macOS with
 HTTPS access. It uses temporary files and requires no secrets or installed skill links.
 
-Source/workflow policy now runs in Woodpecker; duplicate GitHub policy workflows
-retain scheduled/manual execution after their verified cutover. The mixed
+Source/workflow policy now runs in Woodpecker. Duplicate GitHub policy workflows
+are disabled, including manual and scheduled execution, after verified cutover.
+Their tracked source remains available for rollback. The mixed
 Spec Kit workflow still runs its hosted read-only PR/push validation while this
 native integration is qualified on actual PR and genuine-main revisions. Its
 scheduled/manual updater remains on GitHub. Preserve all current check names and
