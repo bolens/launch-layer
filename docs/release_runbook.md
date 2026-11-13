@@ -190,5 +190,6 @@ Native repository policy, including read-only Spec Kit integrity validation, is
 reproduced with `bash scripts/ci/check-policy.sh`. See
 [the CI organization](../RELEASING.md#ci-organization) for its separation from
 minimum-runtime/platform checks and the CI-to-Pages publication boundary.
-The mixed Spec Kit workflow retains hosted validation during native acceptance
-and keeps its scheduled/manual updater on GitHub.
+The mixed Spec Kit workflow keeps manual read-only validation and its
+scheduled/manual updater on GitHub. Automatic PR/main integrity validation
+runs in the native repository-policy gate.
