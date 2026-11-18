@@ -20,3 +20,20 @@ steps:
       DEBIAN_FRONTEND: noninteractive
     commands:
       - bash scripts/woodpecker-linux.sh shell
+  - name: minimum-python
+    image: docker.io/library/python:3.9-slim-bookworm@sha256:a02e9c5406c416c504d6c9a1a306ff4080c3173f1008d192f953bd20382a2d5c
+    environment:
+      DEBIAN_FRONTEND: noninteractive
+    commands:
+      - apt-get update
+      - apt-get install --yes --no-install-recommends bats
+      - python3 -c 'import sys; assert sys.version_info[:2] == (3, 9)'
+      - bats test/unit/mcp.bats
+  - name: minimum-bash
+    image: docker.io/library/node:26-trixie-slim@sha256:c0753125a3789977aefe869cbebccf70e3cfd7ea84ca48547458f02e4f1d7146
+    environment:
+      DEBIAN_FRONTEND: noninteractive
+    commands:
+      - apt-get update
+      - apt-get install --yes --no-install-recommends build-essential ca-certificates curl python3
+      - bash scripts/ci/check-minimum-bash.sh

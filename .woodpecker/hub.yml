@@ -20,3 +20,12 @@ steps:
       DEBIAN_FRONTEND: noninteractive
     commands:
       - bash scripts/woodpecker-linux.sh hub
+  - name: minimum-node
+    image: docker.io/library/node:22.13.0-bookworm-slim@sha256:f5a0871ab03b035c58bdb3007c3d177b001c2145c18e81817b71624dcf7d8bff
+    environment:
+      CI: 'true'
+      DEBIAN_FRONTEND: noninteractive
+    commands:
+      - test "$(node --version)" = "v$(cat .node-version)"
+      - rm -rf -- hub/node_modules
+      - bash scripts/woodpecker-linux.sh hub

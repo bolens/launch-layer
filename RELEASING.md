@@ -87,6 +87,22 @@ cutover. Its tracked source remains available for rollback.
 Require the native repository status while preserving `ci`, `hub`, `shell`,
 minimum-runtime/platform checks and the CI-to-Pages artifact.
 
+## Portable validation cutover
+
+Woodpecker also runs the full-history redacted Gitleaks scan in `repository`,
+the Bash 4.3 and Python 3.9 checks in `shell`, and the declared minimum Node
+suite in `hub`. The Node step checks its pinned image against `.node-version`
+and installs the frozen dependency graph afresh. Keep the hosted equivalents
+until both PR and `main` runs pass on Woodpecker, then remove only the duplicated
+jobs from the normal GitHub CI caller.
+
+Run `bash scripts/ci/check-history-secrets.sh` from a full Linux amd64 checkout
+to reproduce the history scan, and `bash scripts/ci/check-minimum-bash.sh` with
+a C toolchain, Python 3, and HTTPS access to reproduce the minimum Bash checks.
+Use Python 3.9 for `bats test/unit/mcp.bats` and the version in `.node-version`
+for the frozen Hub install, lint, tests, and coverage. Update the Woodpecker
+Node image and its digest in the same PR as a minimum Node version change.
+
 ## Managed integration validation
 
 `bash scripts/ci/check-spec-kit.sh` verifies the current Spec Kit manifests and
