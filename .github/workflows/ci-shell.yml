@@ -9,12 +9,17 @@ on:
         description: Run the full hosted Linux suite for reusable callers
         type: boolean
         default: true
+      minimum_runtime_validation:
+        description: Run minimum Bash and Python checks for reusable callers
+        type: boolean
+        default: true
 
 permissions:
   contents: read
 
 jobs:
   mcp-python-minimum:
+    if: inputs.minimum_runtime_validation
     name: MCP / Python 3.9 minimum
     # setup-python provides the explicit minimum runtime on this Ubuntu release.
     runs-on: ubuntu-24.04
@@ -37,6 +42,7 @@ jobs:
         run: bats test/unit/mcp.bats
 
   bash-minimum:
+    if: inputs.minimum_runtime_validation
     name: Bash 4.3 minimum
     runs-on: ubuntu-latest
     timeout-minutes: 15

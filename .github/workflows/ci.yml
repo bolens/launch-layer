@@ -21,7 +21,6 @@ jobs:
     timeout-minutes: 5
     outputs:
       shell: ${{ steps.filter.outputs.shell }}
-      hub: ${{ steps.filter.outputs.hub }}
       workflows: ${{ steps.filter.outputs.workflows }}
       editor: ${{ steps.filter.outputs.editor }}
     steps:
@@ -55,16 +54,6 @@ jobs:
               - 'site/**'
               - '.github/workflows/ci-shell.yml'
               - '.github/workflows/ci.yml'
-            hub:
-              - '.woodpecker/**'
-              - 'hub/**'
-              - 'package.json'
-              - '.node-version'
-              - 'scripts/hub-pm.sh'
-              - 'docs/architecture.md'
-              - '.github/workflows/ci-hub.yml'
-              - '.github/workflows/ci.yml'
-              - '.github/workflows/hub-audit.yml'
             workflows:
               - '.github/workflows/**'
             editor:
@@ -108,41 +97,7 @@ jobs:
     uses: ./.github/workflows/ci-shell.yml
     with:
       full_linux_validation: false
-
-  supply_chain:
-    needs: changes
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-
-      - name: Enforce dependency pins and integrity hashes
-        run: bash scripts/check-dependency-pins.sh
-
-      - name: Download Gitleaks
-        env:
-          GITLEAKS_VERSION: "8.30.1"
-          GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
-        run: |
-          set -euo pipefail
-          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
-          curl --proto '=https' --tlsv1.2 -fsSLO \
-            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}"
-          echo "${GITLEAKS_SHA256}  ${archive}" | sha256sum --check -
-          tar -xzf "${archive}" gitleaks
-
-      - name: Scan repository history for secrets
-        run: ./gitleaks git --redact --no-banner .
-
-  hub:
-    needs: changes
-    if: needs.changes.outputs.hub == 'true'
-    uses: ./.github/workflows/ci-hub.yml
-    with:
-      combined_minimum: true
+      minimum_runtime_validation: false
 
   editor:
     name: Editor devcontainer
@@ -170,7 +125,7 @@ jobs:
   # Always runs. Require this job name ("ci") in branch protection.
   # Succeeds when path-filtered suites are skipped; fails if a needed suite failed.
   ci:
-    needs: [changes, actionlint, pages, shell, hub, supply_chain, editor]
+    needs: [changes, actionlint, pages, shell, editor]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -179,26 +134,18 @@ jobs:
         run: |
           set -euo pipefail
           shell_needed='${{ needs.changes.outputs.shell }}'
-          hub_needed='${{ needs.changes.outputs.hub }}'
           workflows_needed='${{ needs.changes.outputs.workflows }}'
           shell_result='${{ needs.shell.result }}'
-          hub_result='${{ needs.hub.result }}'
           changes_result='${{ needs.changes.result }}'
           actionlint_result='${{ needs.actionlint.result }}'
           pages_result='${{ needs.pages.result }}'
-          supply_chain_result='${{ needs.supply_chain.result }}'
           editor_needed='${{ needs.changes.outputs.editor }}'
           editor_result='${{ needs.editor.result }}'
 
-          echo "changes=$changes_result actionlint_needed=$workflows_needed actionlint=$actionlint_result pages=$pages_result shell_needed=$shell_needed shell=$shell_result hub_needed=$hub_needed hub=$hub_result"
+          echo "changes=$changes_result actionlint_needed=$workflows_needed actionlint=$actionlint_result pages=$pages_result shell_needed=$shell_needed shell=$shell_result"
 
           if [[ "$changes_result" != "success" ]]; then
             echo "changes job did not succeed"
-            exit 1
-          fi
-
-          if [[ "$supply_chain_result" != "success" ]]; then
-            echo "supply-chain job did not succeed: $supply_chain_result"
             exit 1
           fi
 
@@ -214,11 +161,6 @@ jobs:
 
           if [[ "$shell_needed" == "true" && "$shell_result" != "success" ]]; then
             echo "shell suite required but result was: $shell_result"
-            exit 1
-          fi
-
-          if [[ "$hub_needed" == "true" && "$hub_result" != "success" ]]; then
-            echo "hub suite required but result was: $hub_result"
             exit 1
           fi
 

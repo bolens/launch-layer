@@ -179,11 +179,10 @@ Bats concurrency. They need no secrets, Docker socket, host mounts or tuning.
 
 Run `bash scripts/woodpecker-linux.sh shell` or `hub` only inside the disposable
 Debian CI container: these entry points install container tools. For local
-checks, keep using `make check-all check-pages`. Node 22.13 and Python 3.9
-minimum-runtime checks, Bash 4.3 builds, macOS portability, hosted supply-chain
-checks, Pages and administrative workflows remain on GitHub. Duplicate hosted
-source policy is disabled after verified native cutover. Its tracked source
-remains available for rollback.
+checks, keep using `make check-all check-pages`. Woodpecker runs the minimum
+Node, Python and Bash checks and the redacted history scan. Ubuntu/macOS
+portability, GitHub workflow lint and security analysis, the editor image
+build, Pages and administrative workflows remain on GitHub.
 No release or production deployment is triggered by these validation workflows.
 
 Native repository policy, including read-only Spec Kit integrity validation, is

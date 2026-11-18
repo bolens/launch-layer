@@ -16,6 +16,12 @@ must be corrected in the same pull request.
 
 Fleet policy: <https://github.com/bolens/.github/blob/main/RELEASING.md>.
 
+## Gitea mirror
+
+Open delivery PRs and run CI on GitHub. The scheduled mirror fast-forwards
+Gitea's `github-main` from GitHub's `main` and copies release tags under
+`github/`. Gitea's historical `main` retains the earlier Gitea-only commits.
+
 ## Source lint
 
 The native repository policy checks maintained python, javascript, css files selected by
@@ -48,9 +54,9 @@ command below for complete validation. Focused rows expose each component.
 | `validate` | Shell and staged-secret checks: `make shellcheck check-hub-git check-dependency-pins` | `shell` / `verify` | PR, main push and native manual validation |
 | `validate` | Full shared source policy: `bash scripts/ci/check-policy.sh` | `repository` / `source-policy` | Exact shared SourceLint 7603518. Duplicate hosted Source lint is disabled after verified native cutover |
 | `validate` | Managed Spec Kit integrity: `bash scripts/ci/check-spec-kit.sh` (included in repository policy) | Existing policy step | Immutable C161 validator. Automatic PR/main validation is native. Hosted manual validation and scheduled/manual updater stay active |
-| `test` | Disposable shell suites: `make test` | `shell` / `verify` | Minimum Bash/Python and Ubuntu/macOS portability remain hosted |
-| `validate` | Hub lint: `make lint-hub` | `hub` / `verify` | Frozen package-manager inputs; minimum Node validation remains hosted |
-| `test` | Hub tests: `make test-hub`; coverage: `bash scripts/hub-pm.sh test:coverage` | `hub` / `verify` | Existing hosted aggregate still joins selected suites |
+| `test` | Disposable shell suites: `make test` | `shell` / `verify` | Ubuntu/macOS portability remains hosted |
+| `validate` | Hub lint: `make lint-hub` | `hub` / `verify` | Frozen package-manager inputs at Node 26 and the declared minimum |
+| `test` | Hub tests: `make test-hub`; coverage: `bash scripts/hub-pm.sh test:coverage` | `hub` / `verify` | Both supported Node runtime lanes run the same suite |
 | `site` | Static site checks: `make check-pages` | `shell` / `verify` | Hosted CI produces the Pages artifact |
 | `publish` | Explicit version/tag procedure in the [release runbook](docs/release_runbook.md) | Publication remains with its existing owner | Hosted Pages consumes the successful main CI artifact; product release and Convex deployment retain their separate authority |
 
@@ -60,16 +66,15 @@ local development uses the commands in this index.
 
 Run `bash scripts/woodpecker-linux.sh shell` or `hub` only inside the disposable
 Debian CI container: these entry points install container tools. For local
-checks, keep using `make check-all check-pages`. Node 22.13 and Python 3.9
-minimum-runtime checks, Bash 4.3 builds, Ubuntu/macOS portability, hosted
-supply-chain checks, Pages and administrative workflows remain on GitHub.
+checks, keep using `make check-all check-pages`. Ubuntu/macOS portability,
+GitHub workflow lint and security analysis, the editor image build, Pages,
+and administrative workflows remain on GitHub.
 
 Require `ci/woodpecker/pr/shell` and `ci/woodpecker/pr/hub` alongside the existing
 `ci` and `ci/woodpecker/pr/repository` checks. The ordinary caller skips duplicate hosted
-ShellCheck/Bats jobs; external reusable shell callers retain full validation by
-default. The hub's declared minimum Node version still runs lint, tests and
-coverage in one hosted serial job; external reusable callers keep the original
-matrix by default. The existing hosted aggregate rejects failed selected suites.
+Linux jobs. Reusable shell and Hub workflows retain their existing defaults
+for other callers. The hosted aggregate rejects failures in selected hosted
+jobs. Branch protection independently requires the three Woodpecker contexts.
 
 Validate the actual final-head native and retained hosted checks before merging,
 then verify all merged-main native workflows and Pages publication. Validation
@@ -92,9 +97,8 @@ minimum-runtime/platform checks and the CI-to-Pages artifact.
 Woodpecker also runs the full-history redacted Gitleaks scan in `repository`,
 the Bash 4.3 and Python 3.9 checks in `shell`, and the declared minimum Node
 suite in `hub`. The Node step checks its pinned image against `.node-version`
-and installs the frozen dependency graph afresh. Keep the hosted equivalents
-until both PR and `main` runs pass on Woodpecker, then remove only the duplicated
-jobs from the normal GitHub CI caller.
+and installs the frozen dependency graph afresh. The normal GitHub CI caller
+relies on the required Woodpecker statuses for these checks.
 
 Run `bash scripts/ci/check-history-secrets.sh` from a full Linux amd64 checkout
 to reproduce the history scan, and `bash scripts/ci/check-minimum-bash.sh` with
