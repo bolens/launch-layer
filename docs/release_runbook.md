@@ -13,7 +13,7 @@ Use a minor version for user-visible features and a patch version for fixes, doc
 - [ ] Working tree is clean except for intentional release changes
 - [ ] On an up-to-date `main` (or a `release/vX.Y.Z` branch cut from `main`)
 - [ ] You know the target version
-- [ ] Local tools available: `bash`, `bats`, `shellcheck`, Node **22.13+** + pnpm (for hub gates)
+- [ ] Local tools available: `bash`, `bats`, `shellcheck`, Node **22.23.4+** + pnpm (for hub gates)
 
 `main` requires a pull request and the **`ci`** status check, including for
 administrators. Squash-merge the release PR; never push straight to `main` or

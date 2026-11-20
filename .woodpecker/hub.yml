@@ -21,7 +21,7 @@ steps:
     commands:
       - bash scripts/woodpecker-linux.sh hub
   - name: minimum-node
-    image: docker.io/library/node:22.13.0-bookworm-slim@sha256:f5a0871ab03b035c58bdb3007c3d177b001c2145c18e81817b71624dcf7d8bff
+    image: docker.io/library/node:22.23.4-bookworm-slim@sha256:5ec23b7c622b00547753bc6ffd78085dd868a68aeb41c8e0a1418f033e13d96d
     environment:
       CI: 'true'
       DEBIAN_FRONTEND: noninteractive

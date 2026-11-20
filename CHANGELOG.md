@@ -13,6 +13,10 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 - Pages code examples use theme-aware shell syntax highlighting without changing copied commands.
 
+### Changed
+
+- Require Node 22.23.4 or newer for the Hub toolchain.
+
 ## [0.14.0] - 2026-09-01
 
 ### Added
