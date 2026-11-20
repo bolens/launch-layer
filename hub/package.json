@@ -21,8 +21,8 @@
     "test:convex": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "tsx --test --experimental-test-coverage convex/lib/*.test.ts && vitest run --coverage",
-    "lint": "eslint . && tsc -p convex/tsconfig.json --noEmit",
-    "typecheck": "tsc -p convex/tsconfig.json --noEmit"
+    "lint": "eslint . && npm run typecheck",
+    "typecheck": "node node_modules/typescript-native/bin/tsc -p convex/tsconfig.json --noEmit"
   },
   "dependencies": {
     "convex": "1.50.0"
@@ -38,6 +38,7 @@
     "tsx": "4.23.15",
     "typescript": "6.0.3",
     "typescript-eslint": "8.72.2",
+    "typescript-native": "npm:typescript@7.0.2",
     "vitest": "5.1.0"
   },
   "license": "MIT"
