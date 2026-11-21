@@ -273,7 +273,7 @@ make check             # shellcheck + check-hub-git + bats (shell gate)
 make check-hub-git     # scripts/check-staged-hub-secrets.sh
 make check-dependency-pins # exact npm versions, lockfile integrity, Action SHAs
 make test-hub          # hub unit + convex tests (via scripts/hub-pm.sh)
-make lint-hub          # hub ESLint + tsc
+make lint-hub          # hub ESLint + native TypeScript compiler
 make check-hub         # lint-hub + test-hub
 make test-all          # shell bats + test-hub
 make check-all         # check + check-hub

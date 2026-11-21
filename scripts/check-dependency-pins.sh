@@ -36,9 +36,12 @@ import sys
 package_path = pathlib.Path("hub/package.json")
 package = json.loads(package_path.read_text())
 failed = False
+exact_version = r"\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?"
+npm_name = r"[a-z0-9][a-z0-9._-]*"
+alias_prefix = rf"(?:npm:(?:@{npm_name}/)?{npm_name}@)?"
 for section in ("dependencies", "devDependencies", "optionalDependencies"):
     for name, version in package.get(section, {}).items():
-        if not re.fullmatch(r"\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?", version):
+        if not re.fullmatch(alias_prefix + exact_version, version):
             print(f"{package_path}: {section}.{name} must use an exact version, got {version!r}", file=sys.stderr)
             failed = True
 
@@ -67,7 +70,7 @@ for line in workspace.splitlines():
     if in_overrides and re.match(r"^  [^#][^:]*:", line):
         name, version = line.strip().split(":", 1)
         version = version.strip().strip("'\"")
-        if not re.fullmatch(r"\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?", version):
+        if not re.fullmatch(exact_version, version):
             print(f"{workspace_path}: override {name} must use an exact version, got {version!r}", file=sys.stderr)
             failed = True
 
